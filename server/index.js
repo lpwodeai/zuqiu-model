@@ -23,6 +23,7 @@ import logsRoutes from './routes/logs.js';
 import reviewRoutes from './routes/review.js';
 import playerRoutes from './routes/players.js';
 import modelAdminRoutes from './routes/model-admin.js';
+import abTestRoutes from './routes/ab-test.js';
 
 import PredictionService from './services/prediction-service.js';
 import DataService from './services/data-service.js';
@@ -74,6 +75,7 @@ app.use('/api/logs', logsRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api/model', modelAdminRoutes);
+app.use('/api/abtest', abTestRoutes);
 
 app.get('/api/health', (req, res) => {
   const dbStats = db.getDatabaseStats();
@@ -83,7 +85,7 @@ app.get('/api/health', (req, res) => {
   
   res.json({
     status: 'healthy',
-    version: '8.0.0',
+    version: '7.5.0',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     database: {
@@ -226,6 +228,13 @@ async function startServer() {
     await logger.error('system', '数据库连接失败', { error: err.message });
   }
 
+  // 初始化预测服务（异步加载模型 + 引擎配置 + 热更新）
+  try {
+    await PredictionService.init();
+  } catch (err) {
+    console.error('❌ 预测服务初始化失败:', err.message);
+  }
+
   cacheService.connect().then(() => {
     console.log('✅ Redis缓存服务已启动');
   }).catch((err) => {
@@ -261,7 +270,7 @@ async function startServer() {
     console.log(`📍 全局错误处理: 已启用`);
     console.log(`📍 模型热更新: 已启用`);
 
-    logger.info('system', '服务器启动成功', { port: PORT, version: '8.0.0', worker: process.env.WORKER_ID || 'primary' });
+    logger.info('system', '服务器启动成功', { port: PORT, version: '7.5.0', worker: process.env.WORKER_ID || 'primary' });
 
     // Cluster worker 通知主进程已就绪
     if (process.env.CLUSTER_WORKER && typeof process.send === 'function') {

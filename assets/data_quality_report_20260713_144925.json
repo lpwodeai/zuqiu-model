@@ -1,0 +1,83 @@
+{
+  "timestamp": "2026-07-13T14:49:25.260817",
+  "overall_score": 50.0,
+  "assessments": {
+    "matches_completeness": {
+      "total_rows": 29784,
+      "missing_stats": {
+        "id": 0,
+        "date": 0,
+        "homeTeamId": 0,
+        "awayTeamId": 0,
+        "homeGoals": 0,
+        "awayGoals": 0,
+        "competitionId": 0,
+        "homeXg": 0,
+        "awayXg": 0,
+        "homeXgot": 29784,
+        "awayXgot": 29784,
+        "homeBigChances": 0,
+        "awayBigChances": 0,
+        "homeXa": 29784,
+        "awayXa": 29784,
+        "homeSaves": 0,
+        "awaySaves": 0,
+        "homeTouchesBox": 0,
+        "awayTouchesBox": 0,
+        "homeHitsPost": 0,
+        "awayHitsPost": 0,
+        "homeShots": 0,
+        "homeShotsOnTarget": 0,
+        "awayShots": 0,
+        "awayShotsOnTarget": 0,
+        "homePossession": 0,
+        "homeCorners": 0,
+        "awayCorners": 0,
+        "homeFouls": 0,
+        "awayFouls": 0,
+        "homeYellowCards": 0,
+        "awayYellowCards": 0,
+        "matchHash": 0,
+        "createdAt": 0,
+        "updatedAt": 0,
+        "home_team_name": 0,
+        "away_team_name": 0,
+        "competition_name": 0,
+        "result": 0,
+        "goal_diff": 0,
+        "total_goals": 0
+      },
+      "completeness_score": 0
+    },
+    "teams_completeness": {
+      "total_rows": 96,
+      "missing_stats": {
+        "id": 0,
+        "name": 0,
+        "shortName": 0,
+        "country": 0,
+        "league": 0,
+        "createdAt": 0,
+        "updatedAt": 0
+      },
+      "completeness_score": 100
+    },
+    "match_distribution": {
+      "home_win_rate": 0.41330915928015044,
+      "away_win_rate": 0.41797609454740803,
+      "draw_rate": 0.1687147461724416,
+      "distribution_score": 0,
+      "is_symmetric": 1,
+      "avg_home_goals": 2.4986905721192585,
+      "avg_away_goals": 2.516720386784851,
+      "avg_total_goals": 5.015410958904109
+    },
+    "league_distribution": {
+      "Serie A": {
+        "matches": 6460,
+        "home_win_rate": 0.41671826625387,
+        "away_win_rate": 0.41594427244582044,
+        "draw_rate": 0.1673374613003096,
+        "avg_home_goals": 2.503095975232198,
+        "avg_away_goals": 2.51687306501548,
+        "is_suspicious": 

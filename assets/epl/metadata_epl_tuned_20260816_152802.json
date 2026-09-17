@@ -1,0 +1,25 @@
+{
+  "model_type": "EPL-tuned",
+  "timestamp": "20260816_152802",
+  "n_samples": 1141,
+  "feature_dim": 183,
+  "params": {
+    "n_estimators": 200,
+    "learning_rate": 0.02,
+    "max_depth": 4,
+    "num_leaves": 15,
+    "min_child_samples": 50,
+    "subsample": 0.6,
+    "colsample_bytree": 0.6,
+    "reg_alpha": 1.0,
+    "reg_lambda": 1.0,
+    "min_split_gain": 0.05,
+    "random_state": 42,
+    "verbose": -1,
+    "class_weight": "balanced"
+  },
+  "cv_accuracy": 0.45999999999999996,
+  "val_accuracy": 0.4104803493449782,
+  "full_accuracy": 0.6275197195442594,
+  "best_trees": 81
+}

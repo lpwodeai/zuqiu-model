@@ -1,0 +1,232 @@
+{
+ "error_cases": {
+  "ddl": "CREATE TABLE error_cases (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                match_id TEXT,\n                home_team TEXT,\n                away_team TEXT,\n                match_date TEXT,\n                actual_wdl TEXT,\n                actual_score TEXT,\n                ml_prediction TEXT,\n                ml_probabilities TEXT,\n                ml_covered BOOLEAN,\n                odds_prediction TEXT,\n                odds_probabilities TEXT,\n                odds_covered BOOLEAN,\n                score_prediction TEXT,\n                score_top1_score TEXT,\n                score_top1_prob REAL,\n                score_covered BOOLEAN,\n                final_prediction TEXT,\n                prediction_correct BOOLEAN,\n                upset_risk_score REAL,\n                error_type TEXT,\n                scenario TEXT,\n                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP\n            )",
+  "indexes": []
+ },
+ "fbref_match_mapping": {
+  "ddl": "CREATE TABLE fbref_match_mapping (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        odds_match_id TEXT NOT NULL,\n        fbref_match_id TEXT NOT NULL,\n        fbref_match_url TEXT NOT NULL,\n        fbref_match_slug TEXT,\n        league TEXT NOT NULL,\n        season TEXT NOT NULL,\n        match_date TEXT NOT NULL,\n        home_team_fbref TEXT,\n        away_team_fbref TEXT,\n        home_team_cn TEXT,\n        away_team_cn TEXT,\n        fbref_week INTEGER,\n        fbref_score TEXT,\n        collected_at TEXT DEFAULT CURRENT_TIMESTAMP,\n        UNIQUE(fbref_match_id),\n        UNIQUE(odds_match_id, season)\n    )",
+  "indexes": [
+   {
+    "name": "idx_fbref_map_league_season",
+    "sql": "CREATE INDEX idx_fbref_map_league_season ON fbref_match_mapping(league, season)"
+   },
+   {
+    "name": "idx_fbref_map_date",
+    "sql": "CREATE INDEX idx_fbref_map_date ON fbref_match_mapping(match_date)"
+   }
+  ]
+ },
+ "fbref_players": {
+  "ddl": "CREATE TABLE fbref_players (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        fbref_player_id TEXT UNIQUE NOT NULL,\n        fbref_player_url TEXT,\n        player_name_en TEXT NOT NULL,\n        player_name_cn TEXT,\n        five_leagues_player_id INTEGER,\n        primary_team_cn TEXT,\n        primary_team_fbref TEXT,\n        primary_position TEXT,\n        nationality TEXT,\n        first_seen_match TEXT,\n        last_updated TEXT DEFAULT CURRENT_TIMESTAMP\n    )",
+  "indexes": [
+   {
+    "name": "idx_fbref_players_team",
+    "sql": "CREATE INDEX idx_fbref_players_team ON fbref_players(primary_team_cn)"
+   },
+   {
+    "name": "idx_fbref_players_name",
+    "sql": "CREATE INDEX idx_fbref_players_name ON fbref_players(player_name_en)"
+   }
+  ]
+ },
+ "features": {
+  "ddl": "CREATE TABLE features (\n          id INTEGER PRIMARY KEY AUTOINCREMENT,\n          match_id TEXT NOT NULL,\n          feature_name TEXT NOT NULL,\n          feature_value REAL NOT NULL,\n          FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,\n          UNIQUE(match_id, feature_name)\n        )",
+  "indexes": []
+ },
+ "handicap_history": {
+  "ddl": "CREATE TABLE handicap_history (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        match_id TEXT NOT NULL,\n        timestamp TEXT NOT NULL,\n        hcp_win REAL NOT NULL,\n        hcp_draw REAL,\n        hcp_lose REAL NOT NULL, match_id_en TEXT,\n        FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,\n        UNIQUE(match_id, timestamp)\n    )",
+  "indexes": [
+   {
+    "name": "idx_hcp_match_id",
+    "sql": "CREATE INDEX idx_hcp_match_id ON handicap_history(match_id)"
+   },
+   {
+    "name": "idx_handicap_history_match_id_en",
+    "sql": "CREATE INDEX idx_handicap_history_match_id_en ON handicap_history(match_id_en)"
+   }
+  ]
+ },
+ "match_id_mapping": {
+  "ddl": "CREATE TABLE match_id_mapping (\n                sh_match_id TEXT PRIMARY KEY,\n                matches_match_id TEXT NOT NULL,\n                match_method TEXT,\n                confidence REAL DEFAULT 1.0,\n                created_at TEXT DEFAULT (datetime('now', 'localtime'))\n            )",
+  "indexes": []
+ },
+ "match_lineups": {
+  "ddl": "CREATE TABLE match_lineups (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        match_id TEXT NOT NULL,\n        fbref_match_id TEXT,\n        team TEXT NOT NULL,\n        team_fbref TEXT,\n        formation TEXT,\n        player_name TEXT NOT NULL,\n        player_name_cn TEXT,\n        fbref_player_id TEXT,\n        jersey_number INTEGER,\n        position TEXT,\n        is_starter INTEGER DEFAULT 1,\n        sub_in_time TEXT,\n        sub_out_time TEXT,\n        sub_in_for TEXT,\n        sub_out_for TEXT,\n        sub_reason TEXT,\n        minutes_played INTEGER,\n        captain INTEGER DEFAULT 0,\n        collected_at TEXT DEFAULT CURRENT_TIMESTAMP,\n        UNIQUE(match_id, team, player_name)\n    )",
+  "indexes": [
+   {
+    "name": "idx_lineup_match",
+    "sql": "CREATE INDEX idx_lineup_match ON match_lineups(match_id)"
+   },
+   {
+    "name": "idx_lineup_team",
+    "sql": "CREATE INDEX idx_lineup_team ON match_lineups(team, match_id)"
+   },
+   {
+    "name": "idx_lineup_player",
+    "sql": "CREATE INDEX idx_lineup_player ON match_lineups(fbref_player_id)"
+   }
+  ]
+ },
+ "match_mapping": {
+  "ddl": "CREATE TABLE match_mapping (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            odds_match_id TEXT UNIQUE,\n            five_leagues_match_id INTEGER,\n            home_team TEXT,\n            away_team TEXT,\n            match_date TEXT,\n            league TEXT,\n            mapped_at TEXT DEFAULT CURRENT_TIMESTAMP\n        )",
+  "indexes": []
+ },
+ "match_mapping_old": {
+  "ddl": "CREATE TABLE match_mapping_old(\n  id INT,\n  odds_match_id TEXT,\n  five_leagues_match_id INT,\n  home_team TEXT,\n  away_team TEXT,\n  match_date TEXT,\n  league TEXT,\n  mapped_at TEXT\n)",
+  "indexes": []
+ },
+ "match_mapping_sync": {
+  "ddl": "CREATE TABLE match_mapping_sync(\n  id INT,\n  odds_match_id TEXT,\n  five_leagues_match_id INT,\n  home_team TEXT,\n  away_team TEXT,\n  match_date TEXT,\n  league TEXT,\n  mapped_at TEXT\n)",
+  "indexes": []
+ },
+ "match_missing_players": {
+  "ddl": "CREATE TABLE match_missing_players (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            match_id TEXT NOT NULL,\n            fbref_match_id TEXT NOT NULL,\n            team TEXT NOT NULL,\n            player_name TEXT NOT NULL,\n            player_short_name TEXT,\n            fbref_player_id TEXT,\n            jersey_number INTEGER,\n            position TEXT,\n            missing_type TEXT DEFAULT 'missing',\n            reason_code INTEGER DEFAULT 0,\n            reason TEXT DEFAULT '',\n            description TEXT,\n            external_type INTEGER,\n            expected_end_date TEXT,\n            country TEXT,\n            market_value_eur REAL,\n            height INTEGER,\n            sofascore_slug TEXT,\n            collected_at TEXT DEFAULT CURRENT_TIMESTAMP,\n            UNIQUE(match_id, team, fbref_player_id)\n        )",
+  "indexes": [
+   {
+    "name": "idx_missing_match",
+    "sql": "CREATE INDEX idx_missing_match ON match_missing_players(match_id)"
+   },
+   {
+    "name": "idx_missing_team",
+    "sql": "CREATE INDEX idx_missing_team ON match_missing_players(team, match_id)"
+   },
+   {
+    "name": "idx_missing_reason",
+    "sql": "CREATE INDEX idx_missing_reason ON match_missing_players(reason)"
+   },
+   {
+    "name": "idx_missing_player",
+    "sql": "CREATE INDEX idx_missing_player ON match_missing_players(fbref_player_id)"
+   }
+  ]
+ },
+ "match_player_stats": {
+  "ddl": "CREATE TABLE match_player_stats (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        match_id TEXT NOT NULL,\n        fbref_match_id TEXT,\n        team TEXT NOT NULL,\n        team_fbref TEXT,\n        player_name TEXT NOT NULL,\n        player_name_cn TEXT,\n        fbref_player_id TEXT,\n        jersey_number INTEGER,\n        position TEXT,\n        is_starter INTEGER DEFAULT 1,\n        minutes_played INTEGER,\n        -- === Summary 表关键字段 ===\n        goals INTEGER DEFAULT 0,\n        assists INTEGER DEFAULT 0,\n        penalties_made INTEGER DEFAULT 0,\n        penalties_attempted INTEGER DEFAULT 0,\n        shots INTEGER DEFAULT 0,\n        shots_on_target INTEGER DEFAULT 0,\n        yellow_cards INTEGER DEFAULT 0,\n        red_cards INTEGER DEFAULT 0,\n        fouls_committed INTEGER DEFAULT 0,\n        fouls_drawn INTEGER DEFAULT 0,\n        offsides INTEGER DEFAULT 0,\n        crosses INTEGER DEFAULT 0,\n        tackles_won INTEGER DEFAULT 0,\n        interceptions INTEGER DEFAULT 0,\n        own_goals INTEGER DEFAULT 0,\n        -- === Passing 表关键字段 ===\n        passes_completed INTEGER,\n        passes_attempted INTEGER,\n        pass_completion_pct REAL,\n        total_distance_passes REAL,\n        progressive_distance_passes REAL,\n        short_passes_completed INTEGER,\n        short_passes_attempted INTEGER,\n        medium_passes_completed INTEGER,\n        medium_passes_attempted INTEGER,\n        long_passes_completed INTEGER,\n        long_passes_attempted INTEGER,\n        key_passes INTEGER,\n        passes_into_final_third INTEGER,\n        passes_into_penalty_area INTEGER,\n        crosses_into_penalty_area INTEGER,\n        progressive_passes INTEGER,\n        -- === Defense 表关键字段 ===\n        tackles INTEGER,\n        tackles_won_def INTEGER,\n        tackles_in_def_third INTEGER,\n        tackles_in_mid_third INTEGER,\n        tackles_in_att_third INTEGER,\n        dribblers_tackled INTEGER,\n        dribblers_challenged INTEGER,\n        blocks INTEGER,\n        blocked_shots INTEGER,\n        blocked_passes INTEGER,\n        clearances INTEGER,\n        errors_leading_to_shot INTEGER,\n        -- === Possession 表关键字段 ===\n        touches INTEGER,\n        touches_def_pen_area INTEGER,\n        touches_def_third INTEGER,\n        touches_mid_third INTEGER,\n        touches_att_third INTEGER,\n        touches_att_pen_area INTEGER,\n        dribbles_completed_pos INTEGER,\n        dribbles_attempted_pos INTEGER,\n        successful_dribble_pct REAL,\n        players_beaten INTEGER,\n        carries INTEGER,\n        carry_distance REAL,\n        progressive_carries INTEGER,\n        carries_into_final_third INTEGER,\n        carries_into_penalty_area INTEGER,\n        miscontrols INTEGER,\n        dispossessed INTEGER,\n        passes_received INTEGER,\n        progressive_passes_received INTEGER,\n        -- === Miscellaneous 表关键字段 ===\n        corner_kicks INTEGER,\n        penalties_won INTEGER,\n        penalties_conceded INTEGER,\n        ball_recoveries INTEGER,\n        aerials_won INTEGER,\n        aerials_lost INTEGER,\n        aerial_win_pct REAL,\n        -- === Goalkeeper 专属 ===\n        gk_shots_on_target_against INTEGER,\n        gk_goals_against INTEGER,\n        gk_saves INTEGER,\n        gk_save_pct REAL,\n        gk_psa REAL,\n        -- === 高级指标 ===\n        xg REAL,\n        xg_npxg REAL,\n        xa REAL,\n        sca INTEGER,\n        gca INTEGER,\n        -- === 完整数据 JSON（全部 280+ 指标） ===\n        stats_json TEXT,\n        -- === 元数据 ===\n        stats_source TEXT DEFAULT 'fbref',\n        collected_at TEXT DEFAULT CURRENT_TIMESTAMP, rating REAL, expected_goals REAL, expected_assists REAL, total_shots INTEGER, big_chances_created INTEGER, big_chances_missed INTEGER, accurate_long_balls INTEGER, total_long_balls INTEGER, accurate_crosses INTEGER, total_crosses INTEGER, successful_dribbles INTEGER, total_dribbles INTEGER, total_tackles INTEGER, duels_won INTEGER, duels_total INTEGER, aerials_won_total INTEGER, aerials_total INTEGER, ball_recoveries_sofa INTEGER, possession_lost INTEGER, total_pass_sofa INTEGER, accurate_pass_sofa INTEGER, key_passes_sofa INTEGER, touches_sofa INTEGER, meters_covered_walking_km REAL, meters_covered_jogging_km REAL, meters_covered_running_km REAL, meters_covered_high_speed_running_km REAL, meters_covered_sprinting_km REAL, total_ball_carries_distance REAL, ball_carries_count INTEGER, total_progression REAL, goals_prevented REAL, gk_saves_sofa INTEGER, saved_shots_from_inside_box INTEGER, good_high_claim INTEGER, punches INTEGER, keeper_save_value REAL, accurate_keeper_sweeper INTEGER, total_keeper_sweeper INTEGER, duels_lost_sofa REAL, aerials_lost_sofa REAL, ground_duels_won INTEGER, ground_duels_lost INTEGER, ground_duels_total INTEGER,\n        UNIQUE(match_id, team, player_name)\n    )",
+  "indexes": [
+   {
+    "name": "idx_pstats_match",
+    "sql": "CREATE INDEX idx_pstats_match ON match_player_stats(match_id)"
+   },
+   {
+    "name": "idx_pstats_team",
+    "sql": "CREATE INDEX idx_pstats_team ON match_player_stats(team, match_id)"
+   },
+   {
+    "name": "idx_pstats_player",
+    "sql": "CREATE INDEX idx_pstats_player ON match_player_stats(fbref_player_id)"
+   }
+  ]
+ },
+ "matches": {
+  "ddl": "CREATE TABLE matches (\n          id INTEGER PRIMARY KEY AUTOINCREMENT,\n          match_id TEXT UNIQUE NOT NULL,\n          home_team TEXT NOT NULL,\n          away_team TEXT NOT NULL,\n          match_date TEXT NOT NULL,\n          match_type TEXT NOT NULL,\n          handicap REAL,\n          actual_wdl TEXT,\n          actual_handicap TEXT,\n          actual_score TEXT,\n          actual_total_goals INTEGER,\n          created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n          updated_at TEXT DEFAULT CURRENT_TIMESTAMP\n        , league TEXT, referee TEXT, home_yellow_cards INTEGER, away_yellow_cards INTEGER, home_red_cards INTEGER, away_red_cards INTEGER, home_goals INTEGER, away_goals INTEGER)",
+  "indexes": []
+ },
+ "matches_archive": {
+  "ddl": "CREATE TABLE matches_archive (\n            id INTEGER PRIMARY KEY,\n            match_id TEXT,\n            home_team TEXT,\n            away_team TEXT,\n            match_date TEXT,\n            match_type TEXT,\n            handicap REAL,\n            actual_wdl TEXT,\n            actual_handicap TEXT,\n            actual_score TEXT,\n            actual_total_goals INTEGER,\n            created_at TEXT,\n            updated_at TEXT,\n            archived_at TEXT,\n            archive_reason TEXT DEFAULT 'not_in_fbref_match_mapping'\n        )",
+  "indexes": []
+ },
+ "model_performance": {
+  "ddl": "CREATE TABLE model_performance (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                model_version TEXT,\n                accuracy REAL,\n                ml_coverage REAL,\n                odds_coverage REAL,\n                match_count INTEGER,\n                degradation_detected BOOLEAN,\n                degradation_score REAL,\n                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP\n            )",
+  "indexes": []
+ },
+ "model_predictions": {
+  "ddl": "CREATE TABLE \"model_predictions\" (\n              id INTEGER PRIMARY KEY AUTOINCREMENT,\n              match_id TEXT NOT NULL,\n              model_name TEXT NOT NULL,\n              prediction_type TEXT NOT NULL,\n              prediction TEXT,\n              probability REAL,\n              confidence REAL,\n              timestamp TEXT DEFAULT CURRENT_TIMESTAMP,\n              FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE\n           )",
+  "indexes": [
+   {
+    "name": "idx_model_predictions_unique",
+    "sql": "CREATE UNIQUE INDEX idx_model_predictions_unique ON model_predictions (match_id, model_name, prediction_type)"
+   }
+  ]
+ },
+ "model_versions": {
+  "ddl": "CREATE TABLE model_versions (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                version TEXT UNIQUE,\n                model_type TEXT,\n                file_path TEXT,\n                created_at DATETIME DEFAULT CURRENT_TIMESTAMP\n            )",
+  "indexes": []
+ },
+ "module_performance": {
+  "ddl": "CREATE TABLE module_performance (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                module_name TEXT,\n                scenario TEXT,\n                correct_count INTEGER DEFAULT 0,\n                total_count INTEGER DEFAULT 0,\n                accuracy REAL DEFAULT 0,\n                last_updated DATETIME DEFAULT CURRENT_TIMESTAMP\n            )",
+  "indexes": []
+ },
+ "odds500_betting": {
+  "ddl": "CREATE TABLE odds500_betting (\n        fid INTEGER PRIMARY KEY,\n        match_id TEXT,\n        home_name TEXT, draw_name TEXT, away_name TEXT,\n        home_odds TEXT, home_prob TEXT, home_bf_ratio TEXT, home_bf_price TEXT,\n        home_bf_volume TEXT, home_bf_profit TEXT, home_hot TEXT, home_profit_index TEXT,\n        draw_odds TEXT, draw_prob TEXT, draw_bf_ratio TEXT, draw_bf_price TEXT,\n        draw_bf_volume TEXT, draw_bf_profit TEXT, draw_hot TEXT, draw_profit_index TEXT,\n        away_odds TEXT, away_prob TEXT, away_bf_ratio TEXT, away_bf_price TEXT,\n        away_bf_volume TEXT, away_bf_profit TEXT, away_hot TEXT, away_profit_index TEXT,\n        tips TEXT, fetched_at TEXT\n    )",
+  "indexes": []
+ },
+ "odds500_match": {
+  "ddl": "CREATE TABLE odds500_match (\n        fid INTEGER PRIMARY KEY,\n        match_id TEXT,\n        home_team_cn TEXT, away_team_cn TEXT,\n        home_team_en TEXT, away_team_en TEXT,\n        match_date TEXT, match_time TEXT,\n        season TEXT, round INTEGER, stid INTEGER,\n        home_score INTEGER, away_score INTEGER,\n        status INTEGER,\n        win REAL, draw REAL, lost REAL,\n        handicap TEXT, pan TEXT\n    , league TEXT)",
+  "indexes": []
+ },
+ "odds500_ouzhi_company": {
+  "ddl": "CREATE TABLE odds500_ouzhi_company (\n        fid INTEGER, match_id TEXT, seq INTEGER, company TEXT,\n        init_win TEXT, init_draw TEXT, init_lose TEXT,\n        live_win TEXT, live_draw TEXT, live_lose TEXT,\n        prob_init_win TEXT, prob_init_draw TEXT, prob_init_lose TEXT,\n        prob_live_win TEXT, prob_live_draw TEXT, prob_live_lose TEXT,\n        return_init TEXT, return_live TEXT,\n        kelly_init_win TEXT, kelly_init_draw TEXT, kelly_init_lose TEXT,\n        kelly_live_win TEXT, kelly_live_draw TEXT, kelly_live_lose TEXT,\n        PRIMARY KEY (fid, seq)\n    )",
+  "indexes": []
+ },
+ "odds500_ouzhi_summary": {
+  "ddl": "CREATE TABLE odds500_ouzhi_summary (\n        fid INTEGER PRIMARY KEY,\n        match_id TEXT,\n        company_count TEXT,\n        avg_init_win TEXT, avg_init_draw TEXT, avg_init_lose TEXT,\n        avg_live_win TEXT, avg_live_draw TEXT, avg_live_lose TEXT,\n        avg_prob_init_win TEXT, avg_prob_init_draw TEXT, avg_prob_init_lose TEXT,\n        avg_prob_live_win TEXT, avg_prob_live_draw TEXT, avg_prob_live_lose TEXT,\n        avg_return_init TEXT, avg_return_live TEXT,\n        avg_kelly_init_win TEXT, avg_kelly_init_draw TEXT, avg_kelly_init_lose TEXT,\n        avg_kelly_live_win TEXT, avg_kelly_live_draw TEXT, avg_kelly_live_lose TEXT,\n        disp_init_win TEXT, disp_init_draw TEXT, disp_init_lose TEXT,\n        disp_live_win TEXT, disp_live_draw TEXT, disp_live_lose TEXT,\n        fetched_at TEXT\n    )",
+  "indexes": []
+ },
+ "odds500_stat": {
+  "ddl": "CREATE TABLE odds500_stat (\n        fid INTEGER PRIMARY KEY,\n        match_id TEXT,\n        home_attack TEXT, away_attack TEXT,\n        home_danger TEXT, away_danger TEXT,\n        home_shots TEXT, away_shots TEXT,\n        home_shots_on TEXT, away_shots_on TEXT,\n        home_fk TEXT, away_fk TEXT,\n        home_corners TEXT, away_corners TEXT,\n        home_offsides TEXT, away_offsides TEXT,\n        home_fouls TEXT, away_fouls TEXT,\n        home_yellow TEXT, away_yellow TEXT,\n        home_red TEXT, away_red TEXT,\n        home_possession TEXT, away_possession TEXT,\n        fetched_at TEXT\n    )",
+  "indexes": []
+ },
+ "score_history": {
+  "ddl": "CREATE TABLE score_history (\n          id INTEGER PRIMARY KEY AUTOINCREMENT,\n          match_id TEXT NOT NULL,\n          timestamp TEXT NOT NULL,\n          score TEXT NOT NULL,\n          odds REAL NOT NULL,\n          FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,\n          UNIQUE(match_id, timestamp, score)\n        )",
+  "indexes": [
+   {
+    "name": "idx_score_match_id",
+    "sql": "CREATE INDEX idx_score_match_id ON score_history(match_id)"
+   }
+  ]
+ },
+ "sofascore_team_features": {
+  "ddl": "CREATE TABLE sofascore_team_features (\"event_id\" TEXT, \"match_id_cn\" TEXT, \"match_date\" TEXT, \"league\" TEXT, \"home_team_cn\" TEXT, \"away_team_cn\" TEXT, \"sofa_rat_5g_home\" REAL, \"sofa_xg_5g_home\" REAL, \"sofa_xa_5g_home\" REAL, \"sofa_pass_sr_5g_home\" REAL, \"sofa_longball_sr_5g_home\" REAL, \"sofa_cross_sr_5g_home\" REAL, \"sofa_dribble_sr_5g_home\" REAL, \"sofa_tackle_5g_home\" REAL, \"sofa_interception_5g_home\" REAL, \"sofa_duel_sr_5g_home\" REAL, \"sofa_aerial_sr_5g_home\" REAL, \"sofa_recovery_5g_home\" REAL, \"sofa_poss_lost_5g_home\" REAL, \"sofa_big_chance_c_5g_home\" REAL, \"sofa_big_chance_m_5g_home\" REAL, \"sofa_sprint_km_5g_home\" REAL, \"sofa_hsr_km_5g_home\" REAL, \"sofa_total_dist_km_5g_home\" REAL, \"sofa_gk_saves_5g_home\" REAL, \"sofa_gk_goals_prev_5g_home\" REAL, \"sofa_clearance_5g_home\" REAL, \"sofa_formation_consistency_home\" REAL, \"sofa_rat_std_5g_home\" REAL, \"sofa_fw_goals_5g_home\" REAL, \"sofa_fw_assists_5g_home\" REAL, \"sofa_fw_touches_5g_home\" REAL, \"sofa_fw_rat_5g_home\" REAL, \"sofa_mf_pass_5g_home\" REAL, \"sofa_mf_touches_5g_home\" REAL, \"sofa_mf_rat_5g_home\" REAL, \"sofa_df_interception_5g_home\" REAL, \"sofa_df_tackle_5g_home\" REAL, \"sofa_df_duel_sr_5g_home\" REAL, \"sofa_df_rat_5g_home\" REAL, \"sofa_rat_5g_away\" REAL, \"sofa_xg_5g_away\" REAL, \"sofa_xa_5g_away\" REAL, \"sofa_pass_sr_5g_away\" REAL, \"sofa_longball_sr_5g_away\" REAL, \"sofa_cross_sr_5g_away\" REAL, \"sofa_dribble_sr_5g_away\" REAL, \"sofa_tackle_5g_away\" REAL, \"sofa_interception_5g_away\" REAL, \"sofa_duel_sr_5g_away\" REAL, \"sofa_aerial_sr_5g_away\" REAL, \"sofa_recovery_5g_away\" REAL, \"sofa_poss_lost_5g_away\" REAL, \"sofa_big_chance_c_5g_away\" REAL, \"sofa_big_chance_m_5g_away\" REAL, \"sofa_sprint_km_5g_away\" REAL, \"sofa_hsr_km_5g_away\" REAL, \"sofa_total_dist_km_5g_away\" REAL, \"sofa_gk_saves_5g_away\" REAL, \"sofa_gk_goals_prev_5g_away\" REAL, \"sofa_clearance_5g_away\" REAL, \"sofa_formation_consistency_away\" REAL, \"sofa_rat_std_5g_away\" REAL, \"sofa_fw_goals_5g_away\" REAL, \"sofa_fw_assists_5g_away\" REAL, \"sofa_fw_touches_5g_away\" REAL, \"sofa_fw_rat_5g_away\" REAL, \"sofa_mf_pass_5g_away\" REAL, \"sofa_mf_touches_5g_away\" REAL, \"sofa_mf_rat_5g_away\" REAL, \"sofa_df_interception_5g_away\" REAL, \"sofa_df_tackle_5g_away\" REAL, \"sofa_df_duel_sr_5g_away\" REAL, \"sofa_df_rat_5g_away\" REAL)",
+  "indexes": []
+ },
+ "sofascore_team_features_backup": {
+  "ddl": "CREATE TABLE sofascore_team_features_backup(\n  event_id TEXT,\n  match_id_cn TEXT,\n  match_date TEXT,\n  league TEXT,\n  home_team_cn TEXT,\n  away_team_cn TEXT,\n  sofa_rat_5g_home REAL,\n  sofa_xg_5g_home REAL,\n  sofa_xa_5g_home REAL,\n  sofa_pass_sr_5g_home REAL,\n  sofa_longball_sr_5g_home REAL,\n  sofa_cross_sr_5g_home REAL,\n  sofa_dribble_sr_5g_home REAL,\n  sofa_tackle_5g_home REAL,\n  sofa_interception_5g_home REAL,\n  sofa_duel_sr_5g_home REAL,\n  sofa_aerial_sr_5g_home REAL,\n  sofa_recovery_5g_home REAL,\n  sofa_poss_lost_5g_home REAL,\n  sofa_big_chance_c_5g_home REAL,\n  sofa_big_chance_m_5g_home REAL,\n  sofa_sprint_km_5g_home REAL,\n  sofa_hsr_km_5g_home REAL,\n  sofa_total_dist_km_5g_home REAL,\n  sofa_gk_saves_5g_home REAL,\n  sofa_gk_goals_prev_5g_home REAL,\n  sofa_clearance_5g_home REAL,\n  sofa_formation_consistency_home REAL,\n  sofa_rat_std_5g_home REAL,\n  sofa_rat_5g_away REAL,\n  sofa_xg_5g_away REAL,\n  sofa_xa_5g_away REAL,\n  sofa_pass_sr_5g_away REAL,\n  sofa_longball_sr_5g_away REAL,\n  sofa_cross_sr_5g_away REAL,\n  sofa_dribble_sr_5g_away REAL,\n  sofa_tackle_5g_away REAL,\n  sofa_interception_5g_away REAL,\n  sofa_duel_sr_5g_away REAL,\n  sofa_aerial_sr_5g_away REAL,\n  sofa_recovery_5g_away REAL,\n  sofa_poss_lost_5g_away REAL,\n  sofa_big_chance_c_5g_away REAL,\n  sofa_big_chance_m_5g_away REAL,\n  sofa_sprint_km_5g_away REAL,\n  sofa_hsr_km_5g_away REAL,\n  sofa_total_dist_km_5g_away REAL,\n  sofa_gk_saves_5g_away REAL,\n  sofa_gk_goals_prev_5g_away REAL,\n  sofa_clearance_5g_away REAL,\n  sofa_formation_consistency_away REAL,\n  sofa_rat_std_5g_away REAL\n)",
+  "indexes": []
+ },
+ "team_mapping": {
+  "ddl": "CREATE TABLE team_mapping (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            original_name TEXT UNIQUE,\n            standard_name TEXT,\n            league TEXT,\n            created_at TEXT DEFAULT CURRENT_TIMESTAMP\n        )",
+  "indexes": []
+ },
+ "total_goals_history": {
+  "ddl": "CREATE TABLE total_goals_history (\n          id INTEGER PRIMARY KEY AUTOINCREMENT,\n          match_id TEXT NOT NULL,\n          timestamp TEXT NOT NULL,\n          goals_0 REAL,\n          goals_1 REAL,\n          goals_2 REAL,\n          goals_3 REAL,\n          goals_4 REAL,\n          goals_5 REAL,\n          goals_6 REAL,\n          goals_7_plus REAL, match_id_en TEXT,\n          FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,\n          UNIQUE(match_id, timestamp)\n        )",
+  "indexes": [
+   {
+    "name": "idx_tg_match_id",
+    "sql": "CREATE INDEX idx_tg_match_id ON total_goals_history(match_id)"
+   },
+   {
+    "name": "idx_total_goals_history_match_id_en",
+    "sql": "CREATE INDEX idx_total_goals_history_match_id_en ON total_goals_history(match_id_en)"
+   }
+  ]
+ },
+ "training_history": {
+  "ddl": "CREATE TABLE training_history (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                training_type TEXT,\n                model_version TEXT,\n                status TEXT,\n                start_time DATETIME,\n                end_time DATETIME,\n                duration REAL,\n                error_message TEXT\n            )",
+  "indexes": []
+ },
+ "understat_match_team_stats": {
+  "ddl": "CREATE TABLE understat_match_team_stats (\n        match_id     TEXT PRIMARY KEY,\n        season       TEXT,\n        datetime     TEXT,\n        home_team    TEXT,\n        home_team_id TEXT,\n        away_team    TEXT,\n        away_team_id TEXT,\n        home_goals   INTEGER,\n        away_goals   INTEGER,\n        home_xg      REAL,\n        away_xg      REAL,\n        forecast_w   REAL,\n        forecast_d   REAL,\n        forecast_l   REAL,\n        is_result    INTEGER,\n        collected_at TEXT\n    , league TEXT)",
+  "indexes": []
+ },
+ "understat_player_xg": {
+  "ddl": "CREATE TABLE understat_player_xg (\n        match_id     TEXT,\n        player_id    TEXT,\n        player_name  TEXT,\n        team_id      TEXT,\n        team_name    TEXT,\n        position     TEXT,\n        time         INTEGER,\n        goals        INTEGER,\n        shots        INTEGER,\n        xg           REAL,\n        assists      INTEGER,\n        xa           REAL,\n        key_passes   INTEGER,\n        xg_chain     REAL,\n        xg_buildup   REAL,\n        yellow_card  INTEGER,\n        red_card     INTEGER,\n        season       TEXT, league TEXT,\n        PRIMARY KEY (match_id, player_id)\n    )",
+  "indexes": []
+ },
+ "understat_shots": {
+  "ddl": "CREATE TABLE understat_shots (\n        shot_id         TEXT PRIMARY KEY,\n        match_id        TEXT,\n        minute          INTEGER,\n        result          TEXT,\n        x               REAL,\n        y               REAL,\n        xg              REAL,\n        player_id       TEXT,\n        player_name     TEXT,\n        team_side       TEXT,\n        team_name       TEXT,\n        situation       TEXT,\n        shot_type       TEXT,\n        player_assisted TEXT,\n        last_action     TEXT,\n        season          TEXT\n    , league TEXT)",
+  "indexes": []
+ },
+ "wdl_history": {
+  "ddl": "CREATE TABLE wdl_history (\n          id INTEGER PRIMARY KEY AUTOINCREMENT,\n          match_id TEXT NOT NULL,\n          timestamp TEXT NOT NULL,\n          win_a REAL NOT NULL,\n          draw REAL NOT NULL,\n          win_b REAL NOT NULL, match_id_en TEXT,\n          FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,\n          UNIQUE(match_id, timestamp)\n        )",
+  "indexes": [
+   {
+    "name": "idx_wdl_match_id",
+    "sql": "CREATE INDEX idx_wdl_match_id ON wdl_history(match_id)"
+   },
+   {
+    "name": "idx_wdl_history_match_id_en",
+    "sql": "CREATE INDEX idx_wdl_history_match_id_en ON wdl_history(match_id_en)"
+   }
+  ]
+ }
+}

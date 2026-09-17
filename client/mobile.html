@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>五大联赛预测 v4.3 手机版</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #0b1220; color: #e8ecf1; font-size: 15px; line-height: 1.6;
+    padding-bottom: 2rem;
+  }
+  .header {
+    background: linear-gradient(135deg, #0f1d35 0%, #1a2d4d 100%);
+    padding: 1.2rem 1rem; text-align: center; border-bottom: 1px solid #1e2d47;
+  }
+  .header h1 { font-size: 1.3rem; color: #00d4aa; }
+  .header p { font-size: 0.75rem; color: #8a9bb3; margin-top: 0.3rem; }
+  .card {
+    background: #111a2e; border: 1px solid #1e2d47; border-radius: 12px;
+    margin: 0.8rem 1rem; padding: 1rem;
+  }
+  .card-title {
+    font-size: 0.85rem; color: #00d4aa; font-weight: 600;
+    margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem;
+  }
+  select, button {
+    width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid #1e2d47;
+    background: #0b1220; color: #e8ecf1; font-size: 0.95rem; margin-bottom: 0.6rem;
+  }
+  button {
+    background: linear-gradient(135deg, #00d4aa 0%, #00a884 100%);
+    color: #0b1220; font-weight: 700; border: none; margin-top: 0.5rem;
+  }
+  button:active { opacity: 0.8; }
+  .result-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.5rem 0; border-bottom: 1px solid #1e2d47;
+  }
+  .result-row:last-child { border-bottom: none; }
+  .label { color: #8a9bb3; font-size: 0.85rem; }
+  .value { font-weight: 600; }
+  .highlight { color: #00d4aa; }
+  .danger { color: #ff6b6b; }
+  .warn { color: #ffd700; }
+  .tag {
+    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+    font-size: 0.75rem; background: #1e2d47; margin-left: 0.3rem;
+  }
+  .tag.green { background: rgba(0,212,170,0.15); color: #00d4aa; }
+  .tag.red { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+  .tag.yellow { background: rgba(255,215,0,0.15); color: #ffd700; }
+  .tag.blue { background: rgba(100,149,237,0.15); color: #6495ed; }
+  .progress {
+    height: 6px; background: #1e2d47; border-radius: 3px; margin-top: 0.3rem; overflow: hidden;
+  }
+  .progress-bar { height: 100%; border-radius: 3px; }
+  .progress-bar.green { background: #00d4aa; }
+  .progress-bar.yellow { background: #ffd700; }
+  .progress-bar.red { background: #ff6b6b; }
+  .rank-item {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0;
+  }
+  .rank-num {
+    width: 22px; height: 22px; border-radius: 50%; background: #1e2d47;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700;
+  }
+  .rank-num.top { background: #00d4aa; color: #0b1220; }
+  .hidden { display: none; }
+  .footer {
+    text-align: center; padding: 1rem; color: #5a6b83; font-size: 0.7rem;
+  }
+  .confidence-bar {
+    display: flex; gap: 0.3rem; margin-top: 0.4rem;
+  }
+  .confidence-dot {
+    width: 10px; height: 10px; border-radius: 50%; background: #1e2d47;
+  }
+  .confidence-dot.active { background: #00d4aa; }
+  .confidence-dot.warn { background: #ffd700; }
+  .confidence-dot.low { background: #ff6b6b; }
+  .model-tags {
+    display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem;
+  }
+  .model-tag {
+    font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 3px;
+    background: #1e2d47; color: #8a9bb3;
+  }
+  .model-tag.agree { background: rgba(0,212,170,0.12); color: #00d4aa; }
+  .model-tag.disagree { background: rgba(255,107,107,0.12); color: #ff6b6b; }
+  .section-divider {
+    height: 1px; background: linear-gradient(90deg, transparent, #1e2d47, transparent);
+    margin: 0.6rem 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>五大联赛预测引擎 v4.3</h1>
+  <p>6模型Stacking融合 | 残差修正 | 卡尔曼滤波 | 动态K因子</p>
+</div>
+
+<div class="card">
+  <div class="card-title">选择比赛</div>
+  <select id="teamA"></select>
+  <select id="teamB"></select>
+  <select id="venue">
+    <option value="neutral">中立场地</option>
+    <option value="home">主场</option>
+    <option value="away">客场</option>
+  </select>
+  <button onclick="predict()">开始预测</button>
+</div>
+
+<div id="results" class="hidden">
+
+  <!-- 模型信息 -->
+  <div class="card">
+    <div class="card-title">模型信息</div>
+    <div class="result-row">
+      <span class="label">模型版本</span>
+      <span class="value highlight" id="model-ver">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">置信度</span>
+      <span class="value" id="conf-level">--</span>
+    </div>
+    <div class="confidence-bar" id="conf-dots"></div>
+    <div class="result-row">
+      <span class="label">模型一致</span>
+      <span class="value" id="conf-agree">--</span>
+    </div>
+    <div class="model-tags" id="model-tags"></div>
+  </div>
+
+  <!-- 胜平负预测 -->
+  <div class="card">
+    <div class="card-title">胜平负预测</div>
+    <div class="result-row">
+      <span class="label">主胜</span>
+      <span class="value highlight" id="wdw-a">--</span>
+    </div>
+    <div class="progress"><div class="progress-bar green" id="bar-a"></div></div>
+    <div class="result-row">
+      <span class="label">平局</span>
+      <span class="value warn" id="wdw-d">--</span>
+    </div>
+    <div class="progress"><div class="progress-bar yellow" id="bar-d"></div></div>
+    <div class="result-row">
+      <span class="label">客胜</span>
+      <span class="value danger" id="wdw-b">--</span>
+    </div>
+    <div class="progress"><div class="progress-bar red" id="bar-b"></div></div>
+    <div class="result-row" style="margin-top:0.5rem">
+      <span class="label">推荐</span>
+      <span class="value highlight" id="wdw-rec">--</span>
+    </div>
+  </div>
+
+  <!-- 比分预测 TOP3 -->
+  <div class="card">
+    <div class="card-title">比分预测 TOP3</div>
+    <div id="scores"></div>
+  </div>
+
+  <!-- 半全场胜平负 TOP3 -->
+  <div class="card">
+    <div class="card-title">半全场胜平负 TOP3</div>
+    <div id="htft"></div>
+  </div>
+
+  <!-- 总进球数预测 -->
+  <div class="card">
+    <div class="card-title">总进球数预测</div>
+    <div class="result-row">
+      <span class="label">期望进球</span>
+      <span class="value" id="exp-goals">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">大2.5球</span>
+      <span class="value highlight" id="over25">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">小2.5球</span>
+      <span class="value" id="under25">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">大3.5球</span>
+      <span class="value highlight" id="over35">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">小3.5球</span>
+      <span class="value" id="under35">--</span>
+    </div>
+    <div id="top-goals" style="margin-top:0.5rem"></div>
+  </div>
+
+  <!-- 让球胜平负 (主-1) -->
+  <div class="card">
+    <div class="card-title">让球胜平负 (主-1)</div>
+    <div class="result-row">
+      <span class="label">让胜</span>
+      <span class="value highlight" id="r-win">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">让平</span>
+      <span class="value warn" id="r-draw">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">让负</span>
+      <span class="value danger" id="r-loss">--</span>
+    </div>
+  </div>
+
+  <!-- 模型数据 -->
+  <div class="card">
+    <div class="card-title">模型数据</div>
+    <div class="result-row">
+      <span class="label">Elo差</span>
+      <span class="value" id="elo-diff">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">动态HT/FT因子</span>
+      <span class="value" id="htft-factor">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">Lambda A</span>
+      <span class="value" id="lambda-a">--</span>
+    </div>
+    <div class="result-row">
+      <span class="label">Lambda B</span>
+      <span class="value" id="lambda-b">--</span>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  v4.3-6model-ensemble | Poisson + Dixon-Coles + SSM + XGBoost + LightGBM + Elo
+</div>
+
+<script>
+// ===== UI逻辑 (v4.3) - API迁移版 =====
+(function(){
+  var allTeams = {};
+
+  fetch('/api/predict/teams')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.success && data.data) {
+        data.data.forEach(function(t) {
+          allTeams[t.key] = t;
+        });
+      }
+      var keys = Object.keys(allTeams).sort(function(a,b){return (allTeams[b].attack||0) - (allTeams[a].attack||0);});
+      var selA = document.getElementById('teamA');
+      var selB = document.getElementById('teamB');
+      keys.forEach(function(k){
+        var t = allTeams[k];
+        selA.add(new Option(t.name + ' (' + t.league + ')', k));
+        selB.add(new Option(t.name + ' (' + t.league + ')', k));
+      });
+      selA.value = 'bl1_bay';
+      selB.value = 'fl1_psg';
+    })
+    .catch(function(err){
+      console.error('数据加载失败:', err);
+      alert('数据加载失败，请刷新重试');
+    });
+})();
+
+function predict(){
+  var a = document.getElementById('teamA').value;
+  var b = document.getElementById('teamB').value;
+  var v = document.getElementById('venue').value;
+  var isNeutral = (v === 'neutral');
+
+  if(a === b){ alert('请选择不同的球队'); return; }
+
+  fetch('/api/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      homeTeam: a,
+      awayTeam: b,
+      options: { venue: v, neutral: isNeutral }
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(result) {
+    if (!result.success || !result.data) {
+      alert('预测失败: ' + (result.message || '未知错误'));
+      return;
+    }
+
+    var pred = result.data;
+    document.getElementById('results').classList.remove('hidden');
+
+    // 模型信息
+    document.getElementById('model-ver').textContent = pred.ensemble ? pred.ensemble.model : 'v4.3-6model-ensemble';
+
+    // 置信度
+    var conf = pred.confidence || {};
+    var confLevelEl = document.getElementById('conf-level');
+    var confMap = { 'high': '高', 'medium': '中', 'low': '低', 'very_low': '极低' };
+    var confText = confMap[conf.level] || '--';
+    var confColor = confText === '高' ? 'highlight' : (confText === '中' ? 'warn' : 'danger');
+    confLevelEl.textContent = confText;
+    confLevelEl.className = 'value ' + confColor;
+
+    // 置信度圆点
+    var dotsHtml = '';
+    var agreeNum = 0;
+    if (pred.ensemble && pred.ensemble.components) {
+      var topPred = pred.predictions.winDrawLose.win > pred.predictions.winDrawLose.lose ? 'win' : (pred.predictions.winDrawLose.draw > Math.max(pred.predictions.winDrawLose.win, pred.predictions.winDrawLose.lose) ? 'draw' : 'lose');
+      for (var mName in pred.ensemble.components) {
+        var comp = pred.ensemble.components[mName];
+        var mPred = comp.winA > comp.winB ? 'win' : (comp.draw > Math.max(comp.winA, comp.winB) ? 'draw' : 'lose');
+        if (mPred === topPred) agreeNum++;
+      }
+    }
+    for(var d = 0; d < 6; d++){
+      var dotClass = 'confidence-dot';
+      if(d < agreeNum){
+        dotClass += agreeNum >= 5 ? ' active' : (agreeNum >= 3 ? ' warn' : ' low');
+      }
+      dotsHtml += '<div class="' + dotClass + '"></div>';
+    }
+    document.getElementById('conf-dots').innerHTML = dotsHtml;
+    document.getElementById('conf-agree').textContent = agreeNum + '/6';
+
+    // 模型一致标签
+    var tagsHtml = '';
+    if(pred.ensemble && pred.ensemble.components){
+      var comps = pred.ensemble.components;
+      var topPred = pred.predictions.winDrawLose.win > pred.predictions.winDrawLose.lose ? 'win' : (pred.predictions.winDrawLose.draw > Math.max(pred.predictions.winDrawLose.win, pred.predictions.winDrawLose.lose) ? 'draw' : 'lose');
+      var models = [
+        {name:'Poisson', data:comps.poisson},
+        {name:'Dixon-Coles', data:comps.dixonCole},
+        {name:'SSM', data:comps.ssm},
+        {name:'XGBoost', data:comps.xgboost},
+        {name:'LightGBM', data:comps.lightgbm},
+        {name:'Elo', data:comps.elo}
+      ];
+      models.forEach(function(m){
+        if (!m.data) return;
+        var mPred = m.data.winA > m.data.winB ? 'win' : (m.data.draw > Math.max(m.data.winA, m.data.winB) ? 'draw' : 'lose');
+        var agree = mPred === topPred;
+        var label = mPred === 'win' ? '主胜' : (mPred === 'draw' ? '平局' : '客胜');
+        tagsHtml += '<span class="model-tag ' + (agree ? 'agree' : 'disagree') + '">' + m.name + ': ' + label + '</span>';
+      });
+    }
+    document.getElementById('model-tags').innerHTML = tagsHtml;
+
+    // 胜平负
+    var wdw = pred.predictions.winDrawLose;
+    document.getElementById('wdw-a').textContent = (wdw.win*100).toFixed(1) + '%';
+    document.getElementById('wdw-d').textContent = (wdw.draw*100).toFixed(1) + '%';
+    document.getElementById('wdw-b').textContent = (wdw.lose*100).toFixed(1) + '%';
+    document.getElementById('bar-a').style.width = (wdw.win*100) + '%';
+    document.getElementById('bar-d').style.width = (wdw.draw*100) + '%';
+    document.getElementById('bar-b').style.width = (wdw.lose*100) + '%';
+    var rec = wdw.win > wdw.draw && wdw.win > wdw.lose ? '主胜' : (wdw.draw > wdw.win && wdw.draw > wdw.lose ? '平局' : '客胜');
+    document.getElementById('wdw-rec').textContent = rec;
+
+    // 比分 TOP3
+    var sHtml = '';
+    var scores = pred.predictions.topScores || [];
+    scores.slice(0, 3).forEach(function(s, i){
+      sHtml += '<div class="rank-item"><div class="rank-num ' + (i < 1 ? 'top' : '') + '">' + (i+1) + '</div><div style="flex:1">' + s.score + '</div><div>' + (s.probability*100).toFixed(1) + '%</div></div>';
+    });
+    document.getElementById('scores').innerHTML = sHtml;
+
+    // 半全场 TOP3
+    var hHtml = '';
+    var htft = pred.predictions.halfFull || {};
+    var htftList = Object.entries(htft).sort(function(a,b){return b[1]-a[1]}).slice(0, 3);
+    htftList.forEach(function(h, i){
+      hHtml += '<div class="rank-item"><div class="rank-num ' + (i < 1 ? 'top' : '') + '">' + (i+1) + '</div><div style="flex:1">' + h[0] + '</div><div>' + (h[1]*100).toFixed(1) + '%</div></div>';
+    });
+    document.getElementById('htft').innerHTML = hHtml;
+
+    // 总进球
+    var tg = pred.predictions.totalGoals || {};
+    var expGoals = pred.lambda ? (pred.lambda.home + pred.lambda.away) : 0;
+    document.getElementById('exp-goals').textContent = expGoals.toFixed(2);
+    document.getElementById('over25').textContent = ((tg.over25 || 0)*100).toFixed(1) + '%';
+    document.getElementById('under25').textContent = ((tg.under25 || 0)*100).toFixed(1) + '%';
+    var over35 = 0, under35 = 0;
+    if (tg.distribution) {
+      for (var g in tg.distribution) {
+        if (parseInt(g) >= 4) over35 += tg.distribution[g];
+        else under35 += tg.distribution[g];
+      }
+    }
+    document.getElementById('over35').textContent = (over35*100).toFixed(1) + '%';
+    document.getElementById('under35').textContent = (under35*100).toFixed(1) + '%';
+    var gHtml = '';
+    if (tg.distribution) {
+      var sortedTg = Object.entries(tg.distribution).sort(function(a,b){return b[1]-a[1]}).slice(0, 5);
+      sortedTg.forEach(function(t, i){
+        gHtml += '<div class="rank-item"><div class="rank-num ' + (i < 1 ? 'top' : '') + '">' + (i+1) + '</div><div style="flex:1">' + t[0] + '球</div><div>' + (t[1]*100).toFixed(1) + '%</div></div>';
+      });
+    }
+    document.getElementById('top-goals').innerHTML = gHtml;
+
+    // 让球胜平负
+    var handicap = pred.predictions.handicap || {};
+    document.getElementById('r-win').textContent = ((handicap.win || 0)*100).toFixed(1) + '%';
+    document.getElementById('r-draw').textContent = ((handicap.draw || 0)*100).toFixed(1) + '%';
+    document.getElementById('r-loss').textContent = ((handicap.lose || 0)*100).toFixed(1) + '%';
+
+    // 模型数据
+    var teamA = allTeams[a] || {};
+    var teamB = allTeams[b] || {};
+    var eloA = teamA.attack ? Math.round(1800 + (teamA.attack - 1.0) * 50) : 1800;
+    var eloB = teamB.attack ? Math.round(1800 + (teamB.attack - 1.0) * 50) : 1800;
+    var eloDiff = eloA - eloB;
+    document.getElementById('elo-diff').textContent = (eloDiff > 0 ? '+' : '') + eloDiff;
+    document.getElementById('htft-factor').textContent = Math.tanh(eloDiff / 400).toFixed(3);
+    document.getElementById('lambda-a').textContent = (pred.lambda ? pred.lambda.home : 0).toFixed(3);
+    document.getElementById('lambda-b').textContent = (pred.lambda ? pred.lambda.away : 0).toFixed(3);
+
+    window.scrollTo(0, document.getElementById('results').offsetTop - 20);
+  })
+  .catch(function(err){
+    console.error('预测请求失败:', err);
+    alert('预测请求失败，请检查网络连接');
+  });
+}
+</script>
+</body>
+</html>

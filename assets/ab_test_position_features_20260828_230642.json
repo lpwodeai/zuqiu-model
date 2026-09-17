@@ -1,0 +1,72 @@
+{
+  "baseline": {
+    "per": {
+      "XGBoost": {
+        "accuracy": 0.48620328326929796,
+        "log_loss": 1.0124366283416748,
+        "rps": 0.20526795753915061,
+        "draw_recall": 0.3871866295264624
+      },
+      "LightGBM": {
+        "accuracy": 0.4889975550122249,
+        "log_loss": 1.0081503050673497,
+        "rps": 0.20451382340292287,
+        "draw_recall": 0.3579387186629526
+      }
+    },
+    "blend": {
+      "accuracy": 0.48969612294795667,
+      "log_loss": 1.0092922370386024,
+      "rps": 0.20467764994517362,
+      "draw_recall": 0.3788300835654596
+    }
+  },
+  "full": {
+    "per": {
+      "XGBoost": {
+        "accuracy": 0.48864827104435904,
+        "log_loss": 1.0115151405334473,
+        "rps": 0.20510481986567602,
+        "draw_recall": 0.3746518105849582
+      },
+      "LightGBM": {
+        "accuracy": 0.4921411107230178,
+        "log_loss": 1.008812024191326,
+        "rps": 0.20483710663853205,
+        "draw_recall": 0.32172701949860727
+      }
+    },
+    "blend": {
+      "accuracy": 0.48760041914076147,
+      "log_loss": 1.0090950786673292,
+      "rps": 0.2047501101929387,
+      "draw_recall": 0.3384401114206128
+    }
+  },
+  "pos_feature_cols": [
+    "sofa_fw_goals_5g_home",
+    "sofa_fw_assists_5g_home",
+    "sofa_fw_touches_5g_home",
+    "sofa_fw_rat_5g_home",
+    "sofa_mf_pass_5g_home",
+    "sofa_mf_touches_5g_home",
+    "sofa_mf_rat_5g_home",
+    "sofa_df_interception_5g_home",
+    "sofa_df_tackle_5g_home",
+    "sofa_df_duel_sr_5g_home",
+    "sofa_df_rat_5g_home",
+    "sofa_fw_goals_5g_away",
+    "sofa_fw_assists_5g_away",
+    "sofa_fw_touches_5g_away",
+    "sofa_fw_rat_5g_away",
+    "sofa_mf_pass_5g_away",
+    "sofa_mf_touches_5g_away",
+    "sofa_mf_rat_5g_away",
+    "sofa_df_interception_5g_away",
+    "sofa_df_tackle_5g_away",
+    "sofa_df_duel_sr_5g_away",
+    "sofa_df_rat_5g_away"
+  ],
+  "val_size": 2863,
+  "draw_share": 0.2507858889276982
+}

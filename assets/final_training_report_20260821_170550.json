@@ -1,0 +1,405 @@
+{
+  "timestamp": "2026-08-21T17:05:47.781441",
+  "optuna_params_used": true,
+  "xgb_optuna_best": {
+    "objective": "multi:softprob",
+    "num_class": 3,
+    "eval_metric": "mlogloss",
+    "max_depth": 4,
+    "learning_rate": 0.07,
+    "subsample": 0.785,
+    "colsample_bytree": 0.827,
+    "gamma": 5.0,
+    "min_child_weight": 13,
+    "max_delta_step": 0,
+    "reg_alpha": 0.1,
+    "reg_lambda": 8.0,
+    "seed": 42,
+    "n_estimators": 130
+  },
+  "lgb_optuna_best": {
+    "objective": "multiclass",
+    "num_class": 3,
+    "metric": "multi_logloss",
+    "max_depth": 4,
+    "learning_rate": 0.12,
+    "num_leaves": 128,
+    "subsample": 0.68,
+    "colsample_bytree": 0.54,
+    "reg_alpha": 3.353,
+    "reg_lambda": 13.904,
+    "min_child_weight": 8,
+    "min_data_in_leaf": 60,
+    "feature_fraction": 0.566,
+    "bagging_fraction": 0.783,
+    "bagging_freq": 5,
+    "seed": 42,
+    "verbose": 0,
+    "n_estimators": 80
+  },
+  "draw_calibrator_factor": 0.885,
+  "draw_threshold_factor": 1.5,
+  "validation_split": 0.2,
+  "feature_dim": 215,
+  "total_matches": 5256,
+  "models": {
+    "XGBoost": {
+      "training": {
+        "train_accuracy": 0.5794481446241675,
+        "train_logloss": 0.9378361105918884,
+        "val_accuracy_original": 0.4990494296577947,
+        "val_logloss_original": 1.0210527181625366,
+        "train_val_accuracy_gap": 0.10226183283709522,
+        "overfit_level": "severe"
+      },
+      "adaptive_search": {
+        "draw_recall_target": 0.28,
+        "threshold_search": {
+          "factor_min": 1.0,
+          "factor_max": 2.5,
+          "factor_step": 0.05,
+          "best_factor": 1.5000000000000004,
+          "best_accuracy": 0.47718631178707227,
+          "best_draw_recall": 0.34050179211469533,
+          "best_draw_precision": 0.30254777070063693
+        },
+        "draw_calibrator_search": {
+          "factor_min": 0.5,
+          "factor_max": 1.0,
+          "factor_step": 0.01,
+          "best_factor": 0.5,
+          "best_accuracy": 0.47718631178707227,
+          "best_draw_recall": 0.34050179211469533,
+          "best_draw_precision": 0.30254777070063693
+        }
+      },
+      "candidates": {
+        "original": {
+          "label": "Original",
+          "accuracy": 0.4990494296577947,
+          "draw_recall": 0.0,
+          "draw_precision": 0.0,
+          "f1_macro": 0.3721097795987664,
+          "draw_target_028_met": false,
+          "classification_report": {
+            "客胜": {
+              "precision": 0.4730878186968839,
+              "recall": 0.5091463414634146,
+              "f1-score": 0.49045521292217326,
+              "support": 328.0
+            },
+            "平局": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 279.0
+            },
+            "主胜": {
+              "precision": 0.5121602288984263,
+              "recall": 0.8044943820224719,
+              "f1-score": 0.6258741258741258,
+              "support": 445.0
+            },
+            "accuracy": 0.4990494296577947,
+            "macro avg": {
+              "precision": 0.3284160158651034,
+              "recall": 0.4378802411619622,
+              "f1-score": 0.3721097795987664,
+              "support": 1052.0
+            },
+            "weighted avg": {
+              "precision": 0.3641483901068229,
+              "recall": 0.4990494296577947,
+              "f1-score": 0.41766472989777453,
+              "support": 1052.0
+            }
+          },
+          "threshold_factor": null,
+          "calibrator_factor": null
+        },
+        "threshold": {
+          "label": "Threshold(F=1.50)*",
+          "accuracy": 0.47718631178707227,
+          "draw_recall": 0.34050179211469533,
+          "draw_precision": 0.30254777070063693,
+          "f1_macro": 0.457499874562902,
+          "draw_target_028_met": true,
+          "classification_report": {
+            "客胜": {
+              "precision": 0.516728624535316,
+              "recall": 0.42378048780487804,
+              "f1-score": 0.4656616415410385,
+              "support": 328.0
+            },
+            "平局": {
+              "precision": 0.30254777070063693,
+              "recall": 0.34050179211469533,
+              "f1-score": 0.32040472175379425,
+              "support": 279.0
+            },
+            "主胜": {
+              "precision": 0.5714285714285714,
+              "recall": 0.6022471910112359,
+              "f1-score": 0.5864332603938731,
+              "support": 445.0
+            },
+            "accuracy": 0.47718631178707227,
+            "macro avg": {
+              "precision": 0.4635683222215081,
+              "recall": 0.4555098236436031,
+              "f1-score": 0.457499874562902,
+              "support": 1052.0
+            },
+            "weighted avg": {
+              "precision": 0.48306419311670684,
+              "recall": 0.47718631178707227,
+              "f1-score": 0.4782250348574551,
+              "support": 1052.0
+            }
+          },
+          "threshold_factor": 1.5000000000000004,
+          "calibrator_factor": null
+        },
+        "calibrator": {
+          "label": "DrawCalibrator(F=0.500)*",
+          "accuracy": 0.47718631178707227,
+          "draw_recall": 0.34050179211469533,
+          "draw_precision": 0.30254777070063693,
+          "f1_macro": 0.457499874562902,
+          "draw_target_028_met": true,
+          "classification_report": {
+            "客胜": {
+              "precision": 0.516728624535316,
+              "recall": 0.42378048780487804,
+              "f1-score": 0.4656616415410385,
+              "support": 328.0
+            },
+            "平局": {
+              "precision": 0.30254777070063693,
+              "recall": 0.34050179211469533,
+              "f1-score": 0.32040472175379425,
+              "support": 279.0
+            },
+            "主胜": {
+              "precision": 0.5714285714285714,
+              "recall": 0.6022471910112359,
+              "f1-score": 0.5864332603938731,
+              "support": 445.0
+            },
+            "accuracy": 0.47718631178707227,
+            "macro avg": {
+              "precision": 0.4635683222215081,
+              "recall": 0.4555098236436031,
+              "f1-score": 0.457499874562902,
+              "support": 1052.0
+            },
+            "weighted avg": {
+              "precision": 0.48306419311670684,
+              "recall": 0.47718631178707227,
+              "f1-score": 0.4782250348574551,
+              "support": 1052.0
+            }
+          },
+          "threshold_factor": null,
+          "calibrator_factor": 0.5
+        }
+      },
+      "recommended": {
+        "method": "threshold",
+        "label": "Threshold(F=1.50)*",
+        "draw_calibrator_factor": null,
+        "draw_threshold_factor": 1.5000000000000004,
+        "accuracy": 0.47718631178707227,
+        "draw_recall": 0.34050179211469533,
+        "draw_recall_target_028_met": true,
+        "draw_precision": 0.30254777070063693,
+        "f1_macro": 0.457499874562902,
+        "ece_original": 0.02060058886239587,
+        "ece_after_calibration": 0.06094098505676169,
+        "logloss_after_calibration": 1.030653476715088,
+        "home_recall": 0.6022471910112359,
+        "away_recall": 0.42378048780487804,
+        "accuracy_loss_vs_original_pp": -2.186311787072243
+      }
+    },
+    "LightGBM": {
+      "training": {
+        "train_accuracy": 0.6120361560418649,
+        "train_logloss": 0.9000953249732736,
+        "val_accuracy_original": 0.5,
+        "val_logloss_original": 1.0282907382817554,
+        "train_val_accuracy_gap": 0.1453061180190512,
+        "overfit_level": "severe"
+      },
+      "adaptive_search": {
+        "draw_recall_target": 0.28,
+        "threshold_search": {
+          "factor_min": 1.0,
+          "factor_max": 2.5,
+          "factor_step": 0.05,
+          "best_factor": 1.4500000000000004,
+          "best_accuracy": 0.4667300380228137,
+          "best_draw_recall": 0.2831541218637993,
+          "best_draw_precision": 0.2743055555555556
+        },
+        "draw_calibrator_search": {
+          "factor_min": 0.5,
+          "factor_max": 1.0,
+          "factor_step": 0.01,
+          "best_factor": 0.55,
+          "best_accuracy": 0.4667300380228137,
+          "best_draw_recall": 0.2831541218637993,
+          "best_draw_precision": 0.2743055555555556
+        }
+      },
+      "candidates": {
+        "original": {
+          "label": "Original",
+          "accuracy": 0.5,
+          "draw_recall": 0.0035842293906810036,
+          "draw_precision": 0.25,
+          "f1_macro": 0.3763003996481862,
+          "draw_target_028_met": false,
+          "classification_report": {
+            "客胜": {
+              "precision": 0.48563218390804597,
+              "recall": 0.5152439024390244,
+              "f1-score": 0.5,
+              "support": 328.0
+            },
+            "平局": {
+              "precision": 0.25,
+              "recall": 0.0035842293906810036,
+              "f1-score": 0.007067137809187279,
+              "support": 279.0
+            },
+            "主胜": {
+              "precision": 0.5085714285714286,
+              "recall": 0.8,
+              "f1-score": 0.6218340611353712,
+              "support": 445.0
+            },
+            "accuracy": 0.5,
+            "macro avg": {
+              "precision": 0.41473453749315814,
+              "recall": 0.4396093772765685,
+              "f1-score": 0.3763003996481862,
+              "support": 1052.0
+            },
+            "weighted avg": {
+              "precision": 0.4328437661940349,
+              "recall": 0.5,
+              "f1-score": 0.42080597780798806,
+              "support": 1052.0
+            }
+          },
+          "threshold_factor": null,
+          "calibrator_factor": null
+        },
+        "threshold": {
+          "label": "Threshold(F=1.45)*",
+          "accuracy": 0.4667300380228137,
+          "draw_recall": 0.2831541218637993,
+          "draw_precision": 0.2743055555555556,
+          "f1_macro": 0.4393246402664453,
+          "draw_target_028_met": true,
+          "classification_report": {
+            "客胜": {
+              "precision": 0.524,
+              "recall": 0.39939024390243905,
+              "f1-score": 0.4532871972318339,
+              "support": 328.0
+            },
+            "平局": {
+              "precision": 0.2743055555555556,
+              "recall": 0.2831541218637993,
+              "f1-score": 0.2786596119929453,
+              "support": 279.0
+            },
+            "主胜": {
+              "precision": 0.546692607003891,
+              "recall": 0.6314606741573033,
+              "f1-score": 0.5860271115745568,
+              "support": 445.0
+            },
+            "accuracy": 0.4667300380228137,
+            "macro avg": {
+              "precision": 0.4483327208531489,
+              "recall": 0.4380016799745139,
+              "f1-score": 0.4393246402664453,
+              "support": 1052.0
+            },
+            "weighted avg": {
+              "precision": 0.4673778137991744,
+              "recall": 0.4667300380228137,
+              "f1-score": 0.4631238565482424,
+              "support": 1052.0
+            }
+          },
+          "threshold_factor": 1.4500000000000004,
+          "calibrator_factor": null
+        },
+        "calibrator": {
+          "label": "DrawCalibrator(F=0.550)*",
+          "accuracy": 0.4667300380228137,
+          "draw_recall": 0.2831541218637993,
+          "draw_precision": 0.2743055555555556,
+          "f1_macro": 0.4393246402664453,
+          "draw_target_028_met": true,
+          "classification_report": {
+            "客胜": {
+              "precision": 0.524,
+              "recall": 0.39939024390243905,
+              "f1-score": 0.4532871972318339,
+              "support": 328.0
+            },
+            "平局": {
+              "precision": 0.2743055555555556,
+              "recall": 0.2831541218637993,
+              "f1-score": 0.2786596119929453,
+              "support": 279.0
+            },
+            "主胜": {
+              "precision": 0.546692607003891,
+              "recall": 0.6314606741573033,
+              "f1-score": 0.5860271115745568,
+              "support": 445.0
+            },
+            "accuracy": 0.4667300380228137,
+            "macro avg": {
+              "precision": 0.4483327208531489,
+              "recall": 0.4380016799745139,
+              "f1-score": 0.4393246402664453,
+              "support": 1052.0
+            },
+            "weighted avg": {
+              "precision": 0.4673778137991744,
+              "recall": 0.4667300380228137,
+              "f1-score": 0.4631238565482424,
+              "support": 1052.0
+            }
+          },
+          "threshold_factor": null,
+          "calibrator_factor": 0.55
+        }
+      },
+      "recommended": {
+        "method": "threshold",
+        "label": "Threshold(F=1.45)*",
+        "draw_calibrator_factor": null,
+        "draw_threshold_factor": 1.4500000000000004,
+        "accuracy": 0.4667300380228137,
+        "draw_recall": 0.2831541218637993,
+        "draw_recall_target_028_met": true,
+        "draw_precision": 0.2743055555555556,
+        "f1_macro": 0.4393246402664453,
+        "ece_original": 0.021989306160547523,
+        "ece_after_calibration": 0.06360378853317232,
+        "logloss_after_calibration": 1.0345893044156804,
+        "home_recall": 0.6314606741573033,
+        "away_recall": 0.39939024390243905,
+        "accuracy_loss_vs_original_pp": -3.3269961977186293
+      }
+    }
+  }
+}

@@ -1,0 +1,515 @@
+{
+  "generated_at": "2026-07-13T09:02:54.683537",
+  "models": {
+    "xgboost": {
+      "expected_value": [
+        -0.05507191643118858,
+        -0.2116853892803192,
+        0.23611196875572205
+      ],
+      "feature_importance": {
+        "away_win": [
+          {
+            "feature": "h2h_last_result",
+            "shap_importance": 0.5808845162391663
+          },
+          {
+            "feature": "h2h_away_streak",
+            "shap_importance": 0.20578087866306305
+          },
+          {
+            "feature": "h2h_away_win_rate",
+            "shap_importance": 0.07294673472642899
+          },
+          {
+            "feature": "h2h_goal_diff_avg",
+            "shap_importance": 0.06515978276729584
+          },
+          {
+            "feature": "h2h_home_streak",
+            "shap_importance": 0.03637738153338432
+          },
+          {
+            "feature": "h2h_draw_rate",
+            "shap_importance": 0.031102564185857773
+          },
+          {
+            "feature": "h2h_avg_goals_away",
+            "shap_importance": 0.010037695057690144
+          },
+          {
+            "feature": "home_games_played",
+            "shap_importance": 0.00858770590275526
+          },
+          {
+            "feature": "h2h_avg_goals_home",
+            "shap_importance": 0.00854421779513359
+          },
+          {
+            "feature": "away_games_played",
+            "shap_importance": 0.007627429906278849
+          },
+          {
+            "feature": "away_goals_std",
+            "shap_importance": 0.0039685615338385105
+          },
+          {
+            "feature": "home_draw_rate",
+            "shap_importance": 0.0033644891809672117
+          },
+          {
+            "feature": "h2h_home_win_rate",
+            "shap_importance": 0.0027589292731136084
+          },
+          {
+            "feature": "h2h_matches",
+            "shap_importance": 0.0020017072092741728
+          },
+          {
+            "feature": "home_consecutive_undefeated",
+            "shap_importance": 0.0013208425370976329
+          },
+          {
+            "feature": "h2h_avg_total_goals",
+            "shap_importance": 0.0012813189532607794
+          },
+          {
+            "feature": "weighted_form_diff",
+            "shap_importance": 0.0008914078935049474
+          },
+          {
+            "feature": "home_recent_form",
+            "shap_importance": 0.0008004939300008118
+          },
+          {
+            "feature": "away_consecutive_losses",
+            "shap_importance": 0.000750890641938895
+          },
+          {
+            "feature": "home_home_win_rate",
+            "shap_importance": 0.0006123105413280427
+          }
+        ],
+        "draw": [
+          {
+            "feature": "h2h_draw_rate",
+            "shap_importance": 0.4650082290172577
+          },
+          {
+            "feature": "h2h_last_result",
+            "shap_importance": 0.31347352266311646
+          },
+          {
+            "feature": "h2h_away_streak",
+            "shap_importance": 0.06554294377565384
+          },
+          {
+            "feature": "h2h_home_streak",
+            "shap_importance": 0.056824129074811935
+          },
+          {
+            "feature": "h2h_home_win_rate",
+            "shap_importance": 0.05392306298017502
+          },
+          {
+            "feature": "home_games_played",
+            "shap_importance": 0.04057358205318451
+          },
+          {
+            "feature": "h2h_goal_diff_avg",
+            "shap_importance": 0.022641098126769066
+          },
+          {
+            "feature": "h2h_away_win_rate",
+            "shap_importance": 0.015580883249640465
+          },
+          {
+            "feature": "home_draw_rate",
+            "shap_importance": 0.014019309543073177
+          },
+          {
+            "feature": "away_games_played",
+            "shap_importance": 0.0026930856984108686
+          },
+          {
+            "feature": "away_form_trend",
+            "shap_importance": 0.0015118125593289733
+          },
+          {
+            "feature": "form_diff",
+            "shap_importance": 0.001366178854368627
+          },
+          {
+            "feature": "h2h_matches",
+            "shap_importance": 0.0013500653440132737
+          },
+          {
+            "feature": "away_avg_opp_goals",
+            "shap_importance": 0.0006665217806585133
+          },
+          {
+            "feature": "home_opponent_avg_win_rate",
+            "shap_importance": 0.0006182320648804307
+          },
+          {
+            "feature": "home_recent_form",
+            "shap_importance": 0.00048730993876233697
+          },
+          {
+            "feature": "away_consecutive_undefeated",
+            "shap_importance": 0.0004805056087207049
+          },
+          {
+            "feature": "home_consecutive_undefeated",
+            "shap_importance": 0.00032634951639920473
+          },
+          {
+            "feature": "is_weekend",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "day_of_week",
+            "shap_importance": 0.0
+          }
+        ],
+        "home_win": [
+          {
+            "feature": "h2h_last_result",
+            "shap_importance": 0.6392375230789185
+          },
+          {
+            "feature": "h2h_home_streak",
+            "shap_importance": 0.20252254605293274
+          },
+          {
+            "feature": "h2h_home_win_rate",
+            "shap_importance": 0.08689068257808685
+          },
+          {
+            "feature": "h2h_goal_diff_avg",
+            "shap_importance": 0.03346574679017067
+          },
+          {
+            "feature": "h2h_away_streak",
+            "shap_importance": 0.024529073387384415
+          },
+          {
+            "feature": "h2h_draw_rate",
+            "shap_importance": 0.022587433457374573
+          },
+          {
+            "feature": "h2h_avg_goals_home",
+            "shap_importance": 0.016884777694940567
+          },
+          {
+            "feature": "away_games_played",
+            "shap_importance": 0.005397351924329996
+          },
+          {
+            "feature": "h2h_avg_goals_away",
+            "shap_importance": 0.0053367288783192635
+          },
+          {
+            "feature": "is_late_season",
+            "shap_importance": 0.004654201213270426
+          },
+          {
+            "feature": "h2h_away_win_rate",
+            "shap_importance": 0.004434988368302584
+          },
+          {
+            "feature": "h2h_avg_total_goals",
+            "shap_importance": 0.003436934668570757
+          },
+          {
+            "feature": "away_avg_opp_goals",
+            "shap_importance": 0.0016471956623718143
+          },
+          {
+            "feature": "away_loss_rate",
+            "shap_importance": 0.001406650641001761
+          },
+          {
+            "feature": "away_consecutive_undefeated",
+            "shap_importance": 0.0008952523348852992
+          },
+          {
+            "feature": "home_home_advantage",
+            "shap_importance": 0.0007350451778620481
+          },
+          {
+            "feature": "home_games_played",
+            "shap_importance": 0.0006689576548524201
+          },
+          {
+            "feature": "undefeated_diff",
+            "shap_importance": 0.0005121525609865785
+          },
+          {
+            "feature": "form_diff",
+            "shap_importance": 0.0004399741010274738
+          },
+          {
+            "feature": "away_home_win_rate",
+            "shap_importance": 0.000434111658250913
+          }
+        ]
+      }
+    },
+    "lightgbm": {
+      "expected_value": [
+        -1.8909443115640554,
+        -2.0512052291901264,
+        -1.222544623488257
+      ],
+      "feature_importance": {
+        "away_win": [
+          {
+            "feature": "h2h_last_result",
+            "shap_importance": 1.4186589703116268
+          },
+          {
+            "feature": "h2h_away_streak",
+            "shap_importance": 0.7165062416832444
+          },
+          {
+            "feature": "h2h_away_win_rate",
+            "shap_importance": 0.2348933696805866
+          },
+          {
+            "feature": "h2h_avg_goals_away",
+            "shap_importance": 0.016074096434877647
+          },
+          {
+            "feature": "home_games_played",
+            "shap_importance": 0.006221640205643526
+          },
+          {
+            "feature": "league_La Liga",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "league_Serie A",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "league_Premier League",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_mid_season",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_early_season",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_weekend",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "day_of_week",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "month",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_late_season",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "home_avg_opp_goals",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "home_avg_goals",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "home_recent_form",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "home_form_trend",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "home_consecutive_losses",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "home_consecutive_wins",
+            "shap_importance": 0.0
+          }
+        ],
+        "draw": [
+          {
+            "feature": "h2h_draw_rate",
+            "shap_importance": 1.1187226388205513
+          },
+          {
+            "feature": "h2h_last_result",
+            "shap_importance": 0.47357000505500624
+          },
+          {
+            "feature": "h2h_home_win_rate",
+            "shap_importance": 0.27396615132196606
+          },
+          {
+            "feature": "h2h_away_win_rate",
+            "shap_importance": 0.2020730165099575
+          },
+          {
+            "feature": "h2h_goal_diff_avg",
+            "shap_importance": 0.12212704113899994
+          },
+          {
+            "feature": "h2h_away_streak",
+            "shap_importance": 0.0567557923306373
+          },
+          {
+            "feature": "away_games_played",
+            "shap_importance": 0.05652990279306438
+          },
+          {
+            "feature": "h2h_home_streak",
+            "shap_importance": 0.042944221174923615
+          },
+          {
+            "feature": "home_draw_rate",
+            "shap_importance": 0.04280840019487989
+          },
+          {
+            "feature": "opponent_strength_diff",
+            "shap_importance": 0.031510616412683407
+          },
+          {
+            "feature": "home_games_played",
+            "shap_importance": 0.027473475882601406
+          },
+          {
+            "feature": "away_form_trend",
+            "shap_importance": 0.017851710041688357
+          },
+          {
+            "feature": "away_draw_rate",
+            "shap_importance": 0.013848591589457927
+          },
+          {
+            "feature": "h2h_avg_total_goals",
+            "shap_importance": 0.00711901068982848
+          },
+          {
+            "feature": "league_Premier League",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "league_La Liga",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_mid_season",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_early_season",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_weekend",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "day_of_week",
+            "shap_importance": 0.0
+          }
+        ],
+        "home_win": [
+          {
+            "feature": "h2h_last_result",
+            "shap_importance": 1.2911945070206545
+          },
+          {
+            "feature": "h2h_home_win_rate",
+            "shap_importance": 0.44192429111492326
+          },
+          {
+            "feature": "h2h_home_streak",
+            "shap_importance": 0.35195548672817123
+          },
+          {
+            "feature": "h2h_draw_rate",
+            "shap_importance": 0.2240252924164639
+          },
+          {
+            "feature": "h2h_away_streak",
+            "shap_importance": 0.18292304980968618
+          },
+          {
+            "feature": "h2h_avg_goals_home",
+            "shap_importance": 0.170645281223715
+          },
+          {
+            "feature": "h2h_goal_diff_avg",
+            "shap_importance": 0.14007865795294316
+          },
+          {
+            "feature": "h2h_avg_goals_away",
+            "shap_importance": 0.08313018812327556
+          },
+          {
+            "feature": "home_games_played",
+            "shap_importance": 0.041372777317223615
+          },
+          {
+            "feature": "away_games_played",
+            "shap_importance": 0.03327378468449015
+          },
+          {
+            "feature": "away_draw_rate",
+            "shap_importance": 0.01852580849297392
+          },
+          {
+            "feature": "home_weighted_avg_goals",
+            "shap_importance": 0.013955360870200396
+          },
+          {
+            "feature": "away_avg_goals",
+            "shap_importance": 0.004695054479542594
+          },
+          {
+            "feature": "away_goals_std",
+            "shap_importance": 0.004190508115630361
+          },
+          {
+            "feature": "league_Premier League",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "league_La Liga",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_mid_season",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_early_season",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "is_weekend",
+            "shap_importance": 0.0
+          },
+          {
+            "feature": "day_of_week",
+            "shap_importance": 0.0
+          }
+        ]
+      }
+    }
+  }
+}

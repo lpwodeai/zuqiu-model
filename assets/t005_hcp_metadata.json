@@ -1,0 +1,104 @@
+{
+  "model_name": "T-005 HCP LightGBM",
+  "version": "20260810_183656",
+  "created_at": "2026-08-10 18:37:23",
+  "task": "让球胜平负预测 (3类分类: 上盘赢/走水/下盘赢)",
+  "feature_columns": [
+    "hcp_prob_win",
+    "hcp_prob_draw",
+    "hcp_prob_lose",
+    "hcp_home_strength",
+    "hcp_draw_risk",
+    "hcp_confidence",
+    "hcp_entropy",
+    "hcp_expected_value",
+    "hcp_volatility",
+    "hcp_market_sentiment",
+    "hcp_underdog_ratio",
+    "hcp_favorite_margin",
+    "hcp_balance",
+    "hcp_upset_risk",
+    "hcp_odds_skew",
+    "home_elo",
+    "away_elo",
+    "elo_diff",
+    "elo_ratio",
+    "elo_home_expected",
+    "elo_away_expected",
+    "elo_draw_prob",
+    "home_elo_momentum",
+    "away_elo_momentum",
+    "elo_confidence"
+  ],
+  "feature_dim": 25,
+  "hcp_features": [
+    "hcp_prob_win",
+    "hcp_prob_draw",
+    "hcp_prob_lose",
+    "hcp_home_strength",
+    "hcp_draw_risk",
+    "hcp_confidence",
+    "hcp_entropy",
+    "hcp_expected_value",
+    "hcp_volatility",
+    "hcp_market_sentiment",
+    "hcp_underdog_ratio",
+    "hcp_favorite_margin",
+    "hcp_balance",
+    "hcp_upset_risk",
+    "hcp_odds_skew"
+  ],
+  "elo_features": [
+    "home_elo",
+    "away_elo",
+    "elo_diff",
+    "elo_ratio",
+    "elo_home_expected",
+    "elo_away_expected",
+    "elo_draw_prob",
+    "home_elo_momentum",
+    "away_elo_momentum",
+    "elo_confidence"
+  ],
+  "training_samples": 3914,
+  "class_distribution": {
+    "上盘赢(0)": 1179,
+    "走水(1)": 883,
+    "下盘赢(2)": 1852
+  },
+  "model_params": {
+    "max_depth": 3,
+    "learning_rate": 0.03,
+    "n_estimators": 57,
+    "num_leaves": 15,
+    "min_child_samples": 10,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7,
+    "reg_alpha": 0.5,
+    "reg_lambda": 0.5
+  },
+  "label_names": {
+    "0": "上盘赢",
+    "1": "走水",
+    "2": "下盘赢"
+  },
+  "eval_accuracy": 0.561941251596424,
+  "data_source": "odds.db handicap_history + 扩充数据集(反推标签)",
+  "known_blindspots": [
+    {
+      "盲区": "走水预测",
+      "召回率": "2.2%",
+      "严重度": "高"
+    },
+    {
+      "盲区": "冷门比赛",
+      "准确率差距": "62.0pp",
+      "严重度": "高"
+    },
+    {
+      "盲区": "极端盘口(≥±2球)",
+      "准确率差距": "5.7pp",
+      "严重度": "中"
+    }
+  ]
+}

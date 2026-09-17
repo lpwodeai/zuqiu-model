@@ -52,6 +52,8 @@ if (cluster.isPrimary) {
   const { trainScheduler } = await import('./services/train-scheduler.js');
   const { logger } = await import('./services/logger.js');
   const { reviewService } = await import('./services/review-service.js');
+  const PredictionServiceModule = await import('./services/prediction-service.js');
+  const PredictionService = PredictionServiceModule.default;
 
   // 主进程数据库连接（定时任务/统计用）
   try {
@@ -60,6 +62,14 @@ if (cluster.isPrimary) {
     console.log('✅ [主进程] 数据库连接成功');
   } catch (err) {
     console.error('❌ [主进程] 数据库连接失败:', err.message);
+  }
+
+  // 主进程也初始化预测服务（主进程也需要做模型管理和健康检查）
+  try {
+    await PredictionService.init();
+    console.log('✅ [主进程] 预测服务已初始化');
+  } catch (err) {
+    console.error('❌ [主进程] 预测服务初始化失败:', err.message);
   }
 
   // 定时任务只在主进程运行

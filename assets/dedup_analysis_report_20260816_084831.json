@@ -1,0 +1,103 @@
+{
+  "timestamp": "2026-08-16T08:48:31.165524",
+  "total_matches": 5258,
+  "duplicate_groups": 0,
+  "excess_samples": 0,
+  "duplicate_rate_percent": 0,
+  "match_id_duplicates": 0,
+  "near_duplicates_3days": 0,
+  "verdict": "✅ 重复率 < 1%，数据质量良好",
+  "duplicate_details": [],
+  "league_stats": [
+    {
+      "league": "西甲2025-2026赛季",
+      "total": 380,
+      "unique": 380,
+      "dups": 0
+    },
+    {
+      "league": "西甲2024-2025赛季",
+      "total": 380,
+      "unique": 380,
+      "dups": 0
+    },
+    {
+      "league": "西甲2023-2024赛季",
+      "total": 380,
+      "unique": 380,
+      "dups": 0
+    },
+    {
+      "league": "英超2025-2026赛季",
+      "total": 380,
+      "unique": 380,
+      "dups": 0
+    },
+    {
+      "league": "英超2024-2025赛季",
+      "total": 381,
+      "unique": 381,
+      "dups": 0
+    },
+    {
+      "league": "英超2023-2024赛季",
+      "total": 380,
+      "unique": 380,
+      "dups": 0
+    },
+    {
+      "league": "法甲2025-2026赛季",
+      "total": 306,
+      "unique": 306,
+      "dups": 0
+    },
+    {
+      "league": "法甲2024-2025赛季",
+      "total": 306,
+      "unique": 306,
+      "dups": 0
+    },
+    {
+      "league": "法甲2023-2024赛季",
+      "total": 307,
+      "unique": 307,
+      "dups": 0
+    },
+    {
+      "league": "意甲2025-2026赛季",
+      "total": 380,
+      "unique": 380,
+      "dups": 0
+    },
+    {
+      "league": "意甲2024-2025赛季",
+      "total": 380,
+      "unique": 380,
+      "dups": 0
+    },
+    {
+      "league": "意甲2023-2024赛季",
+      "total": 380,
+      "unique": 380,
+      "dups": 0
+    },
+    {
+      "league": "德甲2025-2026赛季",
+      "total": 306,
+      "unique": 306,
+      "dups": 0
+    },
+    {
+      "league": "德甲2024-2025赛季",
+      "total": 306,
+      "unique": 306,
+      "dups": 0
+    },
+    {
+      "league": "德甲2023-2024赛季",
+      "total": 306,
+      "unique": 306,
+      "dups": 0
+    }
+  ]
+}

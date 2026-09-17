@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五大联赛预测系统 - 智能仪表盘</title>
+  <style>
+    :root {
+      --primary: #e94560;
+      --secondary: #16213e;
+      --dark: #1a1a2e;
+      --accent: #0f3460;
+      --success: #00ff88;
+      --warning: #f39c12;
+      --danger: #ff4444;
+      --info: #44aaff;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--dark); color: #fff; line-height: 1.6; }
+    
+    .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 15px; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 15px; background: var(--secondary); border-radius: 12px; }
+    .header h1 { font-size: 1.5em; color: var(--primary); }
+    .header .logo { font-size: 1.8em; }
+    .header .nav-links { display: flex; gap: 15px; }
+    .header .nav-links a { color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 6px; transition: background 0.3s; }
+    .header .nav-links a:hover { background: var(--accent); }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+    .stat-card { background: var(--secondary); padding: 20px; border-radius: 12px; text-align: center; }
+    .stat-card .stat-icon { font-size: 2em; margin-bottom: 10px; }
+    .stat-card .stat-value { font-size: 2.5em; font-weight: bold; color: var(--success); margin-bottom: 5px; }
+    .stat-card .stat-label { color: #aaa; font-size: 0.9em; }
+    .stat-card.warning .stat-value { color: var(--warning); }
+    .stat-card.danger .stat-value { color: var(--danger); }
+    .stat-card.info .stat-value { color: var(--info); }
+    
+    .main-content { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+    
+    .match-selector { background: var(--secondary); padding: 20px; border-radius: 12px; }
+    .match-selector h3 { color: var(--info); margin-bottom: 20px; font-size: 1.1em; }
+    .select-group { margin-bottom: 15px; }
+    .select-group label { display: block; color: #aaa; margin-bottom: 5px; font-size: 0.85em; }
+    .select-group select { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 8px; color: #fff; font-size: 1em; cursor: pointer; }
+    .select-group select:focus { outline: 2px solid var(--primary); }
+    .select-group input[type="number"] { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 8px; color: #fff; font-size: 1em; }
+    .select-group input[type="radio"] { margin-right: 8px; }
+    .select-group .radio-group { display: flex; gap: 15px; }
+    .predict-btn { width: 100%; padding: 15px; background: var(--primary); border: none; border-radius: 8px; color: #fff; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-top: 20px; transition: opacity 0.3s; }
+    .predict-btn:hover { opacity: 0.9; }
+    .predict-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .prediction-panel { background: var(--secondary); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+    .prediction-panel h3 { color: var(--info); margin-bottom: 20px; font-size: 1.1em; }
+    
+    .probability-chart { display: flex; gap: 10px; margin-bottom: 20px; }
+    .prob-bar { flex: 1; height: 80px; border-radius: 8px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 10px; transition: height 0.5s; }
+    .prob-bar.winA { background: linear-gradient(to top, #00ff88, #00cc6a); }
+    .prob-bar.draw { background: linear-gradient(to top, #f39c12, #e67e22); }
+    .prob-bar.winB { background: linear-gradient(to top, #ff4444, #cc0000); }
+    .prob-bar .percent { font-size: 1.5em; font-weight: bold; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+    .prob-bar .label { font-size: 0.8em; color: rgba(255,255,255,0.9); margin-top: 5px; }
+    
+    .team-info { display: flex; justify-content: space-around; margin-bottom: 20px; }
+    .team-card { text-align: center; padding: 15px; background: var(--accent); border-radius: 8px; }
+    .team-card .team-name { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; }
+    .team-card .team-rank { font-size: 0.9em; color: #aaa; }
+    
+    .score-predictions { margin-bottom: 20px; }
+    .score-predictions h4 { color: #aaa; font-size: 0.9em; margin-bottom: 10px; }
+    .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 10px; }
+    .score-box { background: var(--accent); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; transition: background 0.3s; }
+    .score-box:hover { background: var(--primary); }
+    .score-box .score { font-size: 1.1em; font-weight: bold; margin-bottom: 3px; }
+    .score-box .prob { font-size: 0.8em; color: var(--success); }
+    
+    .model-breakdown { background: var(--secondary); padding: 20px; border-radius: 12px; }
+    .model-breakdown h3 { color: var(--info); margin-bottom: 20px; font-size: 1.1em; }
+    .model-list { display: flex; flex-direction: column; gap: 10px; }
+    .model-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--accent); border-radius: 8px; }
+    .model-item .model-name { font-weight: bold; }
+    .model-item .model-probs { font-size: 0.9em; }
+    .model-item .model-weight { font-size: 0.8em; color: var(--warning); }
+    
+    .cache-info { background: var(--secondary); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+    .cache-info h3 { color: var(--info); margin-bottom: 10px; font-size: 1em; }
+    .cache-info .cache-stats { display: flex; gap: 20px; font-size: 0.9em; }
+    .cache-info .cache-hit { color: var(--success); }
+    .cache-info .cache-miss { color: var(--danger); }
+    
+    .backtest-section { background: var(--secondary); padding: 20px; border-radius: 12px; }
+    .backtest-section h3 { color: var(--info); margin-bottom: 15px; font-size: 1.1em; }
+    .backtest-btn { padding: 10px 20px; background: var(--info); border: none; border-radius: 6px; color: #fff; cursor: pointer; margin-bottom: 15px; }
+    .backtest-result { font-family: monospace; font-size: 0.9em; }
+    
+    .social-share { background: var(--secondary); padding: 20px; border-radius: 12px; }
+    .social-share h3 { color: var(--info); margin-bottom: 15px; font-size: 1.1em; }
+    .social-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+    .social-btn { padding: 10px 15px; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.9em; }
+    .social-btn.wechat { background: #07c160; }
+    .social-btn.weibo { background: #e6162d; }
+    .social-btn.twitter { background: #1da1f2; }
+    .social-btn.copy { background: var(--accent); }
+    
+    @media (max-width: 1024px) {
+      .main-content { grid-template-columns: 1fr; }
+    }
+    
+    @media (max-width: 640px) {
+      .header { flex-direction: column; gap: 15px; }
+      .header .nav-links { flex-wrap: wrap; justify-content: center; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .probability-chart { flex-direction: column; }
+      .prob-bar { height: 60px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <header class="header">
+      <div class="logo">🏆</div>
+      <h1>五大联赛智能预测系统</h1>
+      <nav class="nav-links">
+        <a href="#predict">预测</a>
+        <a href="#backtest">回测</a>
+        <a href="#teams">球队</a>
+        <a href="#settings">设置</a>
+      </nav>
+    </header>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value">9</div>
+        <div class="stat-label">预测场次</div>
+      </div>
+      <div class="stat-card info">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value">66.7%</div>
+        <div class="stat-label">预测准确率</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-value">0.8s</div>
+        <div class="stat-label">平均响应时间</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💾</div>
+        <div class="stat-value" id="cache-hit-rate">0%</div>
+        <div class="stat-label">缓存命中率</div>
+      </div>
+    </div>
+    
+    <div class="main-content">
+      <div class="left-panel">
+        <div class="prediction-panel" id="prediction-panel">
+          <h3>🎯 比赛预测</h3>
+          <div class="probability-chart" id="probability-chart">
+            <div class="prob-bar winA" style="height: 33%">
+              <div class="percent">33%</div>
+              <div class="label">主队胜</div>
+            </div>
+            <div class="prob-bar draw" style="height: 34%">
+              <div class="percent">34%</div>
+              <div class="label">平局</div>
+            </div>
+            <div class="prob-bar winB" style="height: 33%">
+              <div class="percent">33%</div>
+              <div class="label">客队胜</div>
+            </div>
+          </div>
+          <div class="team-info" id="team-info">
+            <div class="team-card">
+              <div class="team-name">主队</div>
+              <div class="team-rank">联赛排名 --</div>
+            </div>
+            <div class="team-card">
+              <div class="team-name">VS</div>
+            </div>
+            <div class="team-card">
+              <div class="team-name">客队</div>
+              <div class="team-rank">联赛排名 --</div>
+            </div>
+          </div>
+          <div class="score-predictions">
+            <h4>最可能比分</h4>
+            <div class="score-grid" id="score-grid">
+              <div class="score-box"><div class="score">1-0</div><div class="prob">15%</div></div>
+              <div class="score-box"><div class="score">2-0</div><div class="prob">12%</div></div>
+              <div class="score-box"><div class="score">2-1</div><div class="prob">18%</div></div>
+              <div class="score-box"><div class="score">1-1</div><div class="prob">12%</div></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="model-breakdown">
+          <h3>🔧 模型权重分配</h3>
+          <div class="model-list" id="model-list">
+            <div class="model-item">
+              <span class="model-name">泊松模型</span>
+              <span class="model-probs">--</span>
+              <span class="model-weight">25%</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">XGBoost</span>
+              <span class="model-probs">--</span>
+              <span class="model-weight">20%</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">LightGBM</span>
+              <span class="model-probs">--</span>
+              <span class="model-weight">15%</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">贝叶斯SSM</span>
+              <span class="model-probs">--</span>
+              <span class="model-weight">15%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="right-panel">
+        <div class="match-selector">
+          <h3>⚽ 选择比赛</h3>
+          <div class="select-group">
+            <label>主队</label>
+            <select id="teamA" onchange="updateTeamInfo()">
+              <option value="">请选择主队</option>
+            </select>
+          </div>
+          <div class="select-group">
+            <label>客队</label>
+            <select id="teamB" onchange="updateTeamInfo()">
+              <option value="">请选择客队</option>
+            </select>
+          </div>
+          <div class="select-group">
+            <label>比赛类型</label>
+            <select id="matchType">
+              <option value="league">联赛</option>
+              <option value="cup">杯赛</option>
+              <option value="derby">德比</option>
+              <option value="relegation">保级战</option>
+              <option value="titleRace">争冠战</option>
+            </select>
+          </div>
+          <div class="select-group">
+            <label>场地类型</label>
+            <div class="radio-group">
+              <label><input type="radio" name="venue" value="neutral" checked> 中立场地</label>
+              <label><input type="radio" name="venue" value="home"> 主场</label>
+            </div>
+          </div>
+          <div class="select-group">
+            <label>温度 (℃)</label>
+            <input type="number" id="temperature" value="20" min="-10" max="50">
+          </div>
+          <button class="predict-btn" onclick="runPrediction()" id="predict-btn">开始预测</button>
+        </div>
+        
+        <div class="cache-info">
+          <h3>💾 缓存状态</h3>
+          <div class="cache-stats">
+            <span>命中: <span class="cache-hit" id="cache-hits">0</span></span>
+            <span>未命中: <span class="cache-miss" id="cache-misses">0</span></span>
+          </div>
+        </div>
+        
+        <div class="backtest-section">
+          <h3>📈 历史回测</h3>
+          <button class="backtest-btn" onclick="runBacktest()">运行回测</button>
+          <div class="backtest-result" id="backtest-result"></div>
+        </div>
+        
+        <div class="social-share">
+          <h3>🔗 分享预测</h3>
+          <div class="social-buttons">
+            <button class="social-btn wechat" onclick="shareToWechat()">微信</button>
+            <button class="social-btn weibo" onclick="shareToWeibo()">微博</button>
+            <button class="social-btn twitter" onclick="shareToTwitter()">Twitter</button>
+            <button class="social-btn copy" onclick="copyToClipboard()">复制链接</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/modules/ui/social-share.js"></script>
+
+  <script>
+    var currentPrediction = null;
+    var allTeams = {};
+
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch('/api/predict/teams')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.success && data.data) {
+            data.data.forEach(function(t) {
+              allTeams[t.key] = t;
+            });
+          }
+          populateTeamSelects();
+          updateCacheStats();
+        })
+        .catch(function(err) {
+          console.error('数据加载失败:', err);
+          alert('数据加载失败，请刷新重试');
+        });
+    });
+
+    function populateTeamSelects() {
+      var teamA = document.getElementById('teamA');
+      var teamB = document.getElementById('teamB');
+      
+      for (var key in allTeams) {
+        var optionA = document.createElement('option');
+        optionA.value = key;
+        optionA.textContent = allTeams[key].name;
+        teamA.appendChild(optionA);
+        
+        var optionB = document.createElement('option');
+        optionB.value = key;
+        optionB.textContent = allTeams[key].name;
+        teamB.appendChild(optionB);
+      }
+      
+      teamA.value = 'bl1_bay';
+      teamB.value = 'fl1_psg';
+      updateTeamInfo();
+    }
+
+    function updateTeamInfo() {
+      var teamAKey = document.getElementById('teamA').value;
+      var teamBKey = document.getElementById('teamB').value;
+      
+      var teamA = allTeams[teamAKey];
+      var teamB = allTeams[teamBKey];
+      
+      var teamInfo = document.getElementById('team-info');
+      teamInfo.innerHTML = '';
+      
+      if (teamA) {
+        teamInfo.innerHTML += '<div class="team-card"><div class="team-name">' + teamA.name + '</div><div class="team-rank">联赛 ' + teamA.league + '</div></div>';
+      } else {
+        teamInfo.innerHTML += '<div class="team-card"><div class="team-name">主队</div><div class="team-rank">联赛 --</div></div>';
+      }
+      
+      teamInfo.innerHTML += '<div class="team-card"><div class="team-name">VS</div></div>';
+      
+      if (teamB) {
+        teamInfo.innerHTML += '<div class="team-card"><div class="team-name">' + teamB.name + '</div><div class="team-rank">联赛 ' + teamB.league + '</div></div>';
+      } else {
+        teamInfo.innerHTML += '<div class="team-card"><div class="team-name">客队</div><div class="team-rank">联赛 --</div></div>';
+      }
+    }
+
+    function runPrediction() {
+      var teamAKey = document.getElementById('teamA').value;
+      var teamBKey = document.getElementById('teamB').value;
+      var matchType = document.getElementById('matchType').value;
+      var neutral = document.querySelector('input[name="venue"]:checked').value === 'neutral';
+      var temperature = parseInt(document.getElementById('temperature').value);
+      
+      if (!teamAKey || !teamBKey) {
+        alert('请选择两支球队');
+        return;
+      }
+      
+      var btn = document.getElementById('predict-btn');
+      btn.disabled = true;
+      btn.textContent = '预测中...';
+      
+      fetch('/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          homeTeam: teamAKey,
+          awayTeam: teamBKey,
+          options: { 
+            venue: neutral ? 'neutral' : 'home', 
+            neutral: neutral,
+            matchType: matchType,
+            temperature: temperature
+          }
+        })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (!result.success || !result.data) {
+          alert('预测失败: ' + (result.message || '未知错误'));
+          return;
+        }
+        
+        var pred = result.data;
+        currentPrediction = pred;
+        displayPrediction(pred, teamAKey, teamBKey);
+        updateCacheStats();
+      })
+      .catch(function(err) {
+        console.error('预测请求失败:', err);
+        alert('预测请求失败，请检查网络连接');
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.textContent = '开始预测';
+      });
+    }
+
+    function displayPrediction(pred, teamAKey, teamBKey) {
+      var teamA = allTeams[teamAKey];
+      var teamB = allTeams[teamBKey];
+      var wdw = pred.predictions.winDrawLose;
+      
+      var probChart = document.getElementById('probability-chart');
+      var maxProb = Math.max(wdw.win, wdw.draw, wdw.lose);
+      
+      probChart.innerHTML = '';
+      probChart.innerHTML += '<div class="prob-bar winA" style="height: ' + (wdw.win / maxProb * 100) + '%">' +
+        '<div class="percent">' + (wdw.win * 100).toFixed(1) + '%</div>' +
+        '<div class="label">' + (teamA ? teamA.name : '主队') + '胜</div></div>';
+      probChart.innerHTML += '<div class="prob-bar draw" style="height: ' + (wdw.draw / maxProb * 100) + '%">' +
+        '<div class="percent">' + (wdw.draw * 100).toFixed(1) + '%</div>' +
+        '<div class="label">平局</div></div>';
+      probChart.innerHTML += '<div class="prob-bar winB" style="height: ' + (wdw.lose / maxProb * 100) + '%">' +
+        '<div class="percent">' + (wdw.lose * 100).toFixed(1) + '%</div>' +
+        '<div class="label">' + (teamB ? teamB.name : '客队') + '胜</div></div>';
+      
+      var modelList = document.getElementById('model-list');
+      modelList.innerHTML = '';
+      
+      var components = pred.ensemble ? pred.ensemble.components : {};
+      for (var model in components) {
+        var comp = components[model];
+        modelList.innerHTML += '<div class="model-item">' +
+          '<span class="model-name">' + getModelDisplayName(model) + '</span>' +
+          '<span class="model-probs">' + (comp.winA * 100).toFixed(0) + '-' + (comp.draw * 100).toFixed(0) + '-' + (comp.winB * 100).toFixed(0) + '</span>' +
+          '<span class="model-weight">' + (comp.weight * 100).toFixed(0) + '%</span></div>';
+      }
+      
+      var scoreGrid = document.getElementById('score-grid');
+      scoreGrid.innerHTML = '';
+      var scores = pred.predictions.topScores || [];
+      scores.slice(0, 8).forEach(function(s) {
+        scoreGrid.innerHTML += '<div class="score-box"><div class="score">' + s.score + '</div><div class="prob">' + (s.probability * 100).toFixed(0) + '%</div></div>';
+      });
+    }
+
+    function getModelDisplayName(model) {
+      var names = {
+        poisson: '泊松模型',
+        dixonCole: 'Dixon-Cole',
+        ssm: '贝叶斯SSM',
+        xgboost: 'XGBoost',
+        lightgbm: 'LightGBM',
+        elo: 'Elo'
+      };
+      return names[model] || model;
+    }
+
+    function updateCacheStats() {
+      document.getElementById('cache-hits').textContent = '--';
+      document.getElementById('cache-misses').textContent = '--';
+      document.getElementById('cache-hit-rate').textContent = '--';
+    }
+
+    function runBacktest() {
+      var resultDiv = document.getElementById('backtest-result');
+      resultDiv.textContent = '回测功能需通过API调用，暂未开放';
+    }
+
+    function generateShareCard(teamAName, teamBName, prediction) {
+      var wdw = prediction.predictions.winDrawLose;
+      return {
+        title: teamAName + ' VS ' + teamBName,
+        description: '预测结果: ' + (wdw.win * 100).toFixed(1) + '%主胜 | ' + (wdw.draw * 100).toFixed(1) + '%平局 | ' + (wdw.lose * 100).toFixed(1) + '%客胜',
+        image: '',
+        url: window.location.href
+      };
+    }
+
+    function shareToWechat() {
+      if (currentPrediction) {
+        var teamA = allTeams[document.getElementById('teamA').value];
+        var teamB = allTeams[document.getElementById('teamB').value];
+        var card = generateShareCard(teamA ? teamA.name : '主队', teamB ? teamB.name : '客队', currentPrediction);
+        if (typeof FiveLeagues_Social !== 'undefined' && FiveLeagues_Social.shareToWechat) {
+          FiveLeagues_Social.shareToWechat(card);
+        } else {
+          alert('分享模块未加载');
+        }
+      }
+    }
+
+    function shareToWeibo() {
+      if (currentPrediction) {
+        var teamA = allTeams[document.getElementById('teamA').value];
+        var teamB = allTeams[document.getElementById('teamB').value];
+        var card = generateShareCard(teamA ? teamA.name : '主队', teamB ? teamB.name : '客队', currentPrediction);
+        if (typeof FiveLeagues_Social !== 'undefined' && FiveLeagues_Social.shareToWeibo) {
+          FiveLeagues_Social.shareToWeibo(card);
+        } else {
+          alert('分享模块未加载');
+        }
+      }
+    }
+
+    function shareToTwitter() {
+      if (currentPrediction) {
+        var teamA = allTeams[document.getElementById('teamA').value];
+        var teamB = allTeams[document.getElementById('teamB').value];
+        var card = generateShareCard(teamA ? teamA.name : '主队', teamB ? teamB.name : '客队', currentPrediction);
+        if (typeof FiveLeagues_Social !== 'undefined' && FiveLeagues_Social.shareToTwitter) {
+          FiveLeagues_Social.shareToTwitter(card);
+        } else {
+          alert('分享模块未加载');
+        }
+      }
+    }
+
+    function copyToClipboard() {
+      navigator.clipboard.writeText(window.location.href).then(function() {
+        alert('链接已复制到剪贴板');
+      }).catch(function() {
+        alert('复制失败，请手动复制');
+      });
+    }
+  </script>
+</body>
+</html>

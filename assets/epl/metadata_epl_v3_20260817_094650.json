@@ -1,0 +1,52 @@
+{
+  "model_type": "EPL-v3",
+  "version": "3.0",
+  "timestamp": "20260817_094650",
+  "n_samples": 1141,
+  "feature_dim": 100,
+  "top_k_features": 100,
+  "half_life_months": 18,
+  "params": {
+    "n_estimators": 200,
+    "learning_rate": 0.03,
+    "max_depth": 4,
+    "num_leaves": 15,
+    "min_child_samples": 40,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7,
+    "reg_alpha": 0.8,
+    "reg_lambda": 0.8,
+    "min_split_gain": 0.03,
+    "random_state": 42,
+    "verbose": -1
+  },
+  "cv_accuracy": 0.4807017543859649,
+  "val_accuracy": 0.388646288209607,
+  "full_accuracy": 0.6292725679228747,
+  "cv_macro_f1": 0.44630051055905123,
+  "val_macro_f1": 0.3461798228175878,
+  "cv_draw_recall": 0.2356460676132807,
+  "best_trees": 56,
+  "feature_importance_top5": [
+    {
+      "feature": "score_away_win_prob",
+      "importance": 130
+    },
+    {
+      "feature": "away_draw_rate",
+      "importance": 94
+    },
+    {
+      "feature": "defence_diff",
+      "importance": 91
+    },
+    {
+      "feature": "home_elo_momentum",
+      "importance": 87
+    },
+    {
+      "feature": "away_weighted_avg_goals",
+      "importance": 86
+    }
+  ]
+}

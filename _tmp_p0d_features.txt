@@ -1,0 +1,254 @@
+﻿  0 ✗ league_德甲
+  1 ✗ league_意甲
+  2 ✗ league_法甲
+  3 ✗ league_英超
+  4 ✗ league_西甲
+  5 ✗ month
+  6 ✗ day_of_week
+  7 ✗ is_weekend
+  8 ✗ is_early_season
+  9 ✗ is_mid_season
+ 10 ✗ is_late_season
+ 11   home_avg_goals
+ 12   home_avg_opp_goals
+ 13   home_win_rate
+ 14   home_draw_rate
+ 15   home_loss_rate
+ 16   home_goals_std
+ 17   home_recent_form
+ 18   home_form_trend
+ 19   home_consecutive_wins
+ 20   home_consecutive_losses
+ 21   home_consecutive_undefeated
+ 22   home_games_played
+ 23   home_weighted_win_rate
+ 24   home_weighted_avg_goals
+ 25   home_home_win_rate
+ 26   home_away_win_rate
+ 27   home_home_goals
+ 28   home_away_goals
+ 29   home_home_advantage
+ 30   away_avg_goals
+ 31   away_avg_opp_goals
+ 32   away_win_rate
+ 33   away_draw_rate
+ 34   away_loss_rate
+ 35   away_goals_std
+ 36   away_recent_form
+ 37   away_form_trend
+ 38   away_consecutive_wins
+ 39   away_consecutive_losses
+ 40   away_consecutive_undefeated
+ 41   away_games_played
+ 42   away_weighted_win_rate
+ 43   away_weighted_avg_goals
+ 44   away_home_win_rate
+ 45   away_away_win_rate
+ 46   away_home_goals
+ 47   away_away_goals
+ 48   away_home_advantage
+ 49   h2h_matches
+ 50   h2h_home_win_rate
+ 51   h2h_away_win_rate
+ 52   h2h_draw_rate
+ 53   h2h_avg_goals_home
+ 54   h2h_avg_goals_away
+ 55   h2h_avg_total_goals
+ 56   h2h_goal_diff_avg
+ 57   h2h_last_result
+ 58   h2h_home_streak
+ 59   h2h_away_streak
+ 60   home_opponent_avg_win_rate
+ 61   away_opponent_avg_win_rate
+ 62   form_diff
+ 63   goals_diff
+ 64   defence_diff
+ 65   recent_form_diff
+ 66   form_trend_diff
+ 67   streak_diff
+ 68   undefeated_diff
+ 69   weighted_form_diff
+ 70   weighted_goals_diff
+ 71   venue_diff
+ 72   goals_stability_diff
+ 73   opponent_strength_diff
+ 74   home_elo
+ 75   away_elo
+ 76   elo_diff
+ 77   elo_ratio
+ 78   elo_home_expected
+ 79   elo_away_expected
+ 80   elo_draw_prob
+ 81   home_elo_momentum
+ 82   away_elo_momentum
+ 83   elo_confidence
+ 84   wdl_implied_win
+ 85   wdl_implied_draw
+ 86   wdl_implied_lose
+ 87   hcp_implied_win
+ 88   hcp_implied_draw
+ 89   hcp_implied_lose
+ 90   tg_over_25_prob
+ 91   tg_under_25_prob
+ 92   wdl_kelly_win
+ 93   wdl_kelly_draw
+ 94   wdl_kelly_lose
+ 95   hcp_kelly_win
+ 96   hcp_kelly_draw
+ 97   hcp_kelly_lose
+ 98   wdl_win_change_rate
+ 99   wdl_draw_change_rate
+100   wdl_lose_change_rate
+101   hcp_win_change_rate
+102   hcp_draw_change_rate
+103   hcp_lose_change_rate
+104   odds_confidence
+105   odds_entropy
+106   bookmaker_margin
+107   has_wdl_odds
+108   has_hcp_odds
+109   has_tg_odds
+110   odds_coverage
+111   wdl_favorite
+112   wdl_favorite_prob
+113   tg_expected
+114   value_bet_home
+115   value_bet_away
+116   wdl_win_volatility
+117   wdl_draw_volatility
+118   wdl_lose_volatility
+119   wdl_win_acceleration
+120   wdl_late_trend
+121   wdl_early_trend
+122   wdl_sudden_jump
+123   wdl_total_change
+124   wdl_update_frequency
+125   wdl_mid_stability
+126 ✗ odds_ts_devig_win_drift
+127 ✗ odds_ts_devig_draw_drift
+128 ✗ odds_ts_devig_lose_drift
+129 ✗ odds_ts_devig_win_close
+130 ✗ odds_ts_hcp_volatility
+131 ✗ odds_ts_hcp_devig_home_drift
+132 ✗ odds_ts_hcp_devig_home_close
+133 ✗ odds_ts_ou25_volatility
+134 ✗ odds_ts_ou25_devig_over_drift
+135 ✗ odds_ts_ou25_devig_over_close
+136 ✗ odds_ts_xmkt_wdl_hcp_gap
+137 ✗ odds_ts_xmkt_direction_agree
+138   score_mode_prob
+139   score_entropy
+140   score_home_win_prob
+141   score_draw_prob
+142   score_away_win_prob
+143   score_over_25_prob
+144   score_expected_goals
+145   score_top3_concentration
+146 ✗ strength_closeness
+147 ✗ strength_gap_indicator
+148 ✗ strength_balance
+149 ✗ draw_odds_stability
+150 ✗ odds_volatility_balance
+151 ✗ draw_vol_relative
+152 ✗ sofa_rat_5g_home
+153 ✗ sofa_xg_5g_home
+154 ✗ sofa_xa_5g_home
+155 ✗ sofa_pass_sr_5g_home
+156 ✗ sofa_longball_sr_5g_home
+157 ✗ sofa_cross_sr_5g_home
+158 ✗ sofa_dribble_sr_5g_home
+159 ✗ sofa_tackle_5g_home
+160 ✗ sofa_interception_5g_home
+161 ✗ sofa_duel_sr_5g_home
+162 ✗ sofa_aerial_sr_5g_home
+163 ✗ sofa_recovery_5g_home
+164 ✗ sofa_poss_lost_5g_home
+165 ✗ sofa_big_chance_c_5g_home
+166 ✗ sofa_big_chance_m_5g_home
+167 ✗ sofa_sprint_km_5g_home
+168 ✗ sofa_hsr_km_5g_home
+169 ✗ sofa_total_dist_km_5g_home
+170 ✗ sofa_gk_saves_5g_home
+171 ✗ sofa_gk_goals_prev_5g_home
+172 ✗ sofa_clearance_5g_home
+173 ✗ sofa_formation_consistency_home
+174 ✗ sofa_rat_std_5g_home
+175 ✗ sofa_fw_goals_5g_home
+176 ✗ sofa_fw_assists_5g_home
+177 ✗ sofa_fw_touches_5g_home
+178 ✗ sofa_fw_rat_5g_home
+179 ✗ sofa_mf_pass_5g_home
+180 ✗ sofa_mf_touches_5g_home
+181 ✗ sofa_mf_rat_5g_home
+182 ✗ sofa_df_interception_5g_home
+183 ✗ sofa_df_tackle_5g_home
+184 ✗ sofa_df_duel_sr_5g_home
+185 ✗ sofa_df_rat_5g_home
+186 ✗ sofa_rat_5g_away
+187 ✗ sofa_xg_5g_away
+188 ✗ sofa_xa_5g_away
+189 ✗ sofa_pass_sr_5g_away
+190 ✗ sofa_longball_sr_5g_away
+191 ✗ sofa_cross_sr_5g_away
+192 ✗ sofa_dribble_sr_5g_away
+193 ✗ sofa_tackle_5g_away
+194 ✗ sofa_interception_5g_away
+195 ✗ sofa_duel_sr_5g_away
+196 ✗ sofa_aerial_sr_5g_away
+197 ✗ sofa_recovery_5g_away
+198 ✗ sofa_poss_lost_5g_away
+199 ✗ sofa_big_chance_c_5g_away
+200 ✗ sofa_big_chance_m_5g_away
+201 ✗ sofa_sprint_km_5g_away
+202 ✗ sofa_hsr_km_5g_away
+203 ✗ sofa_total_dist_km_5g_away
+204 ✗ sofa_gk_saves_5g_away
+205 ✗ sofa_gk_goals_prev_5g_away
+206 ✗ sofa_clearance_5g_away
+207 ✗ sofa_formation_consistency_away
+208 ✗ sofa_rat_std_5g_away
+209 ✗ sofa_fw_goals_5g_away
+210 ✗ sofa_fw_assists_5g_away
+211 ✗ sofa_fw_touches_5g_away
+212 ✗ sofa_fw_rat_5g_away
+213 ✗ sofa_mf_pass_5g_away
+214 ✗ sofa_mf_touches_5g_away
+215 ✗ sofa_mf_rat_5g_away
+216 ✗ sofa_df_interception_5g_away
+217 ✗ sofa_df_tackle_5g_away
+218 ✗ sofa_df_duel_sr_5g_away
+219 ✗ sofa_df_rat_5g_away
+220 ✗ pa_xi_rating_home
+221 ✗ pa_xi_rating_away
+222 ✗ pa_xi_xg_home
+223 ✗ pa_xi_xg_away
+224 ✗ pa_xi_xa_home
+225 ✗ pa_xi_xa_away
+226 ✗ pa_core_xg_share_home
+227 ✗ pa_core_xg_share_away
+228 ✗ pa_core_dependency_home
+229 ✗ pa_core_dependency_away
+230 ✗ pa_availability_home
+231 ✗ pa_availability_away
+232 ✗ pa_missing_impact_home
+233 ✗ pa_missing_impact_away
+234 ✗ pa_fatigue_7d_home
+235 ✗ pa_fatigue_7d_away
+236 ✗ pa_fatigue_14d_home
+237 ✗ pa_fatigue_14d_away
+238 ✗ pa_rest_days_home
+239 ✗ pa_rest_days_away
+240 ✗ pa_squad_stability_home
+241 ✗ pa_squad_stability_away
+242 ✗ pa_formation_std_home
+243 ✗ pa_formation_std_away
+244 ✗ mkt_imp_win
+245 ✗ mkt_imp_draw
+246 ✗ mkt_imp_lose
+247 ✗ mkt_dev_win
+248 ✗ mkt_dev_draw
+249 ✗ mkt_dev_lose
+250 ✗ mkt_dev_abs
+251 ✗ mkt_dispersion
+252 ✗ mkt_company_count
+253 ✗ mkt_return

@@ -1,0 +1,29 @@
+{
+  "model_type": "EPL-v3",
+  "version": "3.0",
+  "timestamp": "20260817_094956",
+  "n_samples": 1141,
+  "feature_dim": 183,
+  "half_life_months": 18,
+  "params": {
+    "n_estimators": 200,
+    "learning_rate": 0.03,
+    "max_depth": 4,
+    "num_leaves": 15,
+    "min_child_samples": 40,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7,
+    "reg_alpha": 0.8,
+    "reg_lambda": 0.8,
+    "min_split_gain": 0.03,
+    "random_state": 42,
+    "verbose": -1
+  },
+  "cv_accuracy": 0.47251461988304094,
+  "val_accuracy": 0.4017467248908297,
+  "full_accuracy": 0.6415425065731815,
+  "cv_macro_f1": 0.44285779569851574,
+  "val_macro_f1": 0.35694584774909927,
+  "cv_draw_recall": 0.2475508295180426,
+  "best_trees": 58
+}

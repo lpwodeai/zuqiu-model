@@ -4,10 +4,15 @@ import numpy as np
 import yaml
 import os
 import re
+import sys
 
 # 自动检测项目根目录，避免硬编码 h: 或 f: 盘符
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_DIR = os.path.dirname(_SCRIPT_DIR)
+if _PROJECT_DIR not in sys.path:
+    sys.path.insert(0, _PROJECT_DIR)
+from db_utils import connect, read_sql, table_exists  # noqa: E402
+
 DB_PATH = os.path.join(_PROJECT_DIR, "data", "five_leagues.db")
 ODDS_DB_PATH = os.path.join(_PROJECT_DIR, "data", "odds.db")
 ODDS_TIMING_DB_PATH = os.path.join(_PROJECT_DIR, "data", "odds_timing.db")
@@ -30,11 +35,14 @@ TEAM_NAME_MAP = {
     'Luton Town': '卢顿', 'Sheffield United': '谢菲尔德联',
     'Southampton': '南安普敦', 'Leeds United': '利兹联',
     'Leicester City': '莱切斯特城', 'Ipswich Town': '伊普斯维奇',
-    'Sunderland': '桑德兰',
+    'Sunderland': '桑德兰', 'Coventry City': '考文垂',
     # 旧标准名 → score_history 变体名
     '曼城': '曼彻斯特城', '曼联': '曼彻斯特联',
     '布莱顿': '布赖顿', '热刺': '托特纳姆热刺',
     '纽卡斯尔': '纽卡斯尔联', '西汉姆': '西汉姆联',
+    '诺丁汉': '诺丁汉森林', '伊普斯': '伊普斯维奇',
+    '布伦特': '布伦特福德',
+    'Hull City': '赫尔城', 'Hull': '赫尔城',
 
     # ========================
     # 西甲 (La Liga)
@@ -60,6 +68,15 @@ TEAM_NAME_MAP = {
     '瓦伦西亚': '巴伦西亚', '巴利亚多利德': '瓦拉多利德',
     '毕尔巴鄂': '毕尔巴鄂竞技', '马略卡': '马洛卡',
     '塞尔塔': '维戈塞尔塔', '格拉纳达': '格拉纳达CF',
+    '皇马': '皇家马德里',
+    'Espanol': '西班牙人', 'Levante': '莱万特',
+    'Vallecano': '巴列卡诺', 'Deportivo': '拉科鲁尼亚',
+    # 升班马/短名别名补全（2026-27 赛季 R3 短名 mapping）
+    'Deportivo de A Coruña': '拉科鲁尼亚', 'Deportivo de A Coruna': '拉科鲁尼亚',
+    'Deportivo La Coruña': '拉科鲁尼亚', 'Deportivo La Coruna': '拉科鲁尼亚',
+    'La Coruña': '拉科鲁尼亚', 'La Coruna': '拉科鲁尼亚',
+    'Málaga CF': '马拉加', 'Malaga CF': '马拉加', 'Málaga': '马拉加', 'Malaga': '马拉加',
+    'Real Racing Club': '桑坦德竞技', 'Real Racing': '桑坦德竞技',
 
     # ========================
     # 意甲 (Serie A)
@@ -82,6 +99,7 @@ TEAM_NAME_MAP = {
     '科莫': '科莫', '克雷莫纳': '克雷莫纳', '帕尔马': '帕尔马',
     '比萨': '比萨', '萨索洛': '萨索洛', '弗洛西诺内': '弗洛西诺内',
     '萨勒尼塔纳': '萨勒尼塔纳', '威尼斯': '威尼斯',
+    '弗罗西诺内': '弗洛西诺内',
 
     # ========================
     # 德甲 (Bundesliga)
@@ -110,6 +128,7 @@ TEAM_NAME_MAP = {
     'Darmstadt 98': '达姆施塔特', 'VfL Bochum 1848': '波鸿',
     # 旧标准名 → score_history 变体名
     '云达不莱梅': '云达不来梅',
+    'Schalke 04': '沙尔克04', 'FC Schalke 04': '沙尔克04', 'Schalke': '沙尔克04',
 
     # ========================
     # 法甲 (Ligue 1)
@@ -127,14 +146,17 @@ TEAM_NAME_MAP = {
     'Toulouse': '图卢兹', 'Saint-Étienne': '圣埃蒂安',
     'Auxerre': '欧塞尔', 'Nantes': '南特', 'Le Havre': '勒阿弗尔',
     'Lorient': '洛里昂', 'Clermont': '克莱蒙', 'Clermont Foot': '克莱蒙',
+    'Troyes': '特鲁瓦', 'ESTAC Troyes': '特鲁瓦',
     'Montpellier': '蒙彼利埃', 'Metz': '梅斯', 'Paris FC': '巴黎FC',
     # 旧标准名 → score_history 变体名
     '巴黎圣日耳曼': '巴黎圣日尔曼',
+    '斯特拉斯': '斯特拉斯堡',
+    'Le Mans': '勒芒', 'Le Mans FC': '勒芒',
 
     # ========================
     # 其他联赛球队（score_history中可能出现）
     # ========================
-    '埃尔沃斯堡': '埃尔沃斯堡', '罗德兹': '罗德兹', '敦刻尔克': '敦刻尔克',
+    '埃尔沃斯堡': '埃沃斯堡', '罗德兹': '罗德兹', '敦刻尔克': '敦刻尔克',
     '杜塞尔多夫': '杜塞尔多夫',
 }
 
@@ -151,6 +173,33 @@ def normalize_team_name(name):
         if eng.lower() == name_lower:
             return ch
     return name
+
+
+def canonical_team_name(match_id, field_value, is_home):
+    """归一化队名（以 post_match_review 队名字段为权威，match_id 仅兜底）。
+
+    home_team/away_team 来自实际赛果数据，队名身份最可靠；match_id 是生成的
+    键，可能因共享前缀等被误匹配（如实际主队为「拉科鲁尼亚」却被记成
+    "Deportivo Alavés"），故不作权威来源，只在字段名无法归一为中文时兜底。
+    """
+    def _has_cjk(s):
+        return any('\u4e00' <= c <= '\u9fff' for c in str(s))
+
+    primary = normalize_team_name(field_value)
+    if primary and _has_cjk(primary):
+        return primary
+    # 字段名为英文/空 → 用 match_id 英文兜底
+    if match_id:
+        try:
+            parts = str(match_id).split('_')
+            if len(parts) >= 3:
+                cn = normalize_team_name(parts[1] if is_home else parts[2])
+                if cn and _has_cjk(cn):
+                    return cn
+        except Exception:
+            pass
+    return primary
+
 
 def load_config():
     if os.path.exists(CONFIG_PATH):
@@ -261,7 +310,7 @@ def load_match_data_odds(db_path=None):
         print(f"  [ERROR] odds.db 不存在: {db_path}")
         return load_match_data()
     
-    conn = sqlite3.connect(db_path)
+    conn = connect(db_path=db_path)
     
     query = """
     SELECT 
@@ -270,13 +319,13 @@ def load_match_data_odds(db_path=None):
         m.away_team as away_team_name,
         m.actual_score,
         m.actual_wdl,
-        m.match_type as competition_name,
+        m.league as competition_name,
         m.match_id
     FROM matches m
     WHERE m.actual_score IS NOT NULL
     ORDER BY m.match_date
     """
-    df = pd.read_sql(query, conn)
+    df = read_sql(query, conn)
     conn.close()
     
     if len(df) == 0:
@@ -565,6 +614,95 @@ def calc_h2h_stats(df, home_team, away_team, match_date):
         'h2h_away_streak': away_streak
     }
 
+def _h2h_meetings_index(df):
+    """预计算历史交锋索引: frozenset({队A, 队B}) -> 按日期升序的比赛记录列表。
+
+    将 build_team_features 中「每场对全量 df 做布尔过滤 + sort」(O(n²)) 降为
+    一次 O(n) 建索引 + 每场 O(1) 字典查找，是特征构建的主要性能瓶颈修复。
+    """
+    cols = ['date', 'home_team_name', 'away_team_name', 'homeGoals', 'awayGoals']
+    idx = {}
+    for rec in df[cols].sort_values('date').itertuples(index=False, name='H2HRec'):
+        key = frozenset((rec.home_team_name, rec.away_team_name))
+        idx.setdefault(key, []).append(rec)
+    return idx
+
+def _h2h_stats_from_records(records, home_team):
+    """从已过滤（按日期升序、≤10 条）的交锋记录计算统计量，替代 calc_h2h_stats 的全量 df 过滤主体。"""
+    total = len(records)
+    if total == 0:
+        return {
+            'h2h_matches': 0,
+            'h2h_home_win_rate': np.nan,
+            'h2h_away_win_rate': np.nan,
+            'h2h_draw_rate': np.nan,
+            'h2h_avg_goals_home': np.nan,
+            'h2h_avg_goals_away': np.nan,
+            'h2h_avg_total_goals': np.nan,
+            'h2h_goal_diff_avg': np.nan,
+            'h2h_last_result': np.nan,
+            'h2h_home_streak': 0,
+            'h2h_away_streak': 0,
+        }
+
+    home_wins = 0
+    away_wins = 0
+    draws = 0
+    home_goals_total = 0
+    away_goals_total = 0
+    goal_diffs = []
+
+    for r in records:
+        if r.home_team_name == home_team:
+            hg, ag = r.homeGoals, r.awayGoals
+        else:
+            hg, ag = r.awayGoals, r.homeGoals
+        home_goals_total += hg
+        away_goals_total += ag
+        goal_diffs.append(hg - ag)
+        if hg > ag:
+            home_wins += 1
+        elif hg < ag:
+            away_wins += 1
+        else:
+            draws += 1
+
+    def _goal_pair(r):
+        return (r.homeGoals, r.awayGoals) if r.home_team_name == home_team else (r.awayGoals, r.homeGoals)
+
+    home_streak = 0
+    for r in reversed(records):
+        hg, ag = _goal_pair(r)
+        if hg > ag:
+            home_streak += 1
+        else:
+            break
+
+    away_streak = 0
+    for r in reversed(records):
+        hg, ag = _goal_pair(r)
+        if hg < ag:
+            away_streak += 1
+        else:
+            break
+
+    hg_last, ag_last = _goal_pair(records[-1])
+    last_result = 2 if hg_last > ag_last else (0 if hg_last < ag_last else 1)
+
+    return {
+        'h2h_matches': total,
+        'h2h_home_win_rate': home_wins / total,
+        'h2h_away_win_rate': away_wins / total,
+        'h2h_draw_rate': draws / total,
+        'h2h_avg_goals_home': home_goals_total / total,
+        'h2h_avg_goals_away': away_goals_total / total,
+        'h2h_avg_total_goals': (home_goals_total + away_goals_total) / total,
+        'h2h_goal_diff_avg': np.mean(goal_diffs),
+        'h2h_last_result': last_result,
+        'h2h_home_streak': home_streak,
+        'h2h_away_streak': away_streak,
+    }
+
 def precompute_team_stats(df):
     all_teams = pd.concat([df['home_team_name'], df['away_team_name']]).unique()
     league_stats, global_stats = get_global_league_stats(df)
@@ -597,10 +735,8 @@ def precompute_team_stats(df):
         team_matches['avg_goals'] = team_matches['cum_goals'] / team_matches['games_played']
         team_matches['avg_opp_goals'] = team_matches['cum_opp_goals'] / team_matches['games_played']
         
-        goals_std = []
-        for i in range(len(team_matches)):
-            goals_std.append(team_matches['team_goals'][:i+1].std() if i >= 1 else 0)
-        team_matches['goals_std'] = goals_std
+        # 用 expanding().std() 向量化替代逐场 [:i+1].std() 的 O(m²) 循环（性能优化）
+        team_matches['goals_std'] = team_matches['team_goals'].expanding(min_periods=1).std().fillna(0)
         
         team_matches['recent_form'] = team_matches['is_win'].rolling(window=5, min_periods=1).mean()
         team_matches['form_trend'] = team_matches['is_win'].rolling(window=6).mean() - team_matches['is_win'].rolling(window=6).mean().shift(6)
@@ -664,27 +800,70 @@ def precompute_team_stats(df):
         team_matches[['home_win_rate', 'away_win_rate', 'home_avg_goals', 'away_avg_goals']] = \
             team_matches[['home_win_rate', 'away_win_rate', 'home_avg_goals', 'away_avg_goals']].fillna(0)
         
-        if _resolve_feature_time_decay().get('enabled', True):
-            weighted_win_rates = []
-            weighted_avg_goals = []
-            for i in range(len(team_matches)):
-                dates = team_matches['date'].iloc[:i]
-                if len(dates) >= 3:
-                    weights = calculate_time_decay_weights(dates, team_matches['date'].iloc[i])
-                    if weights.sum() > 0:
-                        win_mask = team_matches['is_win'].iloc[:i].values
-                        goals = team_matches['team_goals'].iloc[:i].values
-                        weighted_win_rates.append((win_mask * weights).sum() / weights.sum())
-                        weighted_avg_goals.append((goals * weights).sum() / weights.sum())
-                    else:
-                        weighted_win_rates.append(team_matches['win_rate'].iloc[i])
-                        weighted_avg_goals.append(team_matches['avg_goals'].iloc[i])
-                else:
-                    weighted_win_rates.append(team_matches['win_rate'].iloc[i])
-                    weighted_avg_goals.append(team_matches['avg_goals'].iloc[i])
-            
-            team_matches['weighted_win_rate'] = weighted_win_rates
-            team_matches['weighted_avg_goals'] = weighted_avg_goals
+        decay_cfg = _resolve_feature_time_decay()
+        if decay_cfg.get('enabled', True):
+            decay_type = decay_cfg.get('decay_type', 'exponential')
+            half_life = decay_cfg.get('half_life_days', 14)
+            min_weight = decay_cfg.get('min_weight', 0.01)
+            max_hist = decay_cfg.get('max_history_days', 90)
+            alpha = np.log(2) / half_life
+            # 指数衰减且地权下限在窗口内永不生效（min_weight <= exp(-max_hist*α)）时，
+            # 归一化权重 = exp(α·t_k) / Σ exp(α·t_j)，可用前缀和 O(m) 精确向量化；
+            # 否则回退到逐场滑动窗口（结果一致，仅较慢）。
+            floor_noop = (decay_type == 'exponential' and min_weight <= np.exp(-max_hist * alpha))
+            if floor_noop:
+                day = team_matches['date'].values.astype('datetime64[D]').astype(np.int64)
+                t_rel = (day - day[-1]).astype(np.float64)  # <= 0，避免 exp 溢出/下溢
+                E = np.exp(alpha * t_rel)  # <= 1，老比赛趋近 0
+                win = team_matches['is_win'].values.astype(np.float64)
+                goals = team_matches['team_goals'].values.astype(np.float64)
+                PE = np.concatenate([[0.0], np.cumsum(E)])
+                PEW = np.concatenate([[0.0], np.cumsum(E * win)])
+                PEG = np.concatenate([[0.0], np.cumsum(E * goals)])
+                weighted_win = np.empty(len(team_matches))
+                weighted_goal = np.empty(len(team_matches))
+                n = len(team_matches)
+                start = 0
+                for i in range(n):
+                    while start < i and (day[i] - day[start]) > max_hist:
+                        start += 1
+                    if i >= 3 and start < i:
+                        sumE = PE[i] - PE[start]
+                        if sumE > 0:
+                            weighted_win[i] = (PEW[i] - PEW[start]) / sumE
+                            weighted_goal[i] = (PEG[i] - PEG[start]) / sumE
+                            continue
+                    weighted_win[i] = team_matches['win_rate'].iloc[i]
+                    weighted_goal[i] = team_matches['avg_goals'].iloc[i]
+                team_matches['weighted_win_rate'] = weighted_win
+                team_matches['weighted_avg_goals'] = weighted_goal
+            else:
+                max_hist_ = max_hist
+                dates_series = team_matches['date']
+                win_mask_all = team_matches['is_win'].values
+                goals_all = team_matches['team_goals'].values
+                win_rate_all = team_matches['win_rate'].values
+                avg_goals_all = team_matches['avg_goals'].values
+                weighted_win_rates = []
+                weighted_avg_goals = []
+                start = 0
+                n = len(team_matches)
+                for i in range(n):
+                    ref = dates_series.iloc[i]
+                    while start < i and (ref - dates_series.iloc[start]).days > max_hist_:
+                        start += 1
+                    if i >= 3 and start < i:
+                        weights = calculate_time_decay_weights(dates_series.iloc[start:i], ref, config=decay_cfg)
+                        if weights.sum() > 0:
+                            wm = win_mask_all[start:i]
+                            g = goals_all[start:i]
+                            weighted_win_rates.append(float((wm * weights).sum() / weights.sum()))
+                            weighted_avg_goals.append(float((g * weights).sum() / weights.sum()))
+                            continue
+                    weighted_win_rates.append(win_rate_all[i])
+                    weighted_avg_goals.append(avg_goals_all[i])
+                team_matches['weighted_win_rate'] = weighted_win_rates
+                team_matches['weighted_avg_goals'] = weighted_avg_goals
         else:
             team_matches['weighted_win_rate'] = team_matches['win_rate']
             team_matches['weighted_avg_goals'] = team_matches['avg_goals']
@@ -697,26 +876,58 @@ def precompute_team_stats(df):
 
 def build_team_features(df):
     team_stats_cache, league_stats, global_stats = precompute_team_stats(df)
+    h2h_index = _h2h_meetings_index(df)  # 预计算交锋索引，O(n)，替代每场全量 df 过滤
+
+    # 预提取每队「按日期升序」的日期(int64天)与统计 DataFrame，用 np.searchsorted
+    # O(log m) 定位「该队 date<md 的最近一场」，替代逐场 home_hist[date<md] 全量布尔
+    # 过滤 (O(n*m))。team_stats_cache[team] 经 merge 后为 RangeIndex 且按 date 升序，
+    # 故布尔前缀过滤与 .iloc[:k] 完全等价。
+    _EMPTY_D = np.array([], dtype=np.int64)
+    lookup = {}
+    for team, tm in team_stats_cache.items():
+        di = tm['date'].values.astype('datetime64[D]').astype(np.int64)
+        lookup[team] = (di, tm)
+
+    def _last_before(di, tm, md):
+        """返回该队 date<md 的最近一场 Series 行；无则 None。"""
+        if tm is None:
+            return None
+        pos = int(np.searchsorted(di, md, side='left')) - 1
+        return tm.iloc[pos] if pos >= 0 else None
+
+    def _win_rate_before(di, tm, md):
+        """返回 (该队 date<md 的场次数, 该队最近一场 win_rate)。"""
+        if tm is None or len(di) == 0:
+            return 0, None
+        pos = int(np.searchsorted(di, md, side='left')) - 1
+        if pos < 0:
+            return 0, None
+        return pos + 1, tm['win_rate'].iloc[pos]
+
+    dates_all = df['date'].values.astype('datetime64[D]').astype(np.int64)
+    home_names = df['home_team_name'].values
+    away_names = df['away_team_name'].values
+    league_names = df['competition_name'].values
     
     home_team_data = []
     away_team_data = []
     h2h_data = []
     opponent_data = []
     
-    for idx, row in df.iterrows():
-        home_team = row['home_team_name']
-        away_team = row['away_team_name']
-        match_date = row['date']
-        league = row['competition_name']
+    for i in range(len(df)):
+        home_team = home_names[i]
+        away_team = away_names[i]
+        match_date = df['date'].iloc[i]
+        md = dates_all[i]
+        league = league_names[i]
         
-        home_hist = team_stats_cache.get(home_team, pd.DataFrame())
-        away_hist = team_stats_cache.get(away_team, pd.DataFrame())
+        home_di, home_tm = lookup.get(home_team, (_EMPTY_D, None))
+        away_di, away_tm = lookup.get(away_team, (_EMPTY_D, None))
         
-        home_before = home_hist[home_hist['date'] < match_date]
-        away_before = away_hist[away_hist['date'] < match_date]
+        home_last = _last_before(home_di, home_tm, md)
+        away_last = _last_before(away_di, away_tm, md)
         
-        if len(home_before) > 0:
-            home_last = home_before.iloc[-1]
+        if home_last is not None:
             home_stats = {
                 'home_avg_goals': home_last['avg_goals'],
                 'home_avg_opp_goals': home_last['avg_opp_goals'],
@@ -762,8 +973,7 @@ def build_team_features(df):
                 'home_home_advantage': league_default['home_win_rate'] - league_default['away_win_rate']
             }
         
-        if len(away_before) > 0:
-            away_last = away_before.iloc[-1]
+        if away_last is not None:
             away_stats = {
                 'away_avg_goals': away_last['avg_goals'],
                 'away_avg_opp_goals': away_last['avg_opp_goals'],
@@ -812,28 +1022,29 @@ def build_team_features(df):
         home_team_data.append(home_stats)
         away_team_data.append(away_stats)
         
-        h2h = calc_h2h_stats(df, home_team, away_team, match_date)
+        _h2h_records = [r for r in h2h_index.get(frozenset((home_team, away_team)), ()) if r.date < match_date][-10:]
+        h2h = _h2h_stats_from_records(_h2h_records, home_team)
         h2h_data.append(h2h)
         
-        home_opponents = []
-        if len(home_before) > 0:
-            home_opponents = pd.unique(home_before['away_team_name'][:10])
         home_opp_win_rates = []
-        for opp in home_opponents:
-            opp_hist = team_stats_cache.get(opp, pd.DataFrame())
-            opp_before = opp_hist[opp_hist['date'] < match_date]
-            if len(opp_before) >= 5:
-                home_opp_win_rates.append(opp_before.iloc[-1]['win_rate'])
+        if home_tm is not None and len(home_di) > 0:
+            pos_h = int(np.searchsorted(home_di, md, side='left')) - 1
+            if pos_h >= 0:
+                for opp in pd.unique(home_tm['away_team_name'].iloc[:pos_h + 1].iloc[:10]):
+                    odi, otm = lookup.get(opp, (_EMPTY_D, None))
+                    cnt, wr = _win_rate_before(odi, otm, md)
+                    if cnt >= 5:
+                        home_opp_win_rates.append(wr)
         
-        away_opponents = []
-        if len(away_before) > 0:
-            away_opponents = pd.unique(away_before['away_team_name'][:10])
         away_opp_win_rates = []
-        for opp in away_opponents:
-            opp_hist = team_stats_cache.get(opp, pd.DataFrame())
-            opp_before = opp_hist[opp_hist['date'] < match_date]
-            if len(opp_before) >= 5:
-                away_opp_win_rates.append(opp_before.iloc[-1]['win_rate'])
+        if away_tm is not None and len(away_di) > 0:
+            pos_a = int(np.searchsorted(away_di, md, side='left')) - 1
+            if pos_a >= 0:
+                for opp in pd.unique(away_tm['away_team_name'].iloc[:pos_a + 1].iloc[:10]):
+                    odi, otm = lookup.get(opp, (_EMPTY_D, None))
+                    cnt, wr = _win_rate_before(odi, otm, md)
+                    if cnt >= 5:
+                        away_opp_win_rates.append(wr)
         
         opponent_data.append({
             'home_opponent_avg_win_rate': np.mean(home_opp_win_rates) if home_opp_win_rates else np.nan,
@@ -877,7 +1088,7 @@ def build_team_features(df):
 
 def load_odds_database():
     """加载赔率数据库连接"""
-    return sqlite3.connect(ODDS_DB_PATH)
+    return connect(db_path=ODDS_DB_PATH)
 
 
 def load_wdl_history(match_id, conn):
@@ -888,7 +1099,7 @@ def load_wdl_history(match_id, conn):
         WHERE match_id = ? 
         ORDER BY timestamp
     """
-    df = pd.read_sql(query, conn, params=(match_id,))
+    df = read_sql(query, conn, params=(match_id,))
     if not df.empty:
         try:
             df['timestamp'] = pd.to_datetime(df['timestamp'], format='mixed')
@@ -905,7 +1116,7 @@ def load_handicap_history(match_id, conn):
         WHERE match_id = ? 
         ORDER BY timestamp
     """
-    df = pd.read_sql(query, conn, params=(match_id,))
+    df = read_sql(query, conn, params=(match_id,))
     if not df.empty:
         try:
             df['timestamp'] = pd.to_datetime(df['timestamp'], format='mixed')
@@ -922,7 +1133,7 @@ def load_total_goals_history(match_id, conn):
         WHERE match_id = ? 
         ORDER BY timestamp
     """
-    df = pd.read_sql(query, conn, params=(match_id,))
+    df = read_sql(query, conn, params=(match_id,))
     if not df.empty:
         try:
             df['timestamp'] = pd.to_datetime(df['timestamp'], format='mixed')
@@ -972,7 +1183,250 @@ def calculate_change_rate(close_odds, open_odds):
     return 0.0
 
 
+def _kelly_array(implied, odds):
+    """向量化凯利指数（与 calculate_kelly_criterion 等价）。"""
+    implied = np.asarray(implied, dtype=float)
+    odds = np.asarray(odds, dtype=float)
+    out = np.zeros_like(implied)
+    m = (odds > 1.0) & (implied > 0)
+    out[m] = np.clip((implied[m] * odds[m] - 1.0) / (odds[m] - 1.0), -1.0, 1.0)
+    return out
+
+
+def _change_rate_array(close, open_):
+    """向量化赔率变化率（与 calculate_change_rate 等价）。"""
+    close = np.asarray(close, dtype=float)
+    open_ = np.asarray(open_, dtype=float)
+    out = np.zeros_like(close)
+    m = open_ > 0
+    out[m] = np.clip((close[m] - open_[m]) / open_[m], -1.0, 1.0)
+    return out
+
+
 def build_odds_features(df, odds_conn=None):
+    """
+    构建赔率特征（向量化重写版，C-20260830-007）
+
+    与原逐行实现完全等价，但将「逐行 iterrows + 逐行 DB 查询」替换为：
+    1. 一次性批量加载 wdl_history / handicap_history / total_goals_history 三张表；
+    2. 按 match_id 聚合开盘(首条)/收盘(末条)记录；
+    3. 用 numpy 向量化计算全部派生特征。
+
+    行为保持一致：
+    - 仅按 matches.match_id == 历史表.match_id 直接对齐（与旧逻辑相同）；
+    - 未对齐场次的所有赔率特征为 NaN（record_count/has_/coverage 为 0）。
+    """
+    if odds_conn is None:
+        odds_conn = load_odds_database()
+
+    if 'match_id' not in df.columns:
+        # 无 match_id 时回退旧逐行逻辑（按日期+队名构造候选 match_id）
+        return _build_odds_features_legacy(df, odds_conn)
+
+    def _load_and_agg(table, cols):
+        """批量加载单张赔率历史表，返回 (开盘值, 收盘值, 记录数) 三个矩阵/数组。"""
+        try:
+            raw = read_sql(
+                f"SELECT match_id, timestamp, {', '.join(cols)} FROM {table}", odds_conn
+            )
+        except Exception:
+            return None, None, None
+        if raw.empty:
+            return None, None, None
+        # 按 (match_id, timestamp字符串) 排序，等价于 SQL ORDER BY timestamp 后的取首/取末
+        raw = raw.sort_values(['match_id', 'timestamp'], kind='mergesort')
+        first = raw.drop_duplicates(subset='match_id', keep='first').set_index('match_id')[cols]
+        last = raw.drop_duplicates(subset='match_id', keep='last').set_index('match_id')[cols]
+        cnt = raw.groupby('match_id', sort=False).size()
+        return first, last, cnt
+
+    def _align(first, last, cnt):
+        """把按历史表 match_id 聚合的结果对齐到 df 行序（直接 match_id 相等）。"""
+        if first is None:
+            return None, None, None, pd.Series(False, index=df.index)
+        # 统一为 object 字符串，避免 pandas StringDtype 与 numpy object 索引不匹配
+        keys = first.index.astype(object)
+        first = first.copy(); first.index = keys
+        last = last.copy(); last.index = keys
+        cnt = cnt.copy(); cnt.index = keys
+        mid = pd.Index(df['match_id'].astype(object))
+        f = first.reindex(mid).to_numpy(dtype=float)
+        l = last.reindex(mid).to_numpy(dtype=float)
+        c = cnt.reindex(mid).to_numpy(dtype=float)
+        matched = np.asarray(mid.isin(keys), dtype=bool)
+        return f, l, c, matched
+
+    wdl_cols = ['win_a', 'draw', 'win_b']
+    hcp_cols = ['hcp_win', 'hcp_draw', 'hcp_lose']
+    tg_cols = ['goals_0', 'goals_1', 'goals_2', 'goals_3',
+               'goals_4', 'goals_5', 'goals_6', 'goals_7_plus']
+
+    wdl_first, wdl_last, wdl_cnt = _load_and_agg('wdl_history', wdl_cols)
+    hcp_first, hcp_last, hcp_cnt = _load_and_agg('handicap_history', hcp_cols)
+    tg_first, tg_last, tg_cnt = _load_and_agg('total_goals_history', tg_cols)
+
+    wdl_f, wdl_l, wdl_c, wdl_matched = _align(wdl_first, wdl_last, wdl_cnt)
+    hcp_f, hcp_l, hcp_c, hcp_matched = _align(hcp_first, hcp_last, hcp_cnt)
+    _, tg_l, tg_c, tg_matched = _align(tg_first, tg_last, tg_cnt)
+
+    def _three_way(fst, lst, cnt, matched, pfx, with_fav):
+        """构建胜平负/让球三路赔率特征（开盘/收盘/趋势/隐含概率/凯利/变化率）。"""
+        fst = np.asarray(fst, dtype=float)
+        lst = np.asarray(lst, dtype=float)
+        cnt = np.asarray(cnt, dtype=float)
+        matched = np.asarray(matched, dtype=bool)
+
+        ow, od, ol = fst[:, 0], fst[:, 1], fst[:, 2]
+        cw, cd, cl = lst[:, 0], lst[:, 1], lst[:, 2]
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            ih = np.where(cw > 0, 1.0 / cw, np.nan)
+            id_ = np.where(cd > 0, 1.0 / cd, np.nan)
+            ia = np.where(cl > 0, 1.0 / cl, np.nan)
+
+        total = ih + id_ + ia
+        valid = total > 0
+
+        imp_win = np.where(matched & valid, ih / total, np.where(matched, 1.0 / 3.0, np.nan))
+        imp_draw = np.where(matched & valid, id_ / total, np.where(matched, 1.0 / 3.0, np.nan))
+        imp_lose = np.where(matched & valid, ia / total, np.where(matched, 1.0 / 3.0, np.nan))
+
+        out = {
+            f'{pfx}_open_win': ow, f'{pfx}_open_draw': od, f'{pfx}_open_lose': ol,
+            f'{pfx}_close_win': cw, f'{pfx}_close_draw': cd, f'{pfx}_close_lose': cl,
+            f'{pfx}_win_trend': cw - ow, f'{pfx}_draw_trend': cd - od, f'{pfx}_lose_trend': cl - ol,
+            f'{pfx}_implied_win': imp_win, f'{pfx}_implied_draw': imp_draw, f'{pfx}_implied_lose': imp_lose,
+            f'{pfx}_record_count': np.where(matched, cnt, 0.0),
+            f'{pfx}_kelly_win': _kelly_array(imp_win, cw),
+            f'{pfx}_kelly_draw': _kelly_array(imp_draw, cd),
+            f'{pfx}_kelly_lose': _kelly_array(imp_lose, cl),
+            f'{pfx}_win_change_rate': _change_rate_array(cw, ow),
+            f'{pfx}_draw_change_rate': _change_rate_array(cd, od),
+            f'{pfx}_lose_change_rate': _change_rate_array(cl, ol),
+        }
+
+        if with_fav:
+            imp_stack = np.column_stack([ih, id_, ia])
+            fav = np.argmax(imp_stack, axis=1).astype(float)
+            imp_fill = np.where(np.isnan(imp_stack), -np.inf, imp_stack)
+            raw_max = imp_fill.max(axis=1)
+            out[f'{pfx}_favorite'] = np.where(matched, fav, np.nan)
+            out[f'{pfx}_favorite_prob'] = (
+                np.where(matched & valid, raw_max / total, np.where(matched, 0.0, np.nan))
+            )
+            out[f'{pfx}_overround'] = np.where(matched & valid, total, np.where(matched, 1.0, np.nan))
+
+        # 未对齐行：除 record_count 外全部置 NaN（与原 else 分支一致）
+        for k in out:
+            if k == f'{pfx}_record_count':
+                continue
+            out[k] = np.where(matched, out[k], np.nan)
+        return out
+
+    def _tg_feat(lst, cnt, matched):
+        """构建总进球赔率特征（大小球概率/最可能/期望）。"""
+        lst = np.asarray(lst, dtype=float)
+        cnt = np.asarray(cnt, dtype=float)
+        matched = np.asarray(matched, dtype=bool)
+
+        total = lst.sum(axis=1)
+        valid = total > 0
+        with np.errstate(divide='ignore', invalid='ignore'):
+            norm = lst / total[:, None]
+
+        over_idx = np.array([3, 4, 5, 6, 7])
+        under_idx = np.array([0, 1, 2])
+        glabels = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
+        norm_fill = np.where(np.isnan(norm), -np.inf, norm)
+
+        return {
+            'tg_over_25_prob': np.where(matched & valid, norm[:, over_idx].sum(axis=1), np.nan),
+            'tg_under_25_prob': np.where(matched & valid, norm[:, under_idx].sum(axis=1), np.nan),
+            'tg_most_likely': np.where(matched & valid, np.argmax(norm, axis=1).astype(float), np.nan),
+            'tg_most_likely_prob': np.where(matched & valid, norm_fill.max(axis=1), np.nan),
+            'tg_expected': np.where(matched & valid, (norm * glabels).sum(axis=1), np.nan),
+            'tg_record_count': np.where(matched, cnt, 0.0),
+        }
+
+    data = {}
+    data.update(_three_way(wdl_f, wdl_l, wdl_c, wdl_matched, 'wdl', True))
+    data.update(_three_way(hcp_f, hcp_l, hcp_c, hcp_matched, 'hcp', False))
+    data.update(_tg_feat(tg_l, tg_c, tg_matched))
+
+    has_wdl = wdl_matched.astype(int)
+    has_hcp = hcp_matched.astype(int)
+    has_tg = tg_matched.astype(int)
+    data['has_wdl_odds'] = has_wdl
+    data['has_hcp_odds'] = has_hcp
+    data['has_tg_odds'] = has_tg
+    data['odds_coverage'] = has_wdl + has_hcp + has_tg
+
+    # D-010 市场置信度/熵/庄家利润率（基于 WDL 归一化隐含概率）
+    probs = np.column_stack([data['wdl_implied_win'], data['wdl_implied_draw'], data['wdl_implied_lose']])
+    probs_fill = np.where(np.isnan(probs), -np.inf, probs)
+    data['odds_confidence'] = np.where(has_wdl.astype(bool), probs_fill.max(axis=1), np.nan)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        logp = np.log(probs + 1e-10)
+        ent_terms = np.where(probs > 0, probs * logp, 0.0)
+    data['odds_entropy'] = np.clip(-ent_terms.sum(axis=1), 0.0, 1.1)
+    data['bookmaker_margin'] = data['wdl_overround'] - 1.0
+
+    odds_df = pd.DataFrame(data, index=df.index)
+
+    # 确保所有预期的列都存在
+    expected_columns = [
+        'wdl_open_win', 'wdl_open_draw', 'wdl_open_lose',
+        'wdl_close_win', 'wdl_close_draw', 'wdl_close_lose',
+        'wdl_win_trend', 'wdl_draw_trend', 'wdl_lose_trend',
+        'wdl_implied_win', 'wdl_implied_draw', 'wdl_implied_lose',
+        'wdl_overround', 'wdl_favorite', 'wdl_favorite_prob',
+        'wdl_record_count',
+        'wdl_kelly_win', 'wdl_kelly_draw', 'wdl_kelly_lose',
+        'wdl_win_change_rate', 'wdl_draw_change_rate', 'wdl_lose_change_rate',
+        'hcp_open_win', 'hcp_open_draw', 'hcp_open_lose',
+        'hcp_close_win', 'hcp_close_draw', 'hcp_close_lose',
+        'hcp_win_trend', 'hcp_draw_trend', 'hcp_lose_trend',
+        'hcp_implied_win', 'hcp_implied_draw', 'hcp_implied_lose',
+        'hcp_record_count',
+        'hcp_kelly_win', 'hcp_kelly_draw', 'hcp_kelly_lose',
+        'hcp_win_change_rate', 'hcp_draw_change_rate', 'hcp_lose_change_rate',
+        'tg_over_25_prob', 'tg_under_25_prob',
+        'tg_most_likely', 'tg_most_likely_prob',
+        'tg_expected', 'tg_record_count',
+        'has_wdl_odds', 'has_hcp_odds', 'has_tg_odds', 'odds_coverage',
+        'odds_confidence', 'odds_entropy', 'bookmaker_margin',
+    ]
+
+    for col in expected_columns:
+        if col not in odds_df.columns:
+            odds_df[col] = np.nan
+
+    # 保持与旧实现一致的列顺序
+    odds_df = odds_df.reindex(columns=expected_columns)
+
+    # 缺失值处理：使用全局中位数填充（简化处理，避免groupby问题）
+    for col in odds_df.columns:
+        if col.startswith('has_') or col == 'odds_coverage':
+            continue
+        col_median = odds_df[col].median()
+        odds_df[col] = odds_df[col].fillna(col_median)
+
+    # 二元特征和计数特征使用0填充
+    for col in ['has_wdl_odds', 'has_hcp_odds', 'has_tg_odds', 'odds_coverage',
+                'wdl_record_count', 'hcp_record_count', 'tg_record_count']:
+        if col in odds_df.columns:
+            odds_df[col] = odds_df[col].fillna(0).astype(int)
+
+    # 异常值处理
+    for col in odds_df.columns:
+        if col.startswith('has_') or col == 'odds_coverage':
+            continue
+        odds_df[col] = winsorize_series(odds_df[col], lower_percentile=1, upper_percentile=99)
+
+    return odds_df
+
+
+def _build_odds_features_legacy(df, odds_conn=None):
     """
     构建赔率特征（修复版）
     
@@ -1279,7 +1733,7 @@ def build_odds_features(df, odds_conn=None):
     for col in expected_columns:
         if col not in odds_df.columns:
             odds_df[col] = np.nan
-    
+
     # 缺失值处理：使用全局中位数填充（简化处理，避免groupby问题）
     for col in odds_df.columns:
         if col.startswith('has_') or col == 'odds_coverage':
@@ -1300,6 +1754,54 @@ def build_odds_features(df, odds_conn=None):
         odds_df[col] = winsorize_series(odds_df[col], lower_percentile=1, upper_percentile=99)
     
     return odds_df
+
+
+def build_odds_features_slim(df, odds_conn=None):
+    """
+    C-20260823-003: 精简赔率特征（~30维核心特征，砍掉~75维衍生特征）
+    
+    保留特征:
+    - WDL/HCP 隐含概率 (6维) — 核心信号
+    - 总进球概率 (2维) — tg_over_25_prob, tg_under_25_prob
+    - 凯利指数 (6维) — 价值评估
+    - 赔率变化率 (6维) — 市场情绪动量
+    - 市场置信度 (3维) — odds_confidence, odds_entropy, bookmaker_margin
+    - 覆盖度 (4维) — has_wdl/hcp/tg_odds, odds_coverage
+    - 偏好 (2维) — wdl_favorite, wdl_favorite_prob
+    - 总进球期望 (1维) — tg_expected
+    
+    删除特征 (由 build_odds_features 生成但此处不保留):
+    - 原始开盘/收盘赔率 (12维) — 与隐含概率冗余
+    - 趋势值 (6维) — 与变化率冗余
+    - 记录数 (3维) — 无预测价值
+    """
+    full_odds = build_odds_features(df, odds_conn)
+    
+    SLIM_COLUMNS = [
+        # WDL 隐含概率 (3维)
+        'wdl_implied_win', 'wdl_implied_draw', 'wdl_implied_lose',
+        # HCP 隐含概率 (3维)
+        'hcp_implied_win', 'hcp_implied_draw', 'hcp_implied_lose',
+        # 总进球概率 (2维)
+        'tg_over_25_prob', 'tg_under_25_prob',
+        # 凯利指数 (6维)
+        'wdl_kelly_win', 'wdl_kelly_draw', 'wdl_kelly_lose',
+        'hcp_kelly_win', 'hcp_kelly_draw', 'hcp_kelly_lose',
+        # 赔率变化率 (6维)
+        'wdl_win_change_rate', 'wdl_draw_change_rate', 'wdl_lose_change_rate',
+        'hcp_win_change_rate', 'hcp_draw_change_rate', 'hcp_lose_change_rate',
+        # 市场置信度 (3维)
+        'odds_confidence', 'odds_entropy', 'bookmaker_margin',
+        # 覆盖度 (4维)
+        'has_wdl_odds', 'has_hcp_odds', 'has_tg_odds', 'odds_coverage',
+        # 偏好 (2维)
+        'wdl_favorite', 'wdl_favorite_prob',
+        # 总进球期望 (1维)
+        'tg_expected',
+    ]
+    
+    available = [c for c in SLIM_COLUMNS if c in full_odds.columns]
+    return full_odds[available]
 
 
 def build_nonlinear_features(X: pd.DataFrame) -> pd.DataFrame:
@@ -1416,8 +1918,43 @@ def build_draw_enhanced_features(X: pd.DataFrame) -> pd.DataFrame:
     return de_features
 
 
+def _league_zscore(feat: pd.DataFrame, leagues: pd.Series,
+                   matched_mask: pd.Series) -> pd.DataFrame:
+    """按联赛对特征做 z-score 归一（P1-9 联赛条件化）。
+
+    仅对有数据（matched_mask=True）的行计算各联赛均值/标准差并归一，
+    无数据行统一置 0（明确的"无数据"信号，与默认填充行为一致）。
+
+    Args:
+        feat: 特征 DataFrame（索引与 df 对齐）
+        leagues: df['competition_name'] 联赛列
+        matched_mask: 布尔 Series，True=该行有时序数据
+
+    Returns:
+        归一化后的特征 DataFrame（副本）
+    """
+    out = feat.copy()
+    leagues = leagues.reindex(out.index)
+    mask = matched_mask.reindex(out.index).fillna(False)
+    if mask.sum() < 10:
+        # 有效样本过少，跳过归一，保持原值
+        return out
+    lg_masked = leagues[mask]
+    for c in out.columns:
+        sub = out.loc[mask, c]
+        grp = sub.groupby(lg_masked)
+        mu = grp.transform('mean')
+        sd = grp.transform('std')
+        z = (sub - mu) / sd.replace(0.0, np.nan)
+        out.loc[mask, c] = z.fillna(0.0).values
+        out.loc[~mask, c] = 0.0
+    return out
+
+
 def build_all_features(df, include_odds=True, include_elo=True, include_temporal=True,
-                       include_score=True, include_nonlinear=True, include_draw_enhanced=True):
+                       include_score=True, include_nonlinear=True, include_draw_enhanced=True,
+                       slim_odds=True, ts_odds=False, xg_deep=False, ctx_features=False,
+                       consensus_odds=False):
     """
     构建所有特征（基础特征 + 球队特征 + 赔率特征 + D-010衍生特征 + D-012 Elo特征
     + D-013时序赔率特征 + 比分赔率特征 + 非线性变换特征 + 平局增强特征）
@@ -1425,11 +1962,24 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
     参数:
         df: 比赛数据DataFrame
         include_odds: 是否包含赔率特征
+        slim_odds: 是否使用精简赔率特征 (C-20260823-003, ~30维 vs 全量~54维)
         include_elo: 是否包含Elo评分特征 (D-012)
         include_temporal: 是否包含时序赔率变化速率特征 (D-013)
         include_score: 是否包含比分赔率特征 (T-003.1)
         include_nonlinear: 是否包含非线性变换特征 (T-003.2)
         include_draw_enhanced: 是否包含平局增强特征 (T-003.3)
+        ts_odds: P1-9 时序赔率开关（默认 False 保证可回退 A/B）。True 时在
+            slim_odds 精简模式下仍接入 D-013 时序赔率（22维，含跨盘口一致性+
+            去水概率漂移）与 T-003.1 比分赔率（8维），并对时序特征做联赛
+            z-score 归一（联赛条件化，不拆 5 套模型）
+        xg_deep: P1-8 xG 深度特征开关（默认 False 保证可回退 A/B）。True 时接入
+            xg_diff_recent / xg_diff_trend / xg_diff_pct 主客各 3 维（共 6 维）
+        ctx_features: P1-10 情境化特征开关（默认 False 保证可回退 A/B）。True 时接入
+            情境特征（赛程密度/休息天数/主客连续作战/积分排名压力/德比/新军经验，
+            共 14 维）
+        consensus_odds: P1-11 多博彩公司赔率一致性开关（默认 False 保证可回退 A/B）。
+            True 时接入百家欧指共识概率（3维）+ 竞彩-共识偏离度（3维）+ 总偏离度+
+            庄家分歧度+覆盖庄家数+市场抽水（共 10 维）
 
     返回:
         X: 特征矩阵
@@ -1461,8 +2011,12 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
     # 集成赔率特征
     if include_odds:
         try:
-            odds_feature = build_odds_features(df)
-            print(f"   赔率特征维度: {odds_feature.shape[1]} (shape={odds_feature.shape})")
+            if slim_odds:
+                odds_feature = build_odds_features_slim(df)
+                print(f"   赔率特征维度 (slim): {odds_feature.shape[1]} (shape={odds_feature.shape})")
+            else:
+                odds_feature = build_odds_features(df)
+                print(f"   赔率特征维度: {odds_feature.shape[1]} (shape={odds_feature.shape})")
             if odds_feature.shape[1] > 0:
                 X = pd.concat([X, odds_feature], axis=1)
             else:
@@ -1476,20 +2030,35 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
 
         # === D-010: 价值投注信号（2维）===
         # 隐含概率 vs 球队历史胜率的差异，正值表示赔率被高估（有价值）
+        # 使用 pd.concat 一次性添加，避免 DataFrame 碎片化
+        bet_cols = {}
         if 'wdl_implied_win' in X.columns and 'home_win_rate' in X.columns:
-            X['value_bet_home'] = X['wdl_implied_win'] - X['home_win_rate']
-            print(f"   [OK] D-010 价值投注信号: +2维 (value_bet_home, value_bet_away)")
+            bet_cols['value_bet_home'] = X['wdl_implied_win'] - X['home_win_rate']
         if 'wdl_implied_lose' in X.columns and 'away_win_rate' in X.columns:
-            X['value_bet_away'] = X['wdl_implied_lose'] - X['away_win_rate']
+            bet_cols['value_bet_away'] = X['wdl_implied_lose'] - X['away_win_rate']
+        if bet_cols:
+            X = pd.concat([X, pd.DataFrame(bet_cols, index=X.index)], axis=1)
+            print(f"   [OK] D-010 价值投注信号: +2维 (value_bet_home, value_bet_away)")
 
-    # === D-013: 时序赔率变化速率特征（10维）===
-    if include_temporal:
+    # === D-013: 时序赔率特征（22维，P1-9 扩展）===
+    # slim_odds 模式下默认跳过；ts_odds=True 时接入（含跨盘口一致性+去水概率漂移）
+    if include_temporal and (not slim_odds or ts_odds):
         try:
             from d013_temporal_odds import build_d013_features
-            print(f"   构建 D-013 时序赔率变化速率特征...")
+            print(f"   构建 D-013 时序赔率特征 (ts_odds={ts_odds})...")
             temporal_feature = build_d013_features(df)
             print(f"   [OK] D-013 时序赔率特征维度: {temporal_feature.shape[1]} (shape={temporal_feature.shape})")
             if temporal_feature.shape[1] > 0:
+                # 内部指标列：联赛 z-score 时用于屏蔽无数据行
+                if '_ts_matched' in temporal_feature.columns:
+                    ts_matched_mask = temporal_feature.pop('_ts_matched') > 0
+                else:
+                    ts_matched_mask = None
+                # 联赛条件化（P1-9 步骤5）：时序特征按联赛 z-score 归一
+                if ts_odds and ts_matched_mask is not None:
+                    leagues = df['competition_name']
+                    temporal_feature = _league_zscore(temporal_feature, leagues, ts_matched_mask)
+                    print(f"   [OK] D-013 时序特征已按联赛 z-score 归一")
                 X = pd.concat([X, temporal_feature], axis=1)
             else:
                 print(f"   [WARN]  D-013时序赔率特征为0维")
@@ -1499,7 +2068,8 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
             traceback.print_exc()
 
     # === T-003.1: 比分赔率特征（8维）===
-    if include_score:
+    # slim_odds 模式下默认跳过；ts_odds=True 时接入（P1-9）
+    if include_score and (not slim_odds or ts_odds):
         try:
             from score_features import build_score_features
             print(f"   构建比分赔率特征 (T-003.1)...")
@@ -1515,8 +2085,8 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
             traceback.print_exc()
 
     # === T-003.2: 非线性变换特征（29维）===
-    # 注意：必须在赔率特征之后构建，因为依赖 wdl_close_*, wdl_implied_*, hcp_close_*, tg_*, odds_* 等
-    if include_nonlinear:
+    # slim_odds 模式下跳过（赔率衍生特征，拟合噪声）
+    if include_nonlinear and not slim_odds:
         try:
             print(f"   构建非线性变换特征 (T-003.2)...")
             nonlinear_feature = build_nonlinear_features(X)
@@ -1547,19 +2117,16 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
     # === T-007: SofaScore 球员级特征（44维）===
     # 从 sofascore_team_features 表加载，按 date + 球队名合并
     try:
-        import sqlite3
         db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'odds.db')
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sofascore_team_features'")
-        if cursor.fetchone():
-            sofa_df = pd.read_sql_query("SELECT * FROM sofascore_team_features", conn)
+        conn = connect(db_path=db_path)
+        if table_exists(conn, 'sofascore_team_features'):
+            sofa_df = read_sql("SELECT * FROM sofascore_team_features", conn)
             conn.close()
             print(f"   [OK] T-007 球员特征: {sofa_df.shape[1]} 维 (shape={sofa_df.shape})")
             
-            # 只保留特征列（去掉 ID/元数据列）
+            # 只保留特征列（去掉 ID/元数据列），P0-3: 含 pa_ 前缀球员可用性特征
             sofa_feature_cols = [c for c in sofa_df.columns 
-                                 if c.startswith('sofa_')]
+                                 if c.startswith('sofa_') or c.startswith('pa_')]
             
             # 标准化 sofa 的球队名（与 df 保持一致）
             sofa_df['home_norm'] = sofa_df['home_team_cn'].apply(normalize_team_name)
@@ -1586,9 +2153,10 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
             coverage = non_null_mask.sum() / len(merged) * 100 if len(merged) > 0 else 0
             print(f"   球员特征覆盖率: {coverage:.1f}% ({non_null_mask.sum()}/{len(merged)})")
             
-            # 将特征列加入 X
-            for c in sofa_feature_cols:
-                X[c] = merged[c].fillna(-1.0).values
+            # 将特征列加入 X（使用 pd.concat 一次性添加，避免 DataFrame 碎片化）
+            sofa_extra = merged[sofa_feature_cols].fillna(-1.0)
+            sofa_extra.index = X.index
+            X = pd.concat([X, sofa_extra], axis=1)
             
             print(f"   合并后特征维度: {X.shape[1]}")
         else:
@@ -1599,6 +2167,133 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
         print(f"   警告: 加载球员特征失败 - {e}")
         traceback.print_exc()
 
+    # === P1-8: xG 差值趋势 + 联赛分位特征（6维）===
+    if xg_deep:
+        try:
+            from xg_deep_features import build_xg_deep_features
+            print(f"   构建 xG 深度特征 (xg_deep={xg_deep})...")
+            xg_feat = build_xg_deep_features(df)
+            print(f"   [OK] xG 深度特征维度: {xg_feat.shape[1]} (shape={xg_feat.shape})")
+            if xg_feat.shape[1] > 0:
+                X = pd.concat([X, xg_feat], axis=1)
+            else:
+                print(f"   [WARN]  xG 深度特征为0维")
+        except Exception as e:
+            import traceback
+            print(f"   警告: 构建 xG 深度特征失败 - {e}")
+            traceback.print_exc()
+
+    # === P1-10: 情境化特征（14维，赛程密度/休息天数/连续作战/积分压力/德比/新军经验）===
+    if ctx_features:
+        try:
+            from contextual_features import build_contextual_features
+            print(f"   构建 P1-10 情境化特征 (ctx_features={ctx_features})...")
+            ctx_feat = build_contextual_features(df)
+            print(f"   [OK] 情境化特征维度: {ctx_feat.shape[1]} (shape={ctx_feat.shape})")
+            if ctx_feat.shape[1] > 0:
+                X = pd.concat([X, ctx_feat], axis=1)
+            else:
+                print(f"   [WARN]  情境化特征为0维")
+        except Exception as e:
+            import traceback
+            print(f"   警告: 构建情境化特征失败 - {e}")
+            traceback.print_exc()
+
+    # === P1-11: 多博彩公司赔率一致性（10维，竞彩 vs 百家欧指共识偏离度）===
+    if consensus_odds:
+        try:
+            from odds_consensus_features import build_odds_consensus_features
+            print(f"   构建 P1-11 赔率一致性特征 (consensus_odds={consensus_odds})...")
+            cons_feat = build_odds_consensus_features(df, X)
+            print(f"   [OK] 赔率一致性特征维度: {cons_feat.shape[1]} (shape={cons_feat.shape})")
+            if cons_feat.shape[1] > 0:
+                X = pd.concat([X, cons_feat], axis=1)
+            else:
+                print(f"   [WARN]  赔率一致性特征为0维")
+        except Exception as e:
+            import traceback
+            print(f"   警告: 构建赔率一致性特征失败 - {e}")
+            traceback.print_exc()
+
     y = df['result']
 
     return X, y
+
+
+def build_match_alignment(conn, history_table: str) -> dict:
+    """构建赔率历史表 → matches 表的三通道对齐映射。
+
+    赔率历史表（wdl_history/handicap_history/total_goals_history/score_history）
+    的 match_id 主要为中文格式（date_中文主_中文客）。matches 表的 match_id
+    在 16/17~22/23 赛季同为中文格式、23/24 起转为英文格式（date_英文主_英文客），
+    单一通道无法全覆盖。本函数按优先级用三条通道解析对齐：
+
+      通道0（直接，最高优先）: history.match_id == matches.match_id（覆盖中文赛季，占 ~71%）
+      通道1（桥表）: match_id_mapping (sh_match_id → matches_match_id)
+      通道2（兜底）: history 表自带 match_id_en 直接列（补齐英文赛季桥表未覆盖场次）
+
+    Args:
+        conn: sqlite3 连接
+        history_table: 赔率历史表名
+
+    Returns:
+        dict: {history_match_id: matches_match_id}，未对齐项不出现
+    """
+    valid_tables = ("wdl_history", "handicap_history",
+                    "total_goals_history", "score_history")
+    if history_table not in valid_tables:
+        raise ValueError(f"不支持的赔率历史表: {history_table}")
+
+    # ---- 通道0 备选集合：一次性加载 matches.match_id（避免对历史大表做 JOIN）----
+    matches_ids = set()
+    for (mid,) in conn.execute("SELECT match_id FROM matches").fetchall():
+        if mid is not None:
+            matches_ids.add(mid)
+
+    # ---- 通道1 备选：match_id_mapping 桥表全量加载（小表）----
+    bridge = {}
+    try:
+        for sh, en in conn.execute(
+            "SELECT sh_match_id, matches_match_id FROM match_id_mapping"
+        ).fetchall():
+            if sh is not None and en is not None:
+                bridge[sh] = en
+    except Exception:  # noqa: BLE001
+        bridge = {}
+
+    # ---- 通道2 探测：history 表是否带 match_id_en 列（SQLite/PG 双后端一致）----
+    desc = conn.execute(f"SELECT * FROM {history_table} LIMIT 0").description or []
+    has_en = any(d[0] == "match_id_en" for d in desc)
+
+    mapping = {}
+    if has_en:
+        rows = conn.execute(
+            f"SELECT DISTINCT match_id, match_id_en FROM {history_table}"
+        ).fetchall()
+        for sh, en in rows:
+            if sh is None:
+                continue
+            if sh in matches_ids:
+                mapping[sh] = sh          # 通道0 直接对齐（最高优先）
+                continue
+            en1 = bridge.get(sh)
+            if en1 is not None and en1 in matches_ids:
+                mapping[sh] = en1         # 通道1 桥表（次优先）
+                continue
+            if en is not None and en in matches_ids:
+                mapping[sh] = en          # 通道2 match_id_en 兜底（最低优先）
+    else:
+        rows = conn.execute(
+            f"SELECT DISTINCT match_id FROM {history_table}"
+        ).fetchall()
+        for (sh,) in rows:
+            if sh is None:
+                continue
+            if sh in matches_ids:
+                mapping[sh] = sh
+                continue
+            en1 = bridge.get(sh)
+            if en1 is not None and en1 in matches_ids:
+                mapping[sh] = en1
+
+    return mapping

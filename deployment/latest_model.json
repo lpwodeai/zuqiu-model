@@ -1,0 +1,15 @@
+{
+  "latest_version": "20260815_125649",
+  "updated_at": "2026-08-15T12:56:49.942530",
+  "model_paths": {
+    "draw_detector": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_draw_detector.pkl",
+    "direction_predictor": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_direction_predictor.pkl",
+    "metadata": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_metadata.json",
+    "report": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\reports\\t005v3_deployment_20260815_125649.json"
+  },
+  "calibration": {
+    "temperature": 0.8,
+    "threshold": 0.5,
+    "class_weight_ratio": 1.2
+  }
+}

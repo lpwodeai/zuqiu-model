@@ -1,0 +1,242 @@
+{
+  "timestamp": "2026-07-13T14:51:07.409376",
+  "overall_score": 50.0,
+  "assessments": {
+    "matches_completeness": {
+      "total_rows": 29784,
+      "missing_stats": {
+        "id": 0,
+        "date": 0,
+        "homeTeamId": 0,
+        "awayTeamId": 0,
+        "homeGoals": 0,
+        "awayGoals": 0,
+        "competitionId": 0,
+        "homeXg": 0,
+        "awayXg": 0,
+        "homeXgot": 29784,
+        "awayXgot": 29784,
+        "homeBigChances": 0,
+        "awayBigChances": 0,
+        "homeXa": 29784,
+        "awayXa": 29784,
+        "homeSaves": 0,
+        "awaySaves": 0,
+        "homeTouchesBox": 0,
+        "awayTouchesBox": 0,
+        "homeHitsPost": 0,
+        "awayHitsPost": 0,
+        "homeShots": 0,
+        "homeShotsOnTarget": 0,
+        "awayShots": 0,
+        "awayShotsOnTarget": 0,
+        "homePossession": 0,
+        "homeCorners": 0,
+        "awayCorners": 0,
+        "homeFouls": 0,
+        "awayFouls": 0,
+        "homeYellowCards": 0,
+        "awayYellowCards": 0,
+        "matchHash": 0,
+        "createdAt": 0,
+        "updatedAt": 0,
+        "home_team_name": 0,
+        "away_team_name": 0,
+        "competition_name": 0,
+        "result": 0,
+        "goal_diff": 0,
+        "total_goals": 0
+      },
+      "completeness_score": 0
+    },
+    "teams_completeness": {
+      "total_rows": 96,
+      "missing_stats": {
+        "id": 0,
+        "name": 0,
+        "shortName": 0,
+        "country": 0,
+        "league": 0,
+        "createdAt": 0,
+        "updatedAt": 0
+      },
+      "completeness_score": 100
+    },
+    "match_distribution": {
+      "home_win_rate": 0.41330915928015044,
+      "away_win_rate": 0.41797609454740803,
+      "draw_rate": 0.1687147461724416,
+      "distribution_score": 0,
+      "is_symmetric": 1,
+      "avg_home_goals": 2.4986905721192585,
+      "avg_away_goals": 2.516720386784851,
+      "avg_total_goals": 5.015410958904109
+    },
+    "league_distribution": {
+      "Serie A": {
+        "matches": 6460,
+        "home_win_rate": 0.41671826625387,
+        "away_win_rate": 0.41594427244582044,
+        "draw_rate": 0.1673374613003096,
+        "avg_home_goals": 2.503095975232198,
+        "avg_away_goals": 2.51687306501548,
+        "is_suspicious": 1
+      },
+      "Premier League": {
+        "matches": 6460,
+        "home_win_rate": 0.4102167182662539,
+        "away_win_rate": 0.42229102167182664,
+        "draw_rate": 0.1674922600619195,
+        "avg_home_goals": 2.4936532507739937,
+        "avg_away_goals": 2.523219814241486,
+        "is_suspicious": 1
+      },
+      "La Liga": {
+        "matches": 6460,
+        "home_win_rate": 0.41625386996904024,
+        "away_win_rate": 0.41408668730650156,
+        "draw_rate": 0.1696594427244582,
+        "avg_home_goals": 2.5094427244582045,
+        "avg_away_goals": 2.5054179566563466,
+        "is_suspicious": 1
+      },
+      "Bundesliga": {
+        "matches": 5202,
+        "home_win_rate": 0.4083044982698962,
+        "away_win_rate": 0.4215686274509804,
+        "draw_rate": 0.1701268742791234,
+        "avg_home_goals": 2.5034602076124566,
+        "avg_away_goals": 2.5374855824682814,
+        "is_suspicious": 1
+      },
+      "Ligue 1": {
+        "matches": 5202,
+        "home_win_rate": 0.4142637447135717,
+        "away_win_rate": 0.41637831603229525,
+        "draw_rate": 0.16935793925413303,
+        "avg_home_goals": 2.4813533256439833,
+        "avg_away_goals": 2.5017301038062283,
+        "is_suspicious": 1
+      }
+    },
+    "numerical_features": {
+      "homeXg": {
+        "min": 0.3,
+        "max": 3.0,
+        "mean": 1.6431137523502553,
+        "std": 0.7795273197558972,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          6
+        ]
+      },
+      "awayXg": {
+        "min": 0.3,
+        "max": 3.0,
+        "mean": 1.6484132420091322,
+        "std": 0.7782172059279908,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          6
+        ]
+      },
+      "homePossession": {
+        "min": 35,
+        "max": 65,
+        "mean": 49.9963403169487,
+        "std": 8.939906148193435,
+        "out_of_range": 0,
+        "expected_range": [
+          30,
+          70
+        ]
+      },
+      "homeCorners": {
+        "min": 0,
+        "max": 12,
+        "mean": 6.008595218909481,
+        "std": 3.743495627701609,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          20
+        ]
+      },
+      "awayCorners": {
+        "min": 0,
+        "max": 12,
+        "mean": 5.97418076819769,
+        "std": 3.7319404531341305,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          20
+        ]
+      },
+      "homeGoals": {
+        "min": 0,
+        "max": 5,
+        "mean": 2.4986905721192585,
+        "std": 1.7066142743000712,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          10
+        ]
+      },
+      "awayGoals": {
+        "min": 0,
+        "max": 5,
+        "mean": 2.516720386784851,
+        "std": 1.7055881976222809,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          10
+        ]
+      },
+      "quality_score": 100
+    },
+    "temporal_distribution": {
+      "monthly_distribution": {
+        "1": 4380,
+        "2": 3504,
+        "3": 3504,
+        "4": 876,
+        "8": 2628,
+        "9": 3504,
+        "10": 4380,
+        "11": 3504,
+        "12": 3504
+      },
+      "weekday_distribution": {
+        "4": 29784
+      },
+      "weekend_ratio": 0.0,
+      "date_range": "2025-08-15 to 2026-04-03"
+    },
+    "team_data": {
+      "total_teams": 96,
+      "teams_with_matches": 96,
+      "missing_in_matches": [],
+      "missing_in_db": [],
+      "league_distribution": {
+        "SerieA": 20,
+        "PL": 20,
+        "SA": 20,
+        "BL1": 18,
+        "FL1": 18
+      }
+    },
+    "synthetic_detection": {
+      "detected_patterns": [
+        "主客场进球数过于对称",
+        "比赛日期规律性过强"
+      ],
+      "is_synthetic": 1,
+      "pattern_count": 2
+    }
+  }
+}

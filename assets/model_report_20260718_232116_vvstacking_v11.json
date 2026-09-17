@@ -1,0 +1,340 @@
+{
+  "timestamp": "2026-07-18T23:21:16.727404",
+  "version": "vstacking_v11",
+  "data_summary": {
+    "total_matches": 1867,
+    "date_range": "2025-08-15 to 2026-05-24",
+    "feature_dimensions": 50,
+    "class_distribution": {
+      "2": 841,
+      "0": 546,
+      "1": 480
+    }
+  },
+  "cross_validation": {
+    "xgboost": [
+      {
+        "accuracy": 0.5016077170418006,
+        "log_loss": 1.0474172830581665,
+        "brier": 0.6296529769897461,
+        "f1": 0.5089373203184387,
+        "train_accuracy": 0.7980769230769231,
+        "train_log_loss": 0.7721835374832153
+      },
+      {
+        "accuracy": 0.44694533762057875,
+        "log_loss": 1.0520334243774414,
+        "brier": 0.6316948533058167,
+        "f1": 0.45251379733944763,
+        "train_accuracy": 0.8186195826645265,
+        "train_log_loss": 0.7739192247390747
+      },
+      {
+        "accuracy": 0.37942122186495175,
+        "log_loss": 1.0830787420272827,
+        "brier": 0.6565040349960327,
+        "f1": 0.3795771920696487,
+        "train_accuracy": 0.8104925053533191,
+        "train_log_loss": 0.8013395667076111
+      },
+      {
+        "accuracy": 0.42765273311897106,
+        "log_loss": 1.0356842279434204,
+        "brier": 0.6245077252388,
+        "f1": 0.4266427650643818,
+        "train_accuracy": 0.8160642570281125,
+        "train_log_loss": 0.8334276676177979
+      },
+      {
+        "accuracy": 0.4662379421221865,
+        "log_loss": 1.03196382522583,
+        "brier": 0.6207748651504517,
+        "f1": 0.4774449098906086,
+        "train_accuracy": 0.7808483290488432,
+        "train_log_loss": 0.852962076663971
+      }
+    ],
+    "lightgbm": [
+      {
+        "accuracy": 0.4855305466237942,
+        "log_loss": 1.2202304394260235,
+        "brier": 0.6839123755307719,
+        "f1": 0.4918978250130572,
+        "train_accuracy": 0.9006410256410257,
+        "train_log_loss": 0.3372910020375255
+      },
+      {
+        "accuracy": 0.4855305466237942,
+        "log_loss": 1.2780744029901034,
+        "brier": 0.7037416830979406,
+        "f1": 0.4824422140752039,
+        "train_accuracy": 0.9470304975922953,
+        "train_log_loss": 0.3201972229943621
+      },
+      {
+        "accuracy": 0.37942122186495175,
+        "log_loss": 1.31997573498299,
+        "brier": 0.7708820379350679,
+        "f1": 0.36819114214349,
+        "train_accuracy": 0.923982869379015,
+        "train_log_loss": 0.3706495741615524
+      },
+      {
+        "accuracy": 0.4405144694533762,
+        "log_loss": 1.1625706886226423,
+        "brier": 0.6973104650216355,
+        "f1": 0.44107010040693767,
+        "train_accuracy": 0.9301204819277108,
+        "train_log_loss": 0.4159427853980825
+      },
+      {
+        "accuracy": 0.4405144694533762,
+        "log_loss": 1.078324382458179,
+        "brier": 0.6388221368170983,
+        "f1": 0.4456528312867828,
+        "train_accuracy": 0.9042416452442159,
+        "train_log_loss": 0.4830715814956155
+      }
+    ],
+    "ensemble": [
+      {
+        "accuracy": 0.4758842443729904,
+        "log_loss": 1.3902778661251873,
+        "brier": 0.7619924846843208,
+        "f1": 0.480870680100622,
+        "train_accuracy": 0.907051282051282,
+        "rps": 0.2669844744648123,
+        "brier_reliability": 0.2539974948947736,
+        "brier_resolution": 0.3405294749224561,
+        "brier_uncertainty": 0.6228223446821269,
+        "mean_calibration_error": 0.10612380978399029
+      },
+      {
+        "accuracy": 0.4887459807073955,
+        "log_loss": 1.6908993336007003,
+        "brier": 0.8049988582734352,
+        "f1": 0.48209058398341403,
+        "train_accuracy": 0.9598715890850722,
+        "rps": 0.28630051861883715,
+        "brier_reliability": 0.2683329527578116,
+        "brier_resolution": 0.3573411643080405,
+        "brier_uncertainty": 0.644616991139463,
+        "mean_calibration_error": 0.09623280504810905
+      },
+      {
+        "accuracy": 0.36977491961414793,
+        "log_loss": 2.08720492037484,
+        "brier": 0.9866751525752888,
+        "f1": 0.3506702903689111,
+        "train_accuracy": 0.949678800856531,
+        "rps": 0.32482229707411914,
+        "brier_reliability": 0.3288917175250964,
+        "brier_resolution": 0.3544636210317452,
+        "brier_uncertainty": 0.6601255156584402,
+        "mean_calibration_error": 0.09538625704184982
+      },
+      {
+        "accuracy": 0.4437299035369775,
+        "log_loss": 1.7832206269794635,
+        "brier": 0.880272123079966,
+        "f1": 0.44299337305826203,
+        "train_accuracy": 0.9502008032128514,
+        "rps": 0.29317321275085584,
+        "brier_reliability": 0.29342404102665526,
+        "brier_resolution": 0.36221776867555616,
+        "brier_uncertainty": 0.6537980376546975,
+        "mean_calibration_error": 0.06215288688438277
+      },
+      {
+        "accuracy": 0.4662379421221865,
+        "log_loss": 1.5324711786937422,
+        "brier": 0.7802112329391602,
+        "f1": 0.46765844633797193,
+        "train_accuracy": 0.9286632390745502,
+        "rps": 0.26180927610635246,
+        "brier_reliability": 0.2600704109797198,
+        "brier_resolution": 0.32525954292619835,
+        "brier_uncertainty": 0.6447203813029229,
+        "mean_calibration_error": 0.09160419730657755
+      }
+    ]
+  },
+  "final_models": {
+    "xgboost": {
+      "accuracy": 0.47593582887700536,
+      "log_loss": 1.0262563228607178,
+      "brier": 0.6166901588439941,
+      "f1": 0.4823553378570679,
+      "train_accuracy": 0.8017414601473544,
+      "train_log_loss": 0.8442739844322205
+    },
+    "lightgbm": {
+      "accuracy": 0.48128342245989303,
+      "log_loss": 1.0826477218366903,
+      "brier": 0.64047859024615,
+      "f1": 0.4850916110298101,
+      "train_accuracy": 0.9176155391828533,
+      "train_log_loss": 0.4686136822746123
+    },
+    "ensemble": {
+      "accuracy": 0.47593582887700536,
+      "log_loss": 1.5364402079572776,
+      "brier": 0.7816820448178776,
+      "f1": 0.4764222302142552,
+      "train_accuracy": 0.9383791024782318,
+      "rps": 0.2570706494131806,
+      "brier_reliability": 0.26056068160595897,
+      "brier_resolution": 0.32967217671239324,
+      "brier_uncertainty": 0.6471589121793588,
+      "mean_calibration_error": 0.091046913154611,
+      "calibrated_accuracy": 0.48663101604278075,
+      "calibrated_brier": 0.6128417764317305,
+      "calibrated_mean_calibration_error": 0.026494131200311855
+    }
+  },
+  "feature_importance": {
+    "xgboost": [
+      {
+        "feature": "handicap_value",
+        "importance": 0.08941369503736496
+      },
+      {
+        "feature": "平均_主胜",
+        "importance": 0.050317469984292984
+      },
+      {
+        "feature": "最高_主胜",
+        "importance": 0.04891565442085266
+      },
+      {
+        "feature": "avg_implied_away",
+        "importance": 0.044913891702890396
+      },
+      {
+        "feature": "avg_prob_away",
+        "importance": 0.03952057659626007
+      },
+      {
+        "feature": "avg_prob_home",
+        "importance": 0.03717174753546715
+      },
+      {
+        "feature": "平均_客胜",
+        "importance": 0.03526192903518677
+      },
+      {
+        "feature": "avg_implied_home",
+        "importance": 0.03149603679776192
+      },
+      {
+        "feature": "odds_diff_h2a",
+        "importance": 0.03097756765782833
+      },
+      {
+        "feature": "bet365_客胜",
+        "importance": 0.030635008588433266
+      },
+      {
+        "feature": "bet365_主胜",
+        "importance": 0.02915118634700775
+      },
+      {
+        "feature": "avg_h2a",
+        "importance": 0.02416149340569973
+      },
+      {
+        "feature": "venue_diff",
+        "importance": 0.02086472511291504
+      },
+      {
+        "feature": "最高_客胜",
+        "importance": 0.018811291083693504
+      },
+      {
+        "feature": "home_avg_goals",
+        "importance": 0.016144495457410812
+      },
+      {
+        "feature": "home_loss_rate",
+        "importance": 0.015812113881111145
+      },
+      {
+        "feature": "home_win_rate",
+        "importance": 0.015761150047183037
+      },
+      {
+        "feature": "poisson_lambda_home",
+        "importance": 0.015536008402705193
+      },
+      {
+        "feature": "away_home_advantage",
+        "importance": 0.015173577703535557
+      },
+      {
+        "feature": "defence_strength_diff",
+        "importance": 0.015125640667974949
+      }
+    ],
+    "lightgbm": null
+  },
+  "training_time_seconds": 1106.93,
+  "model_files": {
+    "ensemble": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\ensemble_model_20260718_232116.pkl",
+    "xgb": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\xgb_model_20260718_232116.pkl",
+    "lgb": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\lgb_model_20260718_232116.pkl",
+    "scaler": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\scaler_20260718_232116.pkl",
+    "selected_features": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\selected_features_20260718_232116.pkl"
+  },
+  "selected_features": [
+    "home_win_rate",
+    "home_loss_rate",
+    "home_avg_goals",
+    "home_avg_opp_goals",
+    "home_goals_std",
+    "home_weighted_win_rate",
+    "home_weighted_avg_goals",
+    "home_defence_strength",
+    "away_win_rate",
+    "away_loss_rate",
+    "away_avg_goals",
+    "away_avg_opp_goals",
+    "away_goals_std",
+    "away_weighted_win_rate",
+    "away_weighted_avg_goals",
+    "away_home_goals",
+    "away_home_advantage",
+    "away_attack_strength",
+    "form_diff",
+    "goals_diff",
+    "defence_diff",
+    "recent_form_diff_10",
+    "recent_form_diff_15",
+    "weighted_form_diff",
+    "weighted_goals_diff",
+    "venue_diff",
+    "goals_stability_diff",
+    "defence_strength_diff",
+    "attack_strength_ratio",
+    "defence_strength_ratio",
+    "goals_ratio",
+    "recent_form_ratio",
+    "weighted_form_ratio",
+    "bet365_主胜",
+    "bet365_客胜",
+    "最高_主胜",
+    "最高_客胜",
+    "平均_主胜",
+    "平均_客胜",
+    "avg_h2a",
+    "avg_prob_home",
+    "avg_prob_away",
+    "avg_implied_home",
+    "avg_implied_away",
+    "odds_diff_h2a",
+    "handicap_value",
+    "poisson_lambda_home",
+    "poisson_lambda_away",
+    "poisson_prob_lose",
+    "model_vs_poisson_lose_diff"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "model_name": "T-005 v2 Final (Three-Step Optimization)",
+  "version": "20260811_091859",
+  "created_at": "2026-08-11 09:19:30",
+  "architecture": "two-stage (draw detector + direction predictor)",
+  "feature_columns": [
+    "hcp_prob_win",
+    "hcp_prob_draw",
+    "hcp_prob_lose",
+    "hcp_home_strength",
+    "hcp_draw_risk",
+    "hcp_confidence",
+    "hcp_entropy",
+    "hcp_expected_value",
+    "hcp_volatility",
+    "hcp_market_sentiment",
+    "hcp_underdog_ratio",
+    "hcp_favorite_margin",
+    "hcp_balance",
+    "hcp_upset_risk",
+    "hcp_odds_skew",
+    "wdl_draw_odds",
+    "wdl_draw_prob",
+    "draw_divergence",
+    "home_recent_wins",
+    "home_recent_draws",
+    "home_recent_losses",
+    "home_recent_goals_for",
+    "home_recent_goals_against",
+    "home_recent_points",
+    "away_recent_wins",
+    "away_recent_draws",
+    "away_recent_losses",
+    "away_recent_goals_for",
+    "away_recent_goals_against",
+    "away_recent_points",
+    "rest_days_home",
+    "rest_days_away",
+    "rest_days_diff",
+    "home_yellow_cards_l5",
+    "home_red_cards_l5",
+    "away_yellow_cards_l5",
+    "away_red_cards_l5",
+    "home_elo",
+    "away_elo",
+    "elo_diff",
+    "elo_ratio",
+    "elo_home_expected",
+    "elo_away_expected",
+    "elo_draw_prob",
+    "home_elo_momentum",
+    "away_elo_momentum",
+    "elo_confidence"
+  ],
+  "feature_dim": 47,
+  "training_samples": 3131,
+  "test_samples": 783,
+  "optimization_params": {
+    "stage1_class_weight": {
+      "0": 1.0,
+      "1": 1.5
+    },
+    "stage1_class_weight_ratio": 1.5,
+    "temperature": 2.15,
+    "dynamic_thresholds": {
+      "home_get_1": 0.4,
+      "home_give_1": 0.4,
+      "home_give_2+": 0.425
+    },
+    "default_threshold": 0.5
+  },
+  "optimization_history": [
+    "任务1: 组合动态阈值+T=2.150 → F1 Macro 0.4375 (协同效应+)",
+    "任务2: 全量验证集评估 → Accuracy 0.4847, 走水预测率0.1994",
+    "任务3: stage1 class_weight调优 → ratio=1.5 最优"
+  ],
+  "improvements_over_balanced": {
+    "accuracy": "+0.5pp (0.4847→0.4896)",
+    "f1_macro": "+1.1pp (0.4375→0.4488)",
+    "draw_recall": "+3.0pp (0.2098→0.2398)",
+    "draw_precision": "+2.8pp (0.2369→0.2651)"
+  },
+  "stage1_eval": {
+    "accuracy": 0.69377990430622,
+    "draw_recall": 0.21333333333333335
+  },
+  "stage2_eval": {
+    "accuracy": 0.7190775681341719
+  }
+}

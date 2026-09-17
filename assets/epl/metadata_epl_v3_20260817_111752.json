@@ -1,0 +1,34 @@
+{
+  "model_type": "EPL-v3.1",
+  "version": "3.1",
+  "timestamp": "20260817_111752",
+  "n_samples": 1141,
+  "feature_dim": 205,
+  "half_life_months": 18,
+  "season_weights": {
+    "25/26": 1.5,
+    "24/25": 1.2,
+    "older": 1.0
+  },
+  "params": {
+    "n_estimators": 200,
+    "learning_rate": 0.03,
+    "max_depth": 4,
+    "num_leaves": 15,
+    "min_child_samples": 40,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7,
+    "reg_alpha": 0.8,
+    "reg_lambda": 0.8,
+    "min_split_gain": 0.03,
+    "random_state": 42,
+    "verbose": -1
+  },
+  "cv_accuracy": 0.4678362573099415,
+  "val_accuracy": 0.42358078602620086,
+  "full_accuracy": 0.6406660823838738,
+  "cv_macro_f1": 0.4245224159575034,
+  "val_macro_f1": 0.3706464228203359,
+  "cv_draw_recall": 0.18824152020873333,
+  "best_trees": 51
+}

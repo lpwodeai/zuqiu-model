@@ -1,0 +1,268 @@
+{
+  "timestamp": "2026-07-13T15:02:46.836035",
+  "overall_score": 64.125,
+  "assessments": {
+    "matches_completeness": {
+      "total_rows": 875,
+      "missing_stats": {
+        "id": 0,
+        "date": 0,
+        "homeTeamId": 0,
+        "awayTeamId": 0,
+        "homeGoals": 0,
+        "awayGoals": 0,
+        "competitionId": 0,
+        "homeXg": 0,
+        "awayXg": 0,
+        "homeXgot": 0,
+        "awayXgot": 0,
+        "homeBigChances": 0,
+        "awayBigChances": 0,
+        "homeXa": 0,
+        "awayXa": 0,
+        "homeSaves": 0,
+        "awaySaves": 0,
+        "homeTouchesBox": 0,
+        "awayTouchesBox": 0,
+        "homeHitsPost": 0,
+        "awayHitsPost": 0,
+        "homeShots": 0,
+        "homeShotsOnTarget": 0,
+        "awayShots": 0,
+        "awayShotsOnTarget": 0,
+        "homePossession": 0,
+        "homeCorners": 0,
+        "awayCorners": 0,
+        "homeFouls": 0,
+        "awayFouls": 0,
+        "homeYellowCards": 0,
+        "awayYellowCards": 0,
+        "matchHash": 0,
+        "createdAt": 0,
+        "updatedAt": 0,
+        "home_team_name": 0,
+        "away_team_name": 0,
+        "competition_name": 0,
+        "result": 0,
+        "goal_diff": 0,
+        "total_goals": 0
+      },
+      "completeness_score": 100
+    },
+    "teams_completeness": {
+      "total_rows": 96,
+      "missing_stats": {
+        "id": 0,
+        "name": 0,
+        "shortName": 0,
+        "country": 0,
+        "league": 0,
+        "createdAt": 0,
+        "updatedAt": 0
+      },
+      "completeness_score": 100
+    },
+    "match_distribution": {
+      "home_win_rate": 0.41828571428571426,
+      "away_win_rate": 0.31657142857142856,
+      "draw_rate": 0.2651428571428571,
+      "distribution_score": 33,
+      "is_symmetric": 0,
+      "avg_home_goals": 1.416,
+      "avg_away_goals": 1.1782857142857144,
+      "avg_total_goals": 2.5942857142857143
+    },
+    "league_distribution": {
+      "Premier League": {
+        "matches": 380,
+        "home_win_rate": 0.4263157894736842,
+        "away_win_rate": 0.3,
+        "draw_rate": 0.2736842105263158,
+        "avg_home_goals": 1.5263157894736843,
+        "avg_away_goals": 1.2236842105263157,
+        "is_suspicious": 0
+      },
+      "Serie A": {
+        "matches": 380,
+        "home_win_rate": 0.3894736842105263,
+        "away_win_rate": 0.35,
+        "draw_rate": 0.26052631578947366,
+        "avg_home_goals": 1.2763157894736843,
+        "avg_away_goals": 1.15,
+        "is_suspicious": 0
+      },
+      "La Liga": {
+        "matches": 115,
+        "home_win_rate": 0.48695652173913045,
+        "away_win_rate": 0.2608695652173913,
+        "draw_rate": 0.25217391304347825,
+        "avg_home_goals": 1.5130434782608695,
+        "avg_away_goals": 1.1217391304347826,
+        "is_suspicious": 0
+      }
+    },
+    "numerical_features": {
+      "homeXg": {
+        "min": 0.05,
+        "max": 5.07,
+        "mean": 1.4957371428571429,
+        "std": 0.7958001884772243,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          6
+        ]
+      },
+      "awayXg": {
+        "min": 0.0,
+        "max": 4.76,
+        "mean": 1.2138857142857145,
+        "std": 0.7190325216874389,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          6
+        ]
+      },
+      "homePossession": {
+        "min": 18,
+        "max": 79,
+        "mean": 51.181714285714285,
+        "std": 11.292659136622332,
+        "out_of_range": 54,
+        "expected_range": [
+          30,
+          70
+        ]
+      },
+      "homeCorners": {
+        "min": 0,
+        "max": 21,
+        "mean": 5.211428571428572,
+        "std": 2.895567059762372,
+        "out_of_range": 1,
+        "expected_range": [
+          0,
+          20
+        ]
+      },
+      "awayCorners": {
+        "min": 0,
+        "max": 18,
+        "mean": 4.2137142857142855,
+        "std": 2.6001750135981823,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          20
+        ]
+      },
+      "homeGoals": {
+        "min": 0,
+        "max": 6,
+        "mean": 1.416,
+        "std": 1.1952307973939182,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          10
+        ]
+      },
+      "awayGoals": {
+        "min": 0,
+        "max": 5,
+        "mean": 1.1782857142857144,
+        "std": 1.0568440067760165,
+        "out_of_range": 0,
+        "expected_range": [
+          0,
+          10
+        ]
+      },
+      "quality_score": 80
+    },
+    "temporal_distribution": {
+      "monthly_distribution": {
+        "1": 103,
+        "2": 83,
+        "3": 71,
+        "4": 70,
+        "5": 81,
+        "8": 73,
+        "9": 106,
+        "10": 101,
+        "11": 91,
+        "12": 96
+      },
+      "weekday_distribution": {
+        "0": 129,
+        "1": 69,
+        "2": 32,
+        "3": 46,
+        "4": 16,
+        "5": 238,
+        "6": 345
+      },
+      "weekend_ratio": 0.6662857142857143,
+      "date_range": "2025-08-16 to 2026-05-25"
+    },
+    "team_data": {
+      "total_teams": 96,
+      "teams_with_matches": 60,
+      "missing_in_matches": [
+        "云达不莱梅",
+        "美因茨",
+        "汉堡",
+        "雷恩",
+        "马赛",
+        "朗斯",
+        "勒沃库森",
+        "洛里昂",
+        "南特",
+        "海登海姆",
+        "勒阿弗尔",
+        "图卢兹",
+        "奥格斯堡",
+        "多特蒙德",
+        "巴黎FC",
+        "斯特拉斯堡",
+        "弗赖堡",
+        "拜仁慕尼黑",
+        "尼斯",
+        "莱比锡",
+        "里尔",
+        "柏林联合",
+        "梅斯",
+        "布雷斯特",
+        "法兰克福",
+        "霍芬海姆",
+        "斯图加特",
+        "科隆",
+        "门兴格拉德巴赫",
+        "里昂",
+        "沃尔夫斯堡",
+        "昂热",
+        "欧塞尔",
+        "摩纳哥",
+        "圣保利",
+        "巴黎圣日耳曼"
+      ],
+      "missing_in_db": [],
+      "league_distribution": {
+        "SerieA": 20,
+        "PL": 20,
+        "SA": 20,
+        "BL1": 18,
+        "FL1": 18
+      }
+    },
+    "synthetic_detection": {
+      "detected_patterns": [
+        "特定比分出现频率过高",
+        "比赛日期规律性过强"
+      ],
+      "is_synthetic": 1,
+      "pattern_count": 2
+    }
+  }
+}

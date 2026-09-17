@@ -1,0 +1,79 @@
+services:
+  # 后端API服务
+  server:
+    build:
+      context: ..
+      dockerfile: docker/server.Dockerfile
+    container_name: five-leagues-server
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET:-five_leagues_secret_key}
+      - CLIENT_URL=http://localhost
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - ../data:/app/data
+      - ../assets:/app/assets
+    networks:
+      - five-leagues-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 前端应用
+  client:
+    build:
+      context: ..
+      dockerfile: docker/client.Dockerfile
+    container_name: five-leagues-client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    networks:
+      - five-leagues-network
+
+  # Redis缓存（可选）
+  redis:
+    image: redis:7-alpine
+    container_name: five-leagues-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-five_leagues_redis_pass} --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - five-leagues-network
+
+  # 数据采集服务
+  collector:
+    build:
+      context: ..
+      dockerfile: docker/server.Dockerfile
+    container_name: five-leagues-collector
+    restart: unless-stopped
+    command: node scripts/data-collector.js --start
+    volumes:
+      - ../data:/app/data
+      - ../assets:/app/assets
+    networks:
+      - five-leagues-network
+    depends_on:
+      - server
+
+networks:
+  five-leagues-network:
+    driver: bridge
+
+volumes:
+  redis-data:

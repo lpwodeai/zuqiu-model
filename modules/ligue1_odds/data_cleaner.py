@@ -1,0 +1,4 @@
+"""法甲数据清洗器 (兼容层)"""
+from modules.common.data_cleaner import *
+from modules.common.league_config import LIGUE1_TEAM_MAPPINGS
+TEAM_MAPPINGS = LIGUE1_TEAM_MAPPINGS

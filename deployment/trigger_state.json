@@ -1,0 +1,17 @@
+{
+  "last_check_time": "2026-08-16T08:46:38.126633",
+  "last_retrain_time": "2026-08-12T11:51:31.209374",
+  "last_retrain_result": "success",
+  "last_new_data_count": 5258,
+  "total_retrains": 8,
+  "total_successes": 4,
+  "total_failures": 4,
+  "consecutive_failures": 0,
+  "last_retrain_metrics": {
+    "draw_recall": 0.422,
+    "draw_precision": 0.4033,
+    "rate_deviation": 0.0106,
+    "accuracy": 0.5392,
+    "f1_macro": 0.5163
+  }
+}

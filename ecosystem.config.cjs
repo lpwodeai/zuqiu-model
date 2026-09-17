@@ -37,7 +37,8 @@ module.exports = {
       script: 'server/cluster.js',
       cwd: __dirname,
       interpreter: 'node',
-      interpreter_args: '--experimental-vm-modules',
+      // Node 22+: VM Modules 已稳定，无需 --experimental-vm-modules
+      // interpreter_args: '--experimental-vm-modules',
       // exec_mode 保持 fork + instances: 1：PM2 只管主进程，worker 由 cluster.js fork
       // 这是 SQLite WAL 兼容性要求（避免 PM2 cluster 模式在 Windows 上的端口冲突）
       exec_mode: 'fork',

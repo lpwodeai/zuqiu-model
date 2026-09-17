@@ -1,0 +1,278 @@
+{
+  "timestamp": "2026-07-17T11:59:14.055866",
+  "version": null,
+  "data_summary": {
+    "total_matches": 1867,
+    "date_range": "2025-08-15 to 2026-05-24",
+    "feature_dimensions": 50,
+    "class_distribution": {
+      "2": 841,
+      "0": 546,
+      "1": 480
+    }
+  },
+  "cross_validation": {
+    "xgboost": [
+      {
+        "accuracy": 0.5273311897106109,
+        "log_loss": 0.9966290593147278,
+        "brier": 0.5913016200065613,
+        "f1": 0.46730450659061684,
+        "train_accuracy": 0.7243589743589743,
+        "train_log_loss": 0.7603739500045776
+      },
+      {
+        "accuracy": 0.5080385852090032,
+        "log_loss": 1.0187863111495972,
+        "brier": 0.60808265209198,
+        "f1": 0.43774182500530356,
+        "train_accuracy": 0.7319422150882825,
+        "train_log_loss": 0.7519621253013611
+      },
+      {
+        "accuracy": 0.4437299035369775,
+        "log_loss": 1.0871235132217407,
+        "brier": 0.6549331545829773,
+        "f1": 0.336170481054158,
+        "train_accuracy": 0.7205567451820128,
+        "train_log_loss": 0.7761486768722534
+      },
+      {
+        "accuracy": 0.4662379421221865,
+        "log_loss": 1.0257283449172974,
+        "brier": 0.6179772019386292,
+        "f1": 0.4083306045622094,
+        "train_accuracy": 0.6995983935742972,
+        "train_log_loss": 0.8133756518363953
+      },
+      {
+        "accuracy": 0.5016077170418006,
+        "log_loss": 0.9990209937095642,
+        "brier": 0.5970531702041626,
+        "f1": 0.4239511370895556,
+        "train_accuracy": 0.6863753213367609,
+        "train_log_loss": 0.8327864408493042
+      }
+    ],
+    "lightgbm": [
+      {
+        "accuracy": 0.5016077170418006,
+        "log_loss": 1.233552938473302,
+        "brier": 0.6867854650010562,
+        "f1": 0.4889570458968684,
+        "train_accuracy": 0.9166666666666666,
+        "train_log_loss": 0.34091890066271957
+      },
+      {
+        "accuracy": 0.4662379421221865,
+        "log_loss": 1.2187819217739881,
+        "brier": 0.6815837242770987,
+        "f1": 0.43597892775176517,
+        "train_accuracy": 0.942215088282504,
+        "train_log_loss": 0.3102144387275206
+      },
+      {
+        "accuracy": 0.3890675241157556,
+        "log_loss": 1.3321126074017917,
+        "brier": 0.7567092424648324,
+        "f1": 0.3405880376272903,
+        "train_accuracy": 0.9400428265524625,
+        "train_log_loss": 0.3402078733569099
+      },
+      {
+        "accuracy": 0.4180064308681672,
+        "log_loss": 1.177656599747982,
+        "brier": 0.7120307801964639,
+        "f1": 0.40270469690755123,
+        "train_accuracy": 0.934136546184739,
+        "train_log_loss": 0.4027586362841415
+      },
+      {
+        "accuracy": 0.48231511254019294,
+        "log_loss": 1.051063163638644,
+        "brier": 0.622628903962606,
+        "f1": 0.4634997555430425,
+        "train_accuracy": 0.9003856041131105,
+        "train_log_loss": 0.47291400270642114
+      }
+    ],
+    "ensemble": [
+      {
+        "accuracy": 0.47266881028938906,
+        "log_loss": 1.5453433186596335,
+        "brier": 0.7885345970800973,
+        "f1": 0.4718346623552631,
+        "train_accuracy": 0.9358974358974359,
+        "rps": 0.28099869304067315,
+        "brier_reliability": 0.26284486569336557,
+        "brier_resolution": 0.3263567472462492,
+        "brier_uncertainty": 0.6228223446821269,
+        "mean_calibration_error": 0.07056745805780325
+      },
+      {
+        "accuracy": 0.4565916398713826,
+        "log_loss": 1.615276116500044,
+        "brier": 0.8295031487517025,
+        "f1": 0.43890425123131993,
+        "train_accuracy": 0.9614767255216693,
+        "rps": 0.28856752025154725,
+        "brier_reliability": 0.27650104958390076,
+        "brier_resolution": 0.33128191919300465,
+        "brier_uncertainty": 0.644616991139463,
+        "mean_calibration_error": 0.07402987823674043
+      },
+      {
+        "accuracy": 0.40514469453376206,
+        "log_loss": 1.934436922079777,
+        "brier": 0.917092151992351,
+        "f1": 0.38293285090670015,
+        "train_accuracy": 0.9582441113490364,
+        "rps": 0.3084510443242262,
+        "brier_reliability": 0.30569738399745006,
+        "brier_resolution": 0.34547007964948034,
+        "brier_uncertainty": 0.6601255156584402,
+        "mean_calibration_error": 0.11787731027349557
+      },
+      {
+        "accuracy": 0.40836012861736337,
+        "log_loss": 1.8613481376196404,
+        "brier": 0.9303392940210065,
+        "f1": 0.4075639860100883,
+        "train_accuracy": 0.9542168674698795,
+        "rps": 0.31378867352195056,
+        "brier_reliability": 0.31011309800700215,
+        "brier_resolution": 0.3572899484795648,
+        "brier_uncertainty": 0.6537980376546975,
+        "mean_calibration_error": 0.036147126274011177
+      },
+      {
+        "accuracy": 0.4790996784565916,
+        "log_loss": 1.4787892544730281,
+        "brier": 0.7859949958353569,
+        "f1": 0.4801893227784211,
+        "train_accuracy": 0.9421593830334191,
+        "rps": 0.26051717198396873,
+        "brier_reliability": 0.261998331945119,
+        "brier_resolution": 0.32231027031530624,
+        "brier_uncertainty": 0.6447203813029229,
+        "mean_calibration_error": 0.08413601983731482
+      }
+    ]
+  },
+  "final_models": {
+    "xgboost": {
+      "accuracy": 0.48663101604278075,
+      "log_loss": 1.0052441358566284,
+      "brier": 0.6019129753112793,
+      "f1": 0.4145163585800391,
+      "train_accuracy": 0.7026121902210315,
+      "train_log_loss": 0.823427140712738
+    },
+    "lightgbm": {
+      "accuracy": 0.4919786096256685,
+      "log_loss": 1.057557382978544,
+      "brier": 0.615083834783838,
+      "f1": 0.46922461179145664,
+      "train_accuracy": 0.9109176155391828,
+      "train_log_loss": 0.4547905076411205
+    },
+    "ensemble": {
+      "accuracy": 0.48128342245989303,
+      "log_loss": 1.454654362616168,
+      "brier": 0.7596838511699598,
+      "f1": 0.47532256547583907,
+      "train_accuracy": 0.9484259879437374,
+      "rps": 0.26286208593804655,
+      "brier_reliability": 0.25322795038998663,
+      "brier_resolution": 0.3325446072487526,
+      "brier_uncertainty": 0.6471589121793588,
+      "mean_calibration_error": 0.1066864702015232
+    }
+  },
+  "feature_importance": {
+    "xgboost": [
+      {
+        "feature": "handicap_value",
+        "importance": 0.07756303250789642
+      },
+      {
+        "feature": "最高_主胜",
+        "importance": 0.05653322488069534
+      },
+      {
+        "feature": "平均_主胜",
+        "importance": 0.05016925558447838
+      },
+      {
+        "feature": "avg_prob_home",
+        "importance": 0.047196485102176666
+      },
+      {
+        "feature": "avg_implied_away",
+        "importance": 0.04404403641819954
+      },
+      {
+        "feature": "平均_客胜",
+        "importance": 0.043216072022914886
+      },
+      {
+        "feature": "odds_diff_h2a",
+        "importance": 0.033872976899147034
+      },
+      {
+        "feature": "avg_prob_away",
+        "importance": 0.03013496659696102
+      },
+      {
+        "feature": "bet365_主胜",
+        "importance": 0.029563309624791145
+      },
+      {
+        "feature": "bet365_客胜",
+        "importance": 0.028937427327036858
+      },
+      {
+        "feature": "avg_h2a",
+        "importance": 0.02892240509390831
+      },
+      {
+        "feature": "avg_implied_home",
+        "importance": 0.026457589119672775
+      },
+      {
+        "feature": "venue_diff",
+        "importance": 0.02036035805940628
+      },
+      {
+        "feature": "最高_客胜",
+        "importance": 0.01885630562901497
+      },
+      {
+        "feature": "home_loss_rate",
+        "importance": 0.015885129570961
+      },
+      {
+        "feature": "home_win_rate",
+        "importance": 0.01570235565304756
+      },
+      {
+        "feature": "home_avg_goals",
+        "importance": 0.01540429424494505
+      },
+      {
+        "feature": "home_weighted_win_rate",
+        "importance": 0.01539803110063076
+      },
+      {
+        "feature": "away_home_advantage",
+        "importance": 0.015174221247434616
+      },
+      {
+        "feature": "goals_diff",
+        "importance": 0.015122422017157078
+      }
+    ],
+    "lightgbm": null
+  },
+  "training_time_seconds": 473.85
+}

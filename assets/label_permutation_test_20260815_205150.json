@@ -1,0 +1,207 @@
+{
+  "meta": {
+    "test_time": "2026-08-15 20:51:50",
+    "n_permutations": 30,
+    "random_seed": 42,
+    "n_splits": 5,
+    "total_matches": 5252,
+    "train_size": 4201,
+    "test_size": 1051,
+    "feature_dim": 187,
+    "date_range": "2023-08-12 ~ 2026-05-25",
+    "split_date": "2025-12-13",
+    "label_distribution": {
+      "0": 1645,
+      "1": 1347,
+      "2": 2260
+    }
+  },
+  "baseline": {
+    "accuracy": 0.48239771646051377,
+    "log_loss": 1.01902125475944,
+    "confusion_matrix": [
+      [
+        164,
+        3,
+        162
+      ],
+      [
+        101,
+        1,
+        176
+      ],
+      [
+        98,
+        4,
+        342
+      ]
+    ]
+  },
+  "permutation_test": {
+    "mean_accuracy": 0.4231208372978117,
+    "std_accuracy": 0.0027373165071136307,
+    "max_accuracy": 0.43482397716460514,
+    "min_accuracy": 0.4186489058039962,
+    "mean_log_loss": 1.0782463890470066,
+    "z_score": 21.65510601666108,
+    "p_value": 0.0,
+    "accuracy_gap": 0.05927687916270208,
+    "results": [
+      {
+        "iteration": 1,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.076479712228172
+      },
+      {
+        "iteration": 2,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0799852717707366
+      },
+      {
+        "iteration": 3,
+        "accuracy": 0.42150333016175073,
+        "log_loss": 1.074713777349602
+      },
+      {
+        "iteration": 4,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0786831741847491
+      },
+      {
+        "iteration": 5,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.078012747051932
+      },
+      {
+        "iteration": 6,
+        "accuracy": 0.42150333016175073,
+        "log_loss": 1.07819910780114
+      },
+      {
+        "iteration": 7,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0800542001794993
+      },
+      {
+        "iteration": 8,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0776843231348052
+      },
+      {
+        "iteration": 9,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.07843387593175
+      },
+      {
+        "iteration": 10,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0803703190117881
+      },
+      {
+        "iteration": 11,
+        "accuracy": 0.42816365366317793,
+        "log_loss": 1.0703219357361693
+      },
+      {
+        "iteration": 12,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0800885405679028
+      },
+      {
+        "iteration": 13,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.080591484023104
+      },
+      {
+        "iteration": 14,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.080100331751592
+      },
+      {
+        "iteration": 15,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0771214576369605
+      },
+      {
+        "iteration": 16,
+        "accuracy": 0.42435775451950525,
+        "log_loss": 1.077991433746991
+      },
+      {
+        "iteration": 17,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.077893972054042
+      },
+      {
+        "iteration": 18,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0798377284459082
+      },
+      {
+        "iteration": 19,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0804245542294963
+      },
+      {
+        "iteration": 20,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0803153160707386
+      },
+      {
+        "iteration": 21,
+        "accuracy": 0.42816365366317793,
+        "log_loss": 1.0733487094022665
+      },
+      {
+        "iteration": 22,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0790672320008479
+      },
+      {
+        "iteration": 23,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0798698960348663
+      },
+      {
+        "iteration": 24,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0797950085891646
+      },
+      {
+        "iteration": 25,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0786287141159019
+      },
+      {
+        "iteration": 26,
+        "accuracy": 0.43482397716460514,
+        "log_loss": 1.0742393940588035
+      },
+      {
+        "iteration": 27,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.080258254146391
+      },
+      {
+        "iteration": 28,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0799491529905567
+      },
+      {
+        "iteration": 29,
+        "accuracy": 0.4186489058039962,
+        "log_loss": 1.076515108358066
+      },
+      {
+        "iteration": 30,
+        "accuracy": 0.4224548049476689,
+        "log_loss": 1.0784169388062537
+      }
+    ]
+  },
+  "verdict": {
+    "leakage_detected": true,
+    "leakage_level": "中等泄露（可能主场优势特征泄露）",
+    "recommendation": "暂停预测，排查数据泄露"
+  }
+}

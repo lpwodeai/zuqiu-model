@@ -1,0 +1,1922 @@
+{
+  "bl1_aug": {
+    "name": "奥格斯堡",
+    "league": "BL1",
+    "attack": 1.52,
+    "defence": 0.36,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.24,
+    "marketValue": 12.2,
+    "cohesion": 0.74,
+    "recentForm": 0.05,
+    "xT": 0.12,
+    "tempo": 0.96,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_bay": {
+    "name": "拜仁慕尼黑",
+    "league": "BL1",
+    "attack": 2,
+    "defence": 0.54,
+    "tactical": "pressing",
+    "xGOT": 1.15,
+    "xGA": 0.82,
+    "marketValue": 16,
+    "cohesion": 0.93,
+    "recentForm": 0.99,
+    "xT": 0.17,
+    "tempo": 1.11,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_bmg": {
+    "name": "门兴格拉德巴赫",
+    "league": "BL1",
+    "attack": 1.81,
+    "defence": 0.77,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.57,
+    "marketValue": 14.5,
+    "cohesion": 0.71,
+    "recentForm": -0.13,
+    "xT": 0.12,
+    "tempo": 0.91,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_dor": {
+    "name": "多特蒙德",
+    "league": "BL1",
+    "attack": 2,
+    "defence": 0.86,
+    "tactical": "pressing",
+    "xGOT": 0.87,
+    "xGA": 0.51,
+    "marketValue": 16,
+    "cohesion": 0.86,
+    "recentForm": 0.63,
+    "xT": 0.13,
+    "tempo": 0.95,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_fra": {
+    "name": "法兰克福",
+    "league": "BL1",
+    "attack": 1.77,
+    "defence": 0.36,
+    "tactical": "pressing",
+    "xGOT": 0.84,
+    "xGA": 1.24,
+    "marketValue": 14.1,
+    "cohesion": 0.73,
+    "recentForm": -0.01,
+    "xT": 0.13,
+    "tempo": 0.95,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_fre": {
+    "name": "弗赖堡",
+    "league": "BL1",
+    "attack": 2,
+    "defence": 0.41,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.09,
+    "marketValue": 16,
+    "cohesion": 0.75,
+    "recentForm": 0.1,
+    "xT": 0.12,
+    "tempo": 0.86,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_ham": {
+    "name": "汉堡",
+    "league": "BL1",
+    "attack": 1.4,
+    "defence": 0.43,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.01,
+    "marketValue": 11.2,
+    "cohesion": 0.71,
+    "recentForm": -0.13,
+    "xT": 0.12,
+    "tempo": 0.97,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_hei": {
+    "name": "海登海姆",
+    "league": "BL1",
+    "attack": 1.67,
+    "defence": 0.43,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.01,
+    "marketValue": 13.4,
+    "cohesion": 0.67,
+    "recentForm": -0.31,
+    "xT": 0.12,
+    "tempo": 0.93,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_koe": {
+    "name": "科隆",
+    "league": "BL1",
+    "attack": 1.23,
+    "defence": 0.3,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.5,
+    "marketValue": 9.9,
+    "cohesion": 0.68,
+    "recentForm": -0.25,
+    "xT": 0.12,
+    "tempo": 0.97,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_lev": {
+    "name": "勒沃库森",
+    "league": "BL1",
+    "attack": 1.76,
+    "defence": 0.47,
+    "tactical": "pressing",
+    "xGOT": 1.05,
+    "xGA": 0.94,
+    "marketValue": 14.1,
+    "cohesion": 0.8,
+    "recentForm": 0.34,
+    "xT": 0.16,
+    "tempo": 1.1,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_mai": {
+    "name": "美因茨",
+    "league": "BL1",
+    "attack": 1.8,
+    "defence": 0.5,
+    "tactical": "pressing",
+    "xGOT": 0.93,
+    "xGA": 0.87,
+    "marketValue": 14.4,
+    "cohesion": 0.72,
+    "recentForm": -0.07,
+    "xT": 0.14,
+    "tempo": 1,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_rbl": {
+    "name": "莱比锡",
+    "league": "BL1",
+    "attack": 1.86,
+    "defence": 0.32,
+    "tactical": "pressing",
+    "xGOT": 0.95,
+    "xGA": 1.38,
+    "marketValue": 14.9,
+    "cohesion": 0.84,
+    "recentForm": 0.52,
+    "xT": 0.14,
+    "tempo": 1,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_scf": {
+    "name": "斯图加特",
+    "league": "BL1",
+    "attack": 2,
+    "defence": 0.4,
+    "tactical": "pressing",
+    "xGOT": 1.03,
+    "xGA": 1.1,
+    "marketValue": 16,
+    "cohesion": 0.81,
+    "recentForm": 0.4,
+    "xT": 0.15,
+    "tempo": 1.02,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_sge": {
+    "name": "柏林联合",
+    "league": "BL1",
+    "attack": 2,
+    "defence": 0.56,
+    "tactical": "pressing",
+    "xGOT": 0.96,
+    "xGA": 0.78,
+    "marketValue": 16,
+    "cohesion": 0.72,
+    "recentForm": -0.07,
+    "xT": 0.14,
+    "tempo": 0.99,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_stp": {
+    "name": "圣保利",
+    "league": "BL1",
+    "attack": 0.61,
+    "defence": 0.32,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 1.39,
+    "marketValue": 4.8,
+    "cohesion": 0.67,
+    "recentForm": -0.31,
+    "xT": 0.12,
+    "tempo": 0.86,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_tsg": {
+    "name": "霍芬海姆",
+    "league": "BL1",
+    "attack": 1.06,
+    "defence": 0.34,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.31,
+    "marketValue": 8.5,
+    "cohesion": 0.81,
+    "recentForm": 0.4,
+    "xT": 0.12,
+    "tempo": 0.99,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "bl1_wob": {
+    "name": "沃尔夫斯堡",
+    "league": "BL1",
+    "attack": 1.5,
+    "defence": 0.62,
+    "tactical": "pressing",
+    "xGOT": 0.93,
+    "xGA": 0.71,
+    "marketValue": 12,
+    "cohesion": 0.68,
+    "recentForm": -0.25,
+    "xT": 0.14,
+    "tempo": 1,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_ang": {
+    "name": "昂热",
+    "league": "FL1",
+    "attack": 0.69,
+    "defence": 0.46,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.97,
+    "marketValue": 5.5,
+    "cohesion": 0.71,
+    "recentForm": -0.13,
+    "xT": 0.12,
+    "tempo": 0.84,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_aux": {
+    "name": "欧塞尔",
+    "league": "FL1",
+    "attack": 2,
+    "defence": 0.8,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.55,
+    "marketValue": 16,
+    "cohesion": 0.69,
+    "recentForm": -0.19,
+    "xT": 0.12,
+    "tempo": 0.89,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_bre": {
+    "name": "布雷斯特",
+    "league": "FL1",
+    "attack": 0.68,
+    "defence": 0.39,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 1.13,
+    "marketValue": 5.5,
+    "cohesion": 0.72,
+    "recentForm": -0.07,
+    "xT": 0.12,
+    "tempo": 0.93,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_hav": {
+    "name": "勒阿弗尔",
+    "league": "FL1",
+    "attack": 1.49,
+    "defence": 0.69,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.63,
+    "marketValue": 11.9,
+    "cohesion": 0.68,
+    "recentForm": -0.25,
+    "xT": 0.12,
+    "tempo": 0.84,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_len": {
+    "name": "朗斯",
+    "league": "FL1",
+    "attack": 1.63,
+    "defence": 0.67,
+    "tactical": "pressing",
+    "xGOT": 0.95,
+    "xGA": 0.65,
+    "marketValue": 13.1,
+    "cohesion": 0.86,
+    "recentForm": 0.63,
+    "xT": 0.14,
+    "tempo": 1.12,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_lor": {
+    "name": "洛里昂",
+    "league": "FL1",
+    "attack": 1.56,
+    "defence": 0.5,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.87,
+    "marketValue": 12.4,
+    "cohesion": 0.73,
+    "recentForm": -0.01,
+    "xT": 0.12,
+    "tempo": 0.9,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_lyo": {
+    "name": "里昂",
+    "league": "FL1",
+    "attack": 1.24,
+    "defence": 0.32,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.4,
+    "marketValue": 9.9,
+    "cohesion": 0.81,
+    "recentForm": 0.4,
+    "xT": 0.12,
+    "tempo": 0.99,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_mar": {
+    "name": "马赛",
+    "league": "FL1",
+    "attack": 1.48,
+    "defence": 0.61,
+    "tactical": "pressing",
+    "xGOT": 1.05,
+    "xGA": 0.72,
+    "marketValue": 11.8,
+    "cohesion": 0.81,
+    "recentForm": 0.4,
+    "xT": 0.16,
+    "tempo": 1.1,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_met": {
+    "name": "梅斯",
+    "league": "FL1",
+    "attack": 0.51,
+    "defence": 0.35,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 1.25,
+    "marketValue": 4.1,
+    "cohesion": 0.64,
+    "recentForm": -0.48,
+    "xT": 0.12,
+    "tempo": 0.93,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_mon": {
+    "name": "摩纳哥",
+    "league": "FL1",
+    "attack": 2,
+    "defence": 0.3,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.5,
+    "marketValue": 16,
+    "cohesion": 0.79,
+    "recentForm": 0.28,
+    "xT": 0.12,
+    "tempo": 0.98,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_nan": {
+    "name": "南特",
+    "league": "FL1",
+    "attack": 0.51,
+    "defence": 0.92,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.47,
+    "marketValue": 4.1,
+    "cohesion": 0.66,
+    "recentForm": -0.37,
+    "xT": 0.12,
+    "tempo": 0.91,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_nic": {
+    "name": "尼斯",
+    "league": "FL1",
+    "attack": 0.5,
+    "defence": 0.74,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.59,
+    "marketValue": 4,
+    "cohesion": 0.68,
+    "recentForm": -0.25,
+    "xT": 0.12,
+    "tempo": 0.94,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_psg": {
+    "name": "巴黎圣日耳曼",
+    "league": "FL1",
+    "attack": 1.39,
+    "defence": 0.82,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.53,
+    "marketValue": 11.1,
+    "cohesion": 0.88,
+    "recentForm": 0.75,
+    "xT": 0.12,
+    "tempo": 1.02,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_ren": {
+    "name": "雷恩",
+    "league": "FL1",
+    "attack": 1.51,
+    "defence": 0.36,
+    "tactical": "pressing",
+    "xGOT": 0.87,
+    "xGA": 1.22,
+    "marketValue": 12.1,
+    "cohesion": 0.8,
+    "recentForm": 0.34,
+    "xT": 0.13,
+    "tempo": 1.09,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_str": {
+    "name": "斯特拉斯堡",
+    "league": "FL1",
+    "attack": 2,
+    "defence": 0.35,
+    "tactical": "pressing",
+    "xGOT": 0.81,
+    "xGA": 1.26,
+    "marketValue": 16,
+    "cohesion": 0.78,
+    "recentForm": 0.22,
+    "xT": 0.12,
+    "tempo": 0.93,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "fl1_tou": {
+    "name": "图卢兹",
+    "league": "FL1",
+    "attack": 1.13,
+    "defence": 0.62,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.71,
+    "marketValue": 9.1,
+    "cohesion": 0.74,
+    "recentForm": 0.05,
+    "xT": 0.12,
+    "tempo": 0.86,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_atl": {
+    "name": "亚特兰大",
+    "league": "SerieA",
+    "attack": 0.85,
+    "defence": 0.62,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.71,
+    "marketValue": 6.8,
+    "cohesion": 0.76,
+    "recentForm": 0.13,
+    "xT": 0.12,
+    "tempo": 1,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_bov": {
+    "name": "博洛尼亚",
+    "league": "SerieA",
+    "attack": 1.49,
+    "defence": 0.49,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.9,
+    "marketValue": 11.9,
+    "cohesion": 0.77,
+    "recentForm": 0.18,
+    "xT": 0.12,
+    "tempo": 0.89,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_cag": {
+    "name": "卡利亚里",
+    "league": "SerieA",
+    "attack": 1.17,
+    "defence": 0.59,
+    "tactical": "pressing",
+    "xGOT": 0.84,
+    "xGA": 0.74,
+    "marketValue": 9.4,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.13,
+    "tempo": 1.05,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_com": {
+    "name": "科莫",
+    "league": "SerieA",
+    "attack": 1.79,
+    "defence": 0.95,
+    "tactical": "pressing",
+    "xGOT": 0.81,
+    "xGA": 0.4,
+    "marketValue": 14.3,
+    "cohesion": 0.81,
+    "recentForm": 0.39,
+    "xT": 0.12,
+    "tempo": 1.02,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_cre": {
+    "name": "克雷莫纳",
+    "league": "SerieA",
+    "attack": 1.23,
+    "defence": 0.39,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.12,
+    "marketValue": 9.8,
+    "cohesion": 0.68,
+    "recentForm": -0.24,
+    "xT": 0.12,
+    "tempo": 0.82,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_flo": {
+    "name": "佛罗伦萨",
+    "league": "SerieA",
+    "attack": 0.67,
+    "defence": 0.88,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.5,
+    "marketValue": 5.4,
+    "cohesion": 0.69,
+    "recentForm": -0.19,
+    "xT": 0.12,
+    "tempo": 0.88,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_gen": {
+    "name": "热那亚",
+    "league": "SerieA",
+    "attack": 0.5,
+    "defence": 0.68,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.64,
+    "marketValue": 4,
+    "cohesion": 0.71,
+    "recentForm": -0.13,
+    "xT": 0.12,
+    "tempo": 0.85,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_int": {
+    "name": "国际米兰",
+    "league": "SerieA",
+    "attack": 2,
+    "defence": 0.5,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.88,
+    "marketValue": 16,
+    "cohesion": 0.88,
+    "recentForm": 0.76,
+    "xT": 0.12,
+    "tempo": 0.96,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_juv": {
+    "name": "尤文图斯",
+    "league": "SerieA",
+    "attack": 0.9,
+    "defence": 0.62,
+    "tactical": "pressing",
+    "xGOT": 0.87,
+    "xGA": 0.7,
+    "marketValue": 7.2,
+    "cohesion": 0.8,
+    "recentForm": 0.34,
+    "xT": 0.13,
+    "tempo": 1.11,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_laz": {
+    "name": "拉齐奥",
+    "league": "SerieA",
+    "attack": 1.6,
+    "defence": 0.46,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.96,
+    "marketValue": 12.8,
+    "cohesion": 0.75,
+    "recentForm": 0.08,
+    "xT": 0.12,
+    "tempo": 0.89,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_lec": {
+    "name": "莱切",
+    "league": "SerieA",
+    "attack": 1.31,
+    "defence": 0.77,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.57,
+    "marketValue": 10.5,
+    "cohesion": 0.71,
+    "recentForm": -0.13,
+    "xT": 0.12,
+    "tempo": 0.85,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_mil": {
+    "name": "AC米兰",
+    "league": "SerieA",
+    "attack": 0.98,
+    "defence": 0.44,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.99,
+    "marketValue": 7.8,
+    "cohesion": 0.81,
+    "recentForm": 0.39,
+    "xT": 0.12,
+    "tempo": 0.94,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_nap": {
+    "name": "那不勒斯",
+    "league": "SerieA",
+    "attack": 1.6,
+    "defence": 0.95,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.4,
+    "marketValue": 12.8,
+    "cohesion": 0.84,
+    "recentForm": 0.55,
+    "xT": 0.12,
+    "tempo": 0.95,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_par": {
+    "name": "帕尔马",
+    "league": "SerieA",
+    "attack": 0.54,
+    "defence": 0.72,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.61,
+    "marketValue": 4.3,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.12,
+    "tempo": 0.86,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_pis": {
+    "name": "比萨",
+    "league": "SerieA",
+    "attack": 0.5,
+    "defence": 0.31,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.41,
+    "marketValue": 4,
+    "cohesion": 0.62,
+    "recentForm": -0.55,
+    "xT": 0.12,
+    "tempo": 0.79,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_rom": {
+    "name": "罗马",
+    "league": "SerieA",
+    "attack": 2,
+    "defence": 0.95,
+    "tactical": "pressing",
+    "xGOT": 0.95,
+    "xGA": 0.4,
+    "marketValue": 16,
+    "cohesion": 0.84,
+    "recentForm": 0.55,
+    "xT": 0.14,
+    "tempo": 1.01,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_sas": {
+    "name": "萨索洛",
+    "league": "SerieA",
+    "attack": 0.9,
+    "defence": 0.51,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.86,
+    "marketValue": 7.2,
+    "cohesion": 0.75,
+    "recentForm": 0.08,
+    "xT": 0.12,
+    "tempo": 0.89,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_tor": {
+    "name": "都灵",
+    "league": "SerieA",
+    "attack": 1.08,
+    "defence": 0.44,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.99,
+    "marketValue": 8.6,
+    "cohesion": 0.73,
+    "recentForm": -0.03,
+    "xT": 0.12,
+    "tempo": 0.92,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_udi": {
+    "name": "乌迪内斯",
+    "league": "SerieA",
+    "attack": 0.84,
+    "defence": 0.87,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.5,
+    "marketValue": 6.7,
+    "cohesion": 0.75,
+    "recentForm": 0.08,
+    "xT": 0.12,
+    "tempo": 0.91,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "it_ver": {
+    "name": "维罗纳",
+    "league": "SerieA",
+    "attack": 0.5,
+    "defence": 0.57,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.77,
+    "marketValue": 4,
+    "cohesion": 0.63,
+    "recentForm": -0.5,
+    "xT": 0.12,
+    "tempo": 0.88,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "lille": {
+    "name": "里尔",
+    "league": "FL1",
+    "attack": 0.84,
+    "defence": 0.9,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.48,
+    "marketValue": 6.7,
+    "cohesion": 0.81,
+    "recentForm": 0.4,
+    "xT": 0.12,
+    "tempo": 0.92,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "paris_fc": {
+    "name": "巴黎FC",
+    "league": "FL1",
+    "attack": 2,
+    "defence": 0.69,
+    "tactical": "pressing",
+    "xGOT": 0.84,
+    "xGA": 0.64,
+    "marketValue": 16,
+    "cohesion": 0.73,
+    "recentForm": -0.01,
+    "xT": 0.13,
+    "tempo": 0.96,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_ars": {
+    "name": "阿森纳",
+    "league": "PL",
+    "attack": 1.39,
+    "defence": 0.95,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.4,
+    "marketValue": 11.1,
+    "cohesion": 0.87,
+    "recentForm": 0.71,
+    "xT": 0.12,
+    "tempo": 1,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_avl": {
+    "name": "阿斯顿维拉",
+    "league": "PL",
+    "attack": 2,
+    "defence": 0.45,
+    "tactical": "pressing",
+    "xGOT": 0.82,
+    "xGA": 0.97,
+    "marketValue": 16,
+    "cohesion": 0.8,
+    "recentForm": 0.34,
+    "xT": 0.12,
+    "tempo": 0.94,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_bha": {
+    "name": "布莱顿",
+    "league": "PL",
+    "attack": 0.88,
+    "defence": 0.44,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.99,
+    "marketValue": 7,
+    "cohesion": 0.75,
+    "recentForm": 0.08,
+    "xT": 0.12,
+    "tempo": 0.99,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_bou": {
+    "name": "伯恩茅斯",
+    "league": "PL",
+    "attack": 1.02,
+    "defence": 0.91,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.48,
+    "marketValue": 8.1,
+    "cohesion": 0.74,
+    "recentForm": 0.02,
+    "xT": 0.12,
+    "tempo": 0.96,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_bre": {
+    "name": "布伦特福德",
+    "league": "PL",
+    "attack": 0.89,
+    "defence": 0.49,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.89,
+    "marketValue": 7.1,
+    "cohesion": 0.75,
+    "recentForm": 0.08,
+    "xT": 0.12,
+    "tempo": 0.9,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_bur": {
+    "name": "伯恩利",
+    "league": "PL",
+    "attack": 0.83,
+    "defence": 0.46,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.96,
+    "marketValue": 6.6,
+    "cohesion": 0.64,
+    "recentForm": -0.45,
+    "xT": 0.12,
+    "tempo": 0.89,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_che": {
+    "name": "切尔西",
+    "league": "PL",
+    "attack": 0.7,
+    "defence": 0.41,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 1.06,
+    "marketValue": 5.6,
+    "cohesion": 0.75,
+    "recentForm": 0.08,
+    "xT": 0.12,
+    "tempo": 0.89,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_cry": {
+    "name": "水晶宫",
+    "league": "PL",
+    "attack": 0.94,
+    "defence": 0.34,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.29,
+    "marketValue": 7.5,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.12,
+    "tempo": 0.9,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_eve": {
+    "name": "埃弗顿",
+    "league": "PL",
+    "attack": 1.22,
+    "defence": 0.37,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.19,
+    "marketValue": 9.8,
+    "cohesion": 0.74,
+    "recentForm": 0.02,
+    "xT": 0.12,
+    "tempo": 0.88,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_ful": {
+    "name": "富勒姆",
+    "league": "PL",
+    "attack": 0.69,
+    "defence": 0.92,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.48,
+    "marketValue": 5.5,
+    "cohesion": 0.76,
+    "recentForm": 0.13,
+    "xT": 0.12,
+    "tempo": 1.01,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_leeds": {
+    "name": "利兹联",
+    "league": "PL",
+    "attack": 0.82,
+    "defence": 0.52,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.84,
+    "marketValue": 6.5,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.12,
+    "tempo": 0.92,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_liv": {
+    "name": "利物浦",
+    "league": "PL",
+    "attack": 1.4,
+    "defence": 0.4,
+    "tactical": "pressing",
+    "xGOT": 0.84,
+    "xGA": 1.1,
+    "marketValue": 11.2,
+    "cohesion": 0.78,
+    "recentForm": 0.23,
+    "xT": 0.13,
+    "tempo": 1.04,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_mci": {
+    "name": "曼城",
+    "league": "PL",
+    "attack": 1.42,
+    "defence": 0.67,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.66,
+    "marketValue": 11.4,
+    "cohesion": 0.84,
+    "recentForm": 0.55,
+    "xT": 0.12,
+    "tempo": 1.07,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_mun": {
+    "name": "曼联",
+    "league": "PL",
+    "attack": 2,
+    "defence": 0.83,
+    "tactical": "pressing",
+    "xGOT": 0.88,
+    "xGA": 0.52,
+    "marketValue": 16,
+    "cohesion": 0.81,
+    "recentForm": 0.39,
+    "xT": 0.13,
+    "tempo": 1.02,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_new": {
+    "name": "纽卡斯尔",
+    "league": "PL",
+    "attack": 1.25,
+    "defence": 0.52,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.85,
+    "marketValue": 10,
+    "cohesion": 0.75,
+    "recentForm": 0.08,
+    "xT": 0.12,
+    "tempo": 0.91,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_nfo": {
+    "name": "诺丁汉森林",
+    "league": "PL",
+    "attack": 1.9,
+    "defence": 0.54,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.81,
+    "marketValue": 15.2,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.12,
+    "tempo": 0.94,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_sun": {
+    "name": "桑德兰",
+    "league": "PL",
+    "attack": 0.96,
+    "defence": 0.58,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.76,
+    "marketValue": 7.6,
+    "cohesion": 0.75,
+    "recentForm": 0.08,
+    "xT": 0.12,
+    "tempo": 0.97,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_tot": {
+    "name": "热刺",
+    "league": "PL",
+    "attack": 0.88,
+    "defence": 0.76,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.57,
+    "marketValue": 7,
+    "cohesion": 0.71,
+    "recentForm": -0.13,
+    "xT": 0.12,
+    "tempo": 0.98,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_whu": {
+    "name": "西汉姆",
+    "league": "PL",
+    "attack": 1.81,
+    "defence": 0.57,
+    "tactical": "pressing",
+    "xGOT": 0.94,
+    "xGA": 0.76,
+    "marketValue": 14.5,
+    "cohesion": 0.71,
+    "recentForm": -0.13,
+    "xT": 0.14,
+    "tempo": 0.95,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "pl_wol": {
+    "name": "狼队",
+    "league": "PL",
+    "attack": 0.5,
+    "defence": 0.48,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.92,
+    "marketValue": 4,
+    "cohesion": 0.63,
+    "recentForm": -0.5,
+    "xT": 0.12,
+    "tempo": 0.93,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_alv": {
+    "name": "阿拉维斯",
+    "league": "SA",
+    "attack": 1.34,
+    "defence": 0.54,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.81,
+    "marketValue": 10.7,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.12,
+    "tempo": 0.94,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_atm": {
+    "name": "马德里竞技",
+    "league": "SA",
+    "attack": 1.12,
+    "defence": 0.36,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.21,
+    "marketValue": 8.9,
+    "cohesion": 0.82,
+    "recentForm": 0.45,
+    "xT": 0.12,
+    "tempo": 0.92,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_bar": {
+    "name": "巴塞罗那",
+    "league": "SA",
+    "attack": 1.79,
+    "defence": 0.59,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.74,
+    "marketValue": 14.3,
+    "cohesion": 0.93,
+    "recentForm": 0.97,
+    "xT": 0.12,
+    "tempo": 0.92,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_bet": {
+    "name": "皇家贝蒂斯",
+    "league": "SA",
+    "attack": 1.86,
+    "defence": 0.5,
+    "tactical": "pressing",
+    "xGOT": 0.81,
+    "xGA": 0.87,
+    "marketValue": 14.9,
+    "cohesion": 0.76,
+    "recentForm": 0.13,
+    "xT": 0.12,
+    "tempo": 0.96,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_bil": {
+    "name": "毕尔巴鄂",
+    "league": "SA",
+    "attack": 1.07,
+    "defence": 0.34,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.28,
+    "marketValue": 8.5,
+    "cohesion": 0.74,
+    "recentForm": 0.02,
+    "xT": 0.12,
+    "tempo": 0.96,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_civ": {
+    "name": "塞尔塔",
+    "league": "SA",
+    "attack": 1.45,
+    "defence": 0.66,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.66,
+    "marketValue": 11.6,
+    "cohesion": 0.75,
+    "recentForm": 0.08,
+    "xT": 0.12,
+    "tempo": 0.81,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_elc": {
+    "name": "埃尔切",
+    "league": "SA",
+    "attack": 1,
+    "defence": 0.61,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.72,
+    "marketValue": 8,
+    "cohesion": 0.71,
+    "recentForm": -0.13,
+    "xT": 0.12,
+    "tempo": 0.84,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_esp": {
+    "name": "西班牙人",
+    "league": "SA",
+    "attack": 1.11,
+    "defence": 0.67,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.65,
+    "marketValue": 8.9,
+    "cohesion": 0.73,
+    "recentForm": -0.03,
+    "xT": 0.12,
+    "tempo": 0.93,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_get": {
+    "name": "赫塔费",
+    "league": "SA",
+    "attack": 0.63,
+    "defence": 0.95,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.42,
+    "marketValue": 5,
+    "cohesion": 0.76,
+    "recentForm": 0.13,
+    "xT": 0.12,
+    "tempo": 0.82,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_gir": {
+    "name": "赫罗纳",
+    "league": "SA",
+    "attack": 0.78,
+    "defence": 0.64,
+    "tactical": "pressing",
+    "xGOT": 0.89,
+    "xGA": 0.68,
+    "marketValue": 6.2,
+    "cohesion": 0.69,
+    "recentForm": -0.19,
+    "xT": 0.13,
+    "tempo": 1.02,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_lev": {
+    "name": "莱万特",
+    "league": "SA",
+    "attack": 1.56,
+    "defence": 0.47,
+    "tactical": "pressing",
+    "xGOT": 0.86,
+    "xGA": 0.93,
+    "marketValue": 12.5,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.13,
+    "tempo": 1.03,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_mll": {
+    "name": "马洛卡",
+    "league": "SA",
+    "attack": 1.29,
+    "defence": 0.61,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.72,
+    "marketValue": 10.3,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.12,
+    "tempo": 0.97,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_osa": {
+    "name": "奥萨苏纳",
+    "league": "SA",
+    "attack": 0.86,
+    "defence": 0.43,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.02,
+    "marketValue": 6.9,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.12,
+    "tempo": 0.99,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_ovi": {
+    "name": "奥维耶多",
+    "league": "SA",
+    "attack": 0.5,
+    "defence": 0.42,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 1.04,
+    "marketValue": 4,
+    "cohesion": 0.66,
+    "recentForm": -0.34,
+    "xT": 0.12,
+    "tempo": 0.85,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_rma": {
+    "name": "皇家马德里",
+    "league": "SA",
+    "attack": 1.92,
+    "defence": 0.75,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.59,
+    "marketValue": 15.3,
+    "cohesion": 0.88,
+    "recentForm": 0.76,
+    "xT": 0.12,
+    "tempo": 0.98,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_rso": {
+    "name": "皇家社会",
+    "league": "SA",
+    "attack": 1.57,
+    "defence": 0.39,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.12,
+    "marketValue": 12.6,
+    "cohesion": 0.72,
+    "recentForm": -0.08,
+    "xT": 0.12,
+    "tempo": 0.85,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_rva": {
+    "name": "巴列卡诺",
+    "league": "SA",
+    "attack": 1.7,
+    "defence": 0.87,
+    "tactical": "pressing",
+    "xGOT": 0.88,
+    "xGA": 0.51,
+    "marketValue": 13.6,
+    "cohesion": 0.73,
+    "recentForm": -0.03,
+    "xT": 0.13,
+    "tempo": 0.98,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_sev": {
+    "name": "塞维利亚",
+    "league": "SA",
+    "attack": 0.73,
+    "defence": 0.6,
+    "tactical": "direct",
+    "xGOT": 0.8,
+    "xGA": 0.73,
+    "marketValue": 5.9,
+    "cohesion": 0.73,
+    "recentForm": -0.03,
+    "xT": 0.12,
+    "tempo": 0.94,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_val": {
+    "name": "瓦伦西亚",
+    "league": "SA",
+    "attack": 1.65,
+    "defence": 0.54,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.82,
+    "marketValue": 13.2,
+    "cohesion": 0.74,
+    "recentForm": 0.02,
+    "xT": 0.12,
+    "tempo": 0.96,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "sa_vil": {
+    "name": "比利亚雷亚尔",
+    "league": "SA",
+    "attack": 2,
+    "defence": 0.49,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 0.89,
+    "marketValue": 16,
+    "cohesion": 0.83,
+    "recentForm": 0.5,
+    "xT": 0.12,
+    "tempo": 0.9,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  },
+  "werder_bremen": {
+    "name": "云达不莱梅",
+    "league": "BL1",
+    "attack": 0.54,
+    "defence": 0.42,
+    "tactical": "pressing",
+    "xGOT": 0.8,
+    "xGA": 1.05,
+    "marketValue": 4.3,
+    "cohesion": 0.69,
+    "recentForm": -0.19,
+    "xT": 0.12,
+    "tempo": 0.9,
+    "pressIntensity": 0.89,
+    "attackSide": {
+      "left": 0.25,
+      "center": 0.5,
+      "right": 0.25
+    }
+  }
+}

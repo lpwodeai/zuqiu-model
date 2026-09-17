@@ -1,0 +1,250 @@
+{
+  "timestamp": "20260810_194534",
+  "method": "stage1_class_weight_tuning",
+  "description": "调整 stage1 走水检测器的 class_weight, 从源头减少过预测",
+  "phase1_search_results": [
+    {
+      "name": "balanced(2.3)",
+      "class_weight": "balanced",
+      "label": "balanced(2.3)",
+      "accuracy": 0.37883435582822084,
+      "f1_macro": 0.3713382629975772,
+      "log_loss": 1.2293187840352768,
+      "draw_recall": 0.7605442176870748,
+      "draw_precision": 0.25,
+      "draw_prediction_rate": 0.6858895705521473,
+      "actual_draw_rate": 0.2254601226993865,
+      "distribution": {
+        "上盘赢": 392,
+        "走水": 2236,
+        "下盘赢": 632
+      },
+      "n_samples": 3260,
+      "draw_rate_gap": 0.46042944785276074
+    },
+    {
+      "name": "ratio=1.5",
+      "class_weight": "{0: 1.0, 1: 1.5}",
+      "label": "ratio=1.5",
+      "accuracy": 0.5233128834355828,
+      "f1_macro": 0.453530110170643,
+      "log_loss": 1.050728702563643,
+      "draw_recall": 0.1414965986394558,
+      "draw_precision": 0.27296587926509186,
+      "draw_prediction_rate": 0.11687116564417178,
+      "actual_draw_rate": 0.2254601226993865,
+      "distribution": {
+        "上盘赢": 1393,
+        "走水": 381,
+        "下盘赢": 1486
+      },
+      "n_samples": 3260,
+      "draw_rate_gap": 0.10858895705521472
+    },
+    {
+      "name": "ratio=1.0",
+      "class_weight": "{0: 1.0, 1: 1.0}",
+      "label": "ratio=1.0",
+      "accuracy": 0.5444785276073619,
+      "f1_macro": 0.40832115893250664,
+      "log_loss": 0.9984279299096595,
+      "draw_recall": 0.005442176870748299,
+      "draw_precision": 0.21052631578947367,
+      "draw_prediction_rate": 0.005828220858895706,
+      "actual_draw_rate": 0.2254601226993865,
+      "distribution": {
+        "上盘赢": 1550,
+        "走水": 19,
+        "下盘赢": 1691
+      },
+      "n_samples": 3260,
+      "draw_rate_gap": 0.2196319018404908
+    },
+    {
+      "name": "ratio=0.8",
+      "class_weight": "{0: 1.0, 1: 0.8}",
+      "label": "ratio=0.8",
+      "accuracy": 0.5463190184049079,
+      "f1_macro": 0.40562380626103983,
+      "log_loss": 0.9824328106618239,
+      "draw_recall": 0.0,
+      "draw_precision": 0.0,
+      "draw_prediction_rate": 0.0,
+      "actual_draw_rate": 0.2254601226993865,
+      "distribution": {
+        "上盘赢": 1557,
+        "走水": 0,
+        "下盘赢": 1703
+      },
+      "n_samples": 3260,
+      "draw_rate_gap": 0.2254601226993865
+    },
+    {
+      "name": "ratio=0.6",
+      "class_weight": "{0: 1.0, 1: 0.6}",
+      "label": "ratio=0.6",
+      "accuracy": 0.5463190184049079,
+      "f1_macro": 0.40562380626103983,
+      "log_loss": 0.9733287262252587,
+      "draw_recall": 0.0,
+      "draw_precision": 0.0,
+      "draw_prediction_rate": 0.0,
+      "actual_draw_rate": 0.2254601226993865,
+      "distribution": {
+        "上盘赢": 1557,
+        "走水": 0,
+        "下盘赢": 1703
+      },
+      "n_samples": 3260,
+      "draw_rate_gap": 0.2254601226993865
+    },
+    {
+      "name": "ratio=0.5",
+      "class_weight": "{0: 1.0, 1: 0.5}",
+      "label": "ratio=0.5",
+      "accuracy": 0.5463190184049079,
+      "f1_macro": 0.40562380626103983,
+      "log_loss": 0.9748863327572178,
+      "draw_recall": 0.0,
+      "draw_precision": 0.0,
+      "draw_prediction_rate": 0.0,
+      "actual_draw_rate": 0.2254601226993865,
+      "distribution": {
+        "上盘赢": 1557,
+        "走水": 0,
+        "下盘赢": 1703
+      },
+      "n_samples": 3260,
+      "draw_rate_gap": 0.2254601226993865
+    },
+    {
+      "name": "ratio=0.4",
+      "class_weight": "{0: 1.0, 1: 0.4}",
+      "label": "ratio=0.4",
+      "accuracy": 0.5463190184049079,
+      "f1_macro": 0.40562380626103983,
+      "log_loss": 0.983836248792357,
+      "draw_recall": 0.0,
+      "draw_precision": 0.0,
+      "draw_prediction_rate": 0.0,
+      "actual_draw_rate": 0.2254601226993865,
+      "distribution": {
+        "上盘赢": 1557,
+        "走水": 0,
+        "下盘赢": 1703
+      },
+      "n_samples": 3260,
+      "draw_rate_gap": 0.2254601226993865
+    }
+  ],
+  "selected_class_weight": {
+    "name": "ratio=1.5",
+    "value": "{0: 1.0, 1: 1.5}",
+    "f1_macro": 0.453530110170643,
+    "draw_prediction_rate": 0.11687116564417178,
+    "draw_recall": 0.1414965986394558,
+    "draw_precision": 0.27296587926509186
+  },
+  "phase2_comparison": {
+    "orig_base": {
+      "label": "balanced 基线",
+      "accuracy": 0.3791411042944785,
+      "f1_macro": 0.37152798244261526,
+      "log_loss": 1.2340455772406953,
+      "draw_recall": 0.7465940054495913,
+      "draw_precision": 0.25137614678899084,
+      "draw_prediction_rate": 0.6687116564417178,
+      "actual_draw_rate": 0.22515337423312884,
+      "distribution": {
+        "上盘赢": 214,
+        "走水": 1090,
+        "下盘赢": 326
+      }
+    },
+    "orig_combo": {
+      "label": "balanced 组合(T=2.15+动态)",
+      "accuracy": 0.48466257668711654,
+      "f1_macro": 0.4375076953025865,
+      "log_loss": 1.1076622695064129,
+      "draw_recall": 0.2098092643051771,
+      "draw_precision": 0.23692307692307693,
+      "draw_prediction_rate": 0.19938650306748465,
+      "actual_draw_rate": 0.22515337423312884,
+      "distribution": {
+        "上盘赢": 582,
+        "走水": 325,
+        "下盘赢": 723
+      },
+      "confusion_matrix": [
+        [
+          257,
+          94,
+          122
+        ],
+        [
+          145,
+          77,
+          145
+        ],
+        [
+          180,
+          154,
+          456
+        ]
+      ]
+    },
+    "opt_base": {
+      "label": "ratio=1.5 基线",
+      "accuracy": 0.5165644171779141,
+      "f1_macro": 0.45069404279930597,
+      "log_loss": 1.0616657602032136,
+      "draw_recall": 0.15803814713896458,
+      "draw_precision": 0.3005181347150259,
+      "draw_prediction_rate": 0.11840490797546012,
+      "actual_draw_rate": 0.22515337423312884,
+      "distribution": {
+        "上盘赢": 667,
+        "走水": 193,
+        "下盘赢": 770
+      }
+    },
+    "opt_combo": {
+      "label": "ratio=1.5 组合(T=2.15+动态)",
+      "accuracy": 0.48957055214723927,
+      "f1_macro": 0.44884929139272006,
+      "log_loss": 1.0551522088405363,
+      "draw_recall": 0.23978201634877383,
+      "draw_precision": 0.26506024096385544,
+      "draw_prediction_rate": 0.20368098159509201,
+      "actual_draw_rate": 0.22515337423312884,
+      "distribution": {
+        "上盘赢": 606,
+        "走水": 332,
+        "下盘赢": 692
+      },
+      "confusion_matrix": [
+        [
+          271,
+          85,
+          117
+        ],
+        [
+          143,
+          88,
+          136
+        ],
+        [
+          192,
+          159,
+          439
+        ]
+      ]
+    }
+  },
+  "optimal_thresholds_at_T2_150": {
+    "home_get_1": 0.4,
+    "home_give_1": 0.4,
+    "home_give_2+": 0.425
+  },
+  "temperature": 2.15
+}

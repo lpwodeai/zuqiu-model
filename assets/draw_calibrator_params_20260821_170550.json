@@ -1,0 +1,76 @@
+{
+  "method": "Adaptive hybrid search (Threshold + DrawCalibrator, constrained optimization)",
+  "strategy": "优先满足平局召回率≥0.28，再最大化准确率（最小化准确率损失）",
+  "draw_recall_target": 0.28,
+  "original_defaults": {
+    "draw_threshold_factor_default": 1.5,
+    "draw_calibrator_factor_default": 0.885,
+    "draw_calibrator_factor_conservative": 0.85
+  },
+  "per_model": {
+    "XGBoost": {
+      "method": "threshold",
+      "label": "Threshold(F=1.50)*",
+      "draw_threshold_factor": 1.5000000000000004,
+      "draw_calibrator_factor": null,
+      "accuracy": 0.47718631178707227,
+      "draw_recall": 0.34050179211469533,
+      "draw_recall_target_028_met": true,
+      "accuracy_loss_vs_original_pp": -2.186311787072243
+    },
+    "LightGBM": {
+      "method": "threshold",
+      "label": "Threshold(F=1.45)*",
+      "draw_threshold_factor": 1.4500000000000004,
+      "draw_calibrator_factor": null,
+      "accuracy": 0.4667300380228137,
+      "draw_recall": 0.2831541218637993,
+      "draw_recall_target_028_met": true,
+      "accuracy_loss_vs_original_pp": -3.3269961977186293
+    }
+  },
+  "search_details": {
+    "XGBoost": {
+      "draw_recall_target": 0.28,
+      "threshold_search": {
+        "factor_min": 1.0,
+        "factor_max": 2.5,
+        "factor_step": 0.05,
+        "best_factor": 1.5000000000000004,
+        "best_accuracy": 0.47718631178707227,
+        "best_draw_recall": 0.34050179211469533,
+        "best_draw_precision": 0.30254777070063693
+      },
+      "draw_calibrator_search": {
+        "factor_min": 0.5,
+        "factor_max": 1.0,
+        "factor_step": 0.01,
+        "best_factor": 0.5,
+        "best_accuracy": 0.47718631178707227,
+        "best_draw_recall": 0.34050179211469533,
+        "best_draw_precision": 0.30254777070063693
+      }
+    },
+    "LightGBM": {
+      "draw_recall_target": 0.28,
+      "threshold_search": {
+        "factor_min": 1.0,
+        "factor_max": 2.5,
+        "factor_step": 0.05,
+        "best_factor": 1.4500000000000004,
+        "best_accuracy": 0.4667300380228137,
+        "best_draw_recall": 0.2831541218637993,
+        "best_draw_precision": 0.2743055555555556
+      },
+      "draw_calibrator_search": {
+        "factor_min": 0.5,
+        "factor_max": 1.0,
+        "factor_step": 0.01,
+        "best_factor": 0.55,
+        "best_accuracy": 0.4667300380228137,
+        "best_draw_recall": 0.2831541218637993,
+        "best_draw_precision": 0.2743055555555556
+      }
+    }
+  }
+}

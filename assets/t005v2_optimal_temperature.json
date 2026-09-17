@@ -1,0 +1,422 @@
+{
+  "version": "20260810_191831",
+  "method": "temperature_scaling_tuning",
+  "description": "在验证集上搜索最优温度缩放参数",
+  "draw_threshold_fixed": 0.5,
+  "tuning_set_size": 1630,
+  "evaluation_set_size": 1630,
+  "optimal_temperature": {
+    "log_loss": 2.5,
+    "accuracy": 2.5,
+    "f1_macro": 2.15
+  },
+  "recommended_temperature": 2.5,
+  "evaluation_metrics": {
+    "baseline_t1": {
+      "temperature": 1.0,
+      "accuracy": 0.3791411042944785,
+      "f1_macro": 0.37152798244261526,
+      "f1_weighted": 0.38087949014768047,
+      "log_loss": 1.2340455772406953,
+      "draw_recall": 0.7465940054495913,
+      "distribution": {
+        "上盘赢": 214,
+        "走水": 1090,
+        "下盘赢": 326
+      },
+      "mean_confidence": 0.5924782010451168,
+      "std_confidence": 0.09999957198831504,
+      "confusion_matrix": [
+        [
+          109,
+          319,
+          45
+        ],
+        [
+          47,
+          274,
+          46
+        ],
+        [
+          58,
+          497,
+          235
+        ]
+      ]
+    },
+    "optimal_log_loss": {
+      "temperature": 2.5,
+      "accuracy": 0.5245398773006135,
+      "f1_macro": 0.4222962791395664,
+      "f1_weighted": 0.4864823861358307,
+      "log_loss": 1.1002655899749343,
+      "draw_recall": 0.05994550408719346,
+      "distribution": {
+        "上盘赢": 706,
+        "走水": 91,
+        "下盘赢": 833
+      },
+      "mean_confidence": 0.44156604674717154,
+      "std_confidence": 0.04209040198070239,
+      "confusion_matrix": [
+        [
+          311,
+          24,
+          138
+        ],
+        [
+          172,
+          22,
+          173
+        ],
+        [
+          223,
+          45,
+          522
+        ]
+      ]
+    },
+    "optimal_accuracy": {
+      "temperature": 2.5,
+      "accuracy": 0.5245398773006135,
+      "f1_macro": 0.4222962791395664,
+      "f1_weighted": 0.4864823861358307,
+      "log_loss": 1.1002655899749343,
+      "draw_recall": 0.05994550408719346,
+      "distribution": {
+        "上盘赢": 706,
+        "走水": 91,
+        "下盘赢": 833
+      },
+      "mean_confidence": 0.44156604674717154,
+      "std_confidence": 0.04209040198070239,
+      "confusion_matrix": [
+        [
+          311,
+          24,
+          138
+        ],
+        [
+          172,
+          22,
+          173
+        ],
+        [
+          223,
+          45,
+          522
+        ]
+      ]
+    },
+    "optimal_f1": {
+      "temperature": 2.15,
+      "accuracy": 0.48588957055214727,
+      "f1_macro": 0.4373532080081998,
+      "f1_weighted": 0.48396491541702813,
+      "log_loss": 1.1076622695064129,
+      "draw_recall": 0.20435967302452315,
+      "distribution": {
+        "上盘赢": 588,
+        "走水": 316,
+        "下盘赢": 726
+      },
+      "mean_confidence": 0.45917848772993103,
+      "std_confidence": 0.04915457819182763,
+      "confusion_matrix": [
+        [
+          259,
+          91,
+          123
+        ],
+        [
+          147,
+          75,
+          145
+        ],
+        [
+          182,
+          150,
+          458
+        ]
+      ]
+    }
+  },
+  "forward_validation": [
+    {
+      "tune_fold": "1",
+      "eval_fold": "2",
+      "optimal_t_on_tune": 2.5,
+      "optimal_t_metrics": {
+        "temperature": 2.5,
+        "accuracy": 0.5322085889570553,
+        "f1_macro": 0.4312242526074141,
+        "f1_weighted": 0.4970152344416159,
+        "log_loss": 1.1054146572258337,
+        "draw_recall": 0.06428571428571428,
+        "distribution": {
+          "上盘赢": 302,
+          "走水": 39,
+          "下盘赢": 311
+        },
+        "mean_confidence": 0.43565339920560164,
+        "std_confidence": 0.042327883391420615,
+        "confusion_matrix": [
+          [
+            139,
+            8,
+            48
+          ],
+          [
+            67,
+            9,
+            64
+          ],
+          [
+            96,
+            22,
+            199
+          ]
+        ]
+      },
+      "baseline_t1_metrics": {
+        "temperature": 1.0,
+        "accuracy": 0.3834355828220859,
+        "f1_macro": 0.37834123109979406,
+        "f1_weighted": 0.39426971821717766,
+        "log_loss": 1.2345430509518363,
+        "draw_recall": 0.7071428571428572,
+        "distribution": {
+          "上盘赢": 93,
+          "走水": 417,
+          "下盘赢": 142
+        },
+        "mean_confidence": 0.5805055112384806,
+        "std_confidence": 0.10260878806982718,
+        "confusion_matrix": [
+          [
+            47,
+            131,
+            17
+          ],
+          [
+            20,
+            99,
+            21
+          ],
+          [
+            26,
+            187,
+            104
+          ]
+        ]
+      }
+    },
+    {
+      "tune_fold": "2",
+      "eval_fold": "3",
+      "optimal_t_on_tune": 2.5,
+      "optimal_t_metrics": {
+        "temperature": 2.5,
+        "accuracy": 0.5306748466257669,
+        "f1_macro": 0.4367525596772803,
+        "f1_weighted": 0.4958386967783993,
+        "log_loss": 1.0774184623617602,
+        "draw_recall": 0.07006369426751592,
+        "distribution": {
+          "上盘赢": 319,
+          "走水": 42,
+          "下盘赢": 291
+        },
+        "mean_confidence": 0.449397906405023,
+        "std_confidence": 0.03878866912295532,
+        "confusion_matrix": [
+          [
+            133,
+            10,
+            36
+          ],
+          [
+            93,
+            11,
+            53
+          ],
+          [
+            93,
+            21,
+            202
+          ]
+        ]
+      },
+      "baseline_t1_metrics": {
+        "temperature": 1.0,
+        "accuracy": 0.3911042944785276,
+        "f1_macro": 0.3874499962569073,
+        "f1_weighted": 0.38576671674905705,
+        "log_loss": 1.1907408020559984,
+        "draw_recall": 0.8089171974522293,
+        "distribution": {
+          "上盘赢": 75,
+          "走水": 474,
+          "下盘赢": 103
+        },
+        "mean_confidence": 0.6103427171587196,
+        "std_confidence": 0.09360237573077058,
+        "confusion_matrix": [
+          [
+            48,
+            121,
+            10
+          ],
+          [
+            17,
+            127,
+            13
+          ],
+          [
+            10,
+            226,
+            80
+          ]
+        ]
+      }
+    },
+    {
+      "tune_fold": "3",
+      "eval_fold": "4",
+      "optimal_t_on_tune": 2.5,
+      "optimal_t_metrics": {
+        "temperature": 2.5,
+        "accuracy": 0.5475460122699386,
+        "f1_macro": 0.42757492700566707,
+        "f1_weighted": 0.48731887623984343,
+        "log_loss": 1.0878511046851995,
+        "draw_recall": 0.026143790849673203,
+        "distribution": {
+          "上盘赢": 310,
+          "走水": 12,
+          "下盘赢": 330
+        },
+        "mean_confidence": 0.44680191293232757,
+        "std_confidence": 0.03372150141161033,
+        "confusion_matrix": [
+          [
+            153,
+            4,
+            60
+          ],
+          [
+            79,
+            4,
+            70
+          ],
+          [
+            78,
+            4,
+            200
+          ]
+        ]
+      },
+      "baseline_t1_metrics": {
+        "temperature": 1.0,
+        "accuracy": 0.3665644171779141,
+        "f1_macro": 0.35716260100708,
+        "f1_weighted": 0.3551372607394323,
+        "log_loss": 1.2117973950885477,
+        "draw_recall": 0.8169934640522876,
+        "distribution": {
+          "上盘赢": 69,
+          "走水": 490,
+          "下盘赢": 93
+        },
+        "mean_confidence": 0.6043298142175765,
+        "std_confidence": 0.08285754802741005,
+        "confusion_matrix": [
+          [
+            45,
+            157,
+            15
+          ],
+          [
+            19,
+            125,
+            9
+          ],
+          [
+            5,
+            208,
+            69
+          ]
+        ]
+      }
+    },
+    {
+      "tune_fold": "4",
+      "eval_fold": "5",
+      "optimal_t_on_tune": 2.5,
+      "optimal_t_metrics": {
+        "temperature": 2.5,
+        "accuracy": 0.5475460122699386,
+        "f1_macro": 0.4225000921654989,
+        "f1_weighted": 0.49852317942672886,
+        "log_loss": 1.1061900106536364,
+        "draw_recall": 0.034722222222222224,
+        "distribution": {
+          "上盘赢": 271,
+          "走水": 19,
+          "下盘赢": 362
+        },
+        "mean_confidence": 0.44114821595536097,
+        "std_confidence": 0.03382419775428383,
+        "confusion_matrix": [
+          [
+            121,
+            7,
+            52
+          ],
+          [
+            60,
+            5,
+            79
+          ],
+          [
+            90,
+            7,
+            231
+          ]
+        ]
+      },
+      "baseline_t1_metrics": {
+        "temperature": 1.0,
+        "accuracy": 0.35429447852760737,
+        "f1_macro": 0.3350570355812819,
+        "f1_weighted": 0.3386107174913067,
+        "log_loss": 1.2446383253407256,
+        "draw_recall": 0.8472222222222222,
+        "distribution": {
+          "上盘赢": 51,
+          "走水": 493,
+          "下盘赢": 108
+        },
+        "mean_confidence": 0.5932313182448592,
+        "std_confidence": 0.08349697062920919,
+        "confusion_matrix": [
+          [
+            30,
+            136,
+            14
+          ],
+          [
+            7,
+            122,
+            15
+          ],
+          [
+            14,
+            235,
+            79
+          ]
+        ]
+      }
+    }
+  ]
+}

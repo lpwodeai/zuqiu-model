@@ -1,0 +1,278 @@
+{
+  "timestamp": "2026-07-17T11:36:27.994399",
+  "version": null,
+  "data_summary": {
+    "total_matches": 1867,
+    "date_range": "2025-08-15 to 2026-05-24",
+    "feature_dimensions": 50,
+    "class_distribution": {
+      "2": 841,
+      "0": 546,
+      "1": 480
+    }
+  },
+  "cross_validation": {
+    "xgboost": [
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.21626576781272888,
+        "brier": 0.05969944968819618,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.21860603988170624
+      },
+      {
+        "accuracy": 0.9935691318327974,
+        "log_loss": 0.2011675387620926,
+        "brier": 0.05464383214712143,
+        "f1": 0.9935476056453872,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.18880057334899902
+      },
+      {
+        "accuracy": 0.8971061093247589,
+        "log_loss": 0.362150102853775,
+        "brier": 0.16196274757385254,
+        "f1": 0.8896684879964624,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.18075303733348846
+      },
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.2374984323978424,
+        "brier": 0.07262030243873596,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.18915855884552002
+      },
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.21698670089244843,
+        "brier": 0.06015247106552124,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.18969975411891937
+      }
+    ],
+    "lightgbm": [
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.030912880087714624,
+        "brier": 0.0014852556238596107,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.031289428145204634
+      },
+      {
+        "accuracy": 0.9935691318327974,
+        "log_loss": 0.033096871268258304,
+        "brier": 0.011289984115703776,
+        "f1": 0.9935476056453872,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.01601632432025396
+      },
+      {
+        "accuracy": 0.8681672025723473,
+        "log_loss": 0.18737843233659748,
+        "brier": 0.1240170992335005,
+        "f1": 0.8623885309659204,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.010470850637629897
+      },
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.016896294397961257,
+        "brier": 0.0006729421949442698,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.007963343059091289
+      },
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.012397620980815717,
+        "brier": 0.0004455356517973877,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "train_log_loss": 0.006396123047014548
+      }
+    ],
+    "ensemble": [
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.003934940238993507,
+        "brier": 3.2929162588496156e-05,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "rps": 9.198939895975606e-06,
+        "brier_reliability": 1.0976387529498717e-05,
+        "brier_resolution": 0.615460017972452,
+        "brier_uncertainty": 0.6228223446821269,
+        "mean_calibration_error": 0.662435797664271
+      },
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.005976854627920901,
+        "brier": 0.0027817849747181133,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "rps": 0.0006873889375147447,
+        "brier_reliability": 0.0009272616582393713,
+        "brier_resolution": 0.6364139363841204,
+        "brier_uncertainty": 0.644616991139463,
+        "mean_calibration_error": 0.6603809431203597
+      },
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.060796331599159634,
+        "brier": 0.01774629115494871,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "rps": 0.0045789272761702976,
+        "brier_reliability": 0.005915430384982909,
+        "brier_resolution": 0.5683396989653224,
+        "brier_uncertainty": 0.6601255156584402,
+        "mean_calibration_error": 0.6098134222226129
+      },
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.007647273641140704,
+        "brier": 0.0002349133218990968,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "rps": 5.9309649046051805e-05,
+        "brier_reliability": 7.830444063303231e-05,
+        "brier_resolution": 0.6388486005126639,
+        "brier_uncertainty": 0.6537980376546975,
+        "mean_calibration_error": 0.6587256317118664
+      },
+      {
+        "accuracy": 1.0,
+        "log_loss": 0.004357747167309531,
+        "brier": 7.263310104106873e-05,
+        "f1": 1.0,
+        "train_accuracy": 1.0,
+        "rps": 1.8397305499227522e-05,
+        "brier_reliability": 2.4211033680356246e-05,
+        "brier_resolution": 0.6364073322350756,
+        "brier_uncertainty": 0.6447203813029229,
+        "mean_calibration_error": 0.662092013053489
+      }
+    ]
+  },
+  "final_models": {
+    "xgboost": {
+      "accuracy": 1.0,
+      "log_loss": 0.21915127336978912,
+      "brier": 0.06114480271935463,
+      "f1": 1.0,
+      "train_accuracy": 1.0,
+      "train_log_loss": 0.18951714038848877
+    },
+    "lightgbm": {
+      "accuracy": 1.0,
+      "log_loss": 0.015174079212627988,
+      "brier": 0.0007795860883565961,
+      "f1": 1.0,
+      "train_accuracy": 1.0,
+      "train_log_loss": 0.007066125104294848
+    },
+    "ensemble": {
+      "accuracy": 1.0,
+      "log_loss": 0.004757080270436891,
+      "brier": 8.606633599667876e-05,
+      "f1": 1.0,
+      "train_accuracy": 1.0,
+      "rps": 2.180339418897685e-05,
+      "brier_reliability": 2.8688778665559545e-05,
+      "brier_resolution": 0.6380477342087434,
+      "brier_uncertainty": 0.6471589121793588,
+      "mean_calibration_error": 0.6617119421935516
+    }
+  },
+  "feature_importance": {
+    "xgboost": [
+      {
+        "feature": "h2h_last_result",
+        "importance": 0.1699315905570984
+      },
+      {
+        "feature": "h2h_away_streak",
+        "importance": 0.1506171077489853
+      },
+      {
+        "feature": "h2h_draw_rate",
+        "importance": 0.12806802988052368
+      },
+      {
+        "feature": "h2h_home_streak",
+        "importance": 0.12248687446117401
+      },
+      {
+        "feature": "h2h_goal_diff_avg",
+        "importance": 0.09175324440002441
+      },
+      {
+        "feature": "h2h_away_win_rate",
+        "importance": 0.08069484680891037
+      },
+      {
+        "feature": "h2h_home_win_rate",
+        "importance": 0.07642465829849243
+      },
+      {
+        "feature": "h2h_goals_diff",
+        "importance": 0.07015284895896912
+      },
+      {
+        "feature": "h2h_form_diff",
+        "importance": 0.0433812215924263
+      },
+      {
+        "feature": "h2h_avg_goals_away",
+        "importance": 0.007764608599245548
+      },
+      {
+        "feature": "odds_diff_h2a",
+        "importance": 0.005410660523921251
+      },
+      {
+        "feature": "h2h_avg_total_goals",
+        "importance": 0.0040549528785049915
+      },
+      {
+        "feature": "form_diff",
+        "importance": 0.0036240913905203342
+      },
+      {
+        "feature": "weighted_form_diff",
+        "importance": 0.002910865470767021
+      },
+      {
+        "feature": "venue_diff",
+        "importance": 0.0024822058621793985
+      },
+      {
+        "feature": "away_avg_opp_goals",
+        "importance": 0.0024689564015716314
+      },
+      {
+        "feature": "away_weighted_win_rate",
+        "importance": 0.0024604706559330225
+      },
+      {
+        "feature": "away_home_advantage",
+        "importance": 0.002424353500828147
+      },
+      {
+        "feature": "home_avg_goals",
+        "importance": 0.0023948922753334045
+      },
+      {
+        "feature": "defence_strength_ratio",
+        "importance": 0.002222661394625902
+      }
+    ],
+    "lightgbm": null
+  },
+  "training_time_seconds": 427.7
+}

@@ -1,0 +1,311 @@
+{
+  "experiment": "draw_threshold_factor_refined_calibration",
+  "timestamp": "2026-08-20 18:42:25",
+  "model": "lgb_model_20260820_120209.pkl",
+  "selected_features_dim": 210,
+  "n_samples": 5256,
+  "grid": [
+    1.0,
+    1.02,
+    1.04,
+    1.06,
+    1.08,
+    1.1
+  ],
+  "results": {
+    "global": {
+      "actual_draw_rate": 0.256468797564688,
+      "rows": [
+        {
+          "factor": 1.0,
+          "accuracy": 0.5485159817351598,
+          "draw_recall": 0.35979228486646886,
+          "draw_precision": 0.4065381391450126,
+          "draw_rate": 0.2269786910197869
+        },
+        {
+          "factor": 1.02,
+          "accuracy": 0.5475646879756468,
+          "draw_recall": 0.3835311572700297,
+          "draw_precision": 0.4001547987616099,
+          "draw_rate": 0.24581430745814306
+        },
+        {
+          "factor": 1.04,
+          "accuracy": 0.5437595129375952,
+          "draw_recall": 0.4043026706231454,
+          "draw_precision": 0.3912419239052405,
+          "draw_rate": 0.2650304414003044
+        },
+        {
+          "factor": 1.06,
+          "accuracy": 0.54337899543379,
+          "draw_recall": 0.435459940652819,
+          "draw_precision": 0.38822751322751325,
+          "draw_rate": 0.2876712328767123
+        },
+        {
+          "factor": 1.08,
+          "accuracy": 0.5397640791476408,
+          "draw_recall": 0.45326409495548964,
+          "draw_precision": 0.3795031055900621,
+          "draw_rate": 0.3063165905631659
+        },
+        {
+          "factor": 1.1,
+          "accuracy": 0.5350076103500762,
+          "draw_recall": 0.46661721068249257,
+          "draw_precision": 0.37,
+          "draw_rate": 0.3234398782343988
+        }
+      ],
+      "best_accuracy_factor": 1.0,
+      "best_rate_factor": 1.04
+    },
+    "PL": {
+      "actual_draw_rate": 0.24452234881682736,
+      "rows": [
+        {
+          "factor": 1.0,
+          "accuracy": 0.5591586327782647,
+          "draw_recall": 0.2724014336917563,
+          "draw_precision": 0.4222222222222222,
+          "draw_rate": 0.15775635407537247
+        },
+        {
+          "factor": 1.02,
+          "accuracy": 0.5617879053461875,
+          "draw_recall": 0.3010752688172043,
+          "draw_precision": 0.41379310344827586,
+          "draw_rate": 0.17791411042944785
+        },
+        {
+          "factor": 1.04,
+          "accuracy": 0.558282208588957,
+          "draw_recall": 0.3225806451612903,
+          "draw_precision": 0.4090909090909091,
+          "draw_rate": 0.19281332164767748
+        },
+        {
+          "factor": 1.06,
+          "accuracy": 0.5521472392638037,
+          "draw_recall": 0.34050179211469533,
+          "draw_precision": 0.38461538461538464,
+          "draw_rate": 0.21647677475898336
+        },
+        {
+          "factor": 1.08,
+          "accuracy": 0.544259421560035,
+          "draw_recall": 0.35842293906810035,
+          "draw_precision": 0.36900369003690037,
+          "draw_rate": 0.23751095530236635
+        },
+        {
+          "factor": 1.1,
+          "accuracy": 0.5346187554776511,
+          "draw_recall": 0.36917562724014336,
+          "draw_precision": 0.3515358361774744,
+          "draw_rate": 0.2567922874671341
+        }
+      ],
+      "best_accuracy_factor": 1.02,
+      "best_rate_factor": 1.08
+    },
+    "BL1": {
+      "actual_draw_rate": 0.2549019607843137,
+      "rows": [
+        {
+          "factor": 1.0,
+          "accuracy": 0.5631808278867102,
+          "draw_recall": 0.33760683760683763,
+          "draw_precision": 0.42245989304812837,
+          "draw_rate": 0.2037037037037037
+        },
+        {
+          "factor": 1.02,
+          "accuracy": 0.5566448801742919,
+          "draw_recall": 0.34615384615384615,
+          "draw_precision": 0.39901477832512317,
+          "draw_rate": 0.22113289760348584
+        },
+        {
+          "factor": 1.04,
+          "accuracy": 0.5501089324618736,
+          "draw_recall": 0.3547008547008547,
+          "draw_precision": 0.3824884792626728,
+          "draw_rate": 0.23638344226579522
+        },
+        {
+          "factor": 1.06,
+          "accuracy": 0.5533769063180828,
+          "draw_recall": 0.4017094017094017,
+          "draw_precision": 0.3868312757201646,
+          "draw_rate": 0.2647058823529412
+        },
+        {
+          "factor": 1.08,
+          "accuracy": 0.5533769063180828,
+          "draw_recall": 0.4188034188034188,
+          "draw_precision": 0.3828125,
+          "draw_rate": 0.2788671023965142
+        },
+        {
+          "factor": 1.1,
+          "accuracy": 0.5533769063180828,
+          "draw_recall": 0.4358974358974359,
+          "draw_precision": 0.3805970149253731,
+          "draw_rate": 0.29193899782135074
+        }
+      ],
+      "best_accuracy_factor": 1.0,
+      "best_rate_factor": 1.06
+    },
+    "IT": {
+      "actual_draw_rate": 0.2805628847845207,
+      "rows": [
+        {
+          "factor": 1.0,
+          "accuracy": 0.55584872471416,
+          "draw_recall": 0.4043887147335423,
+          "draw_precision": 0.42295081967213116,
+          "draw_rate": 0.26824978012313105
+        },
+        {
+          "factor": 1.02,
+          "accuracy": 0.5549692172383466,
+          "draw_recall": 0.42946708463949845,
+          "draw_precision": 0.4241486068111455,
+          "draw_rate": 0.28408091468777485
+        },
+        {
+          "factor": 1.04,
+          "accuracy": 0.5488126649076517,
+          "draw_recall": 0.4482758620689655,
+          "draw_precision": 0.4109195402298851,
+          "draw_rate": 0.30606860158311344
+        },
+        {
+          "factor": 1.06,
+          "accuracy": 0.5532102022867195,
+          "draw_recall": 0.4827586206896552,
+          "draw_precision": 0.41847826086956524,
+          "draw_rate": 0.32365875109938436
+        },
+        {
+          "factor": 1.08,
+          "accuracy": 0.5505716798592788,
+          "draw_recall": 0.5109717868338558,
+          "draw_precision": 0.4137055837563452,
+          "draw_rate": 0.3465259454705365
+        },
+        {
+          "factor": 1.1,
+          "accuracy": 0.544415127528584,
+          "draw_recall": 0.5235109717868338,
+          "draw_precision": 0.4043583535108959,
+          "draw_rate": 0.36323658751099386
+        }
+      ],
+      "best_accuracy_factor": 1.0,
+      "best_rate_factor": 1.02
+    },
+    "LaLiga": {
+      "actual_draw_rate": 0.26048951048951047,
+      "rows": [
+        {
+          "factor": 1.0,
+          "accuracy": 0.5305944055944056,
+          "draw_recall": 0.4463087248322148,
+          "draw_precision": 0.37254901960784315,
+          "draw_rate": 0.3120629370629371
+        },
+        {
+          "factor": 1.02,
+          "accuracy": 0.5270979020979021,
+          "draw_recall": 0.4563758389261745,
+          "draw_precision": 0.3646112600536193,
+          "draw_rate": 0.32604895104895104
+        },
+        {
+          "factor": 1.04,
+          "accuracy": 0.5236013986013986,
+          "draw_recall": 0.48322147651006714,
+          "draw_precision": 0.3609022556390977,
+          "draw_rate": 0.3487762237762238
+        },
+        {
+          "factor": 1.06,
+          "accuracy": 0.5218531468531469,
+          "draw_recall": 0.5167785234899329,
+          "draw_precision": 0.358974358974359,
+          "draw_rate": 0.375
+        },
+        {
+          "factor": 1.08,
+          "accuracy": 0.5201048951048951,
+          "draw_recall": 0.5268456375838926,
+          "draw_precision": 0.3536036036036036,
+          "draw_rate": 0.3881118881118881
+        },
+        {
+          "factor": 1.1,
+          "accuracy": 0.5166083916083916,
+          "draw_recall": 0.5436241610738255,
+          "draw_precision": 0.34838709677419355,
+          "draw_rate": 0.40646853146853146
+        }
+      ],
+      "best_accuracy_factor": 1.0,
+      "best_rate_factor": 1.0
+    },
+    "FL1": {
+      "actual_draw_rate": 0.23799126637554585,
+      "rows": [
+        {
+          "factor": 1.0,
+          "accuracy": 0.5338427947598253,
+          "draw_recall": 0.3119266055045872,
+          "draw_precision": 0.4146341463414634,
+          "draw_rate": 0.17903930131004367
+        },
+        {
+          "factor": 1.02,
+          "accuracy": 0.537117903930131,
+          "draw_recall": 0.3623853211009174,
+          "draw_precision": 0.41578947368421054,
+          "draw_rate": 0.2074235807860262
+        },
+        {
+          "factor": 1.04,
+          "accuracy": 0.5382096069868996,
+          "draw_recall": 0.38990825688073394,
+          "draw_precision": 0.40669856459330145,
+          "draw_rate": 0.22816593886462883
+        },
+        {
+          "factor": 1.06,
+          "accuracy": 0.537117903930131,
+          "draw_recall": 0.41284403669724773,
+          "draw_precision": 0.4,
+          "draw_rate": 0.24563318777292575
+        },
+        {
+          "factor": 1.08,
+          "accuracy": 0.5316593886462883,
+          "draw_recall": 0.42660550458715596,
+          "draw_precision": 0.3795918367346939,
+          "draw_rate": 0.26746724890829693
+        },
+        {
+          "factor": 1.1,
+          "accuracy": 0.5283842794759825,
+          "draw_recall": 0.43577981651376146,
+          "draw_precision": 0.36398467432950193,
+          "draw_rate": 0.2849344978165939
+        }
+      ],
+      "best_accuracy_factor": 1.04,
+      "best_rate_factor": 1.06
+    }
+  }
+}

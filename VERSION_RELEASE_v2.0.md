@@ -78,7 +78,7 @@ v2.0 是五大联赛足球预测模型的重大优化版本，包含 T-005 v3 �
 | `assets/t005v3_direction_predictor.pkl` | T-005 v3 方向预测器 |
 | `assets/t005v3_draw_detector.pkl` | T-005 v3 平局检测器 |
 | `assets/t005v3_metadata.json` | T-005 v3 元数据（含温度/阈值/class_weight） |
-| `models/t006_lowgoal_classifier_v1.pkl` | T-006 低进球分类器 |
+| `assets/t006_lowgoal_classifier_v1.pkl` | T-006 低进球分类器 |
 
 ### 3.3 配置文件
 

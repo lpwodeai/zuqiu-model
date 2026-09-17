@@ -1,0 +1,76 @@
+{
+  "name": "five-leagues-predictor",
+  "version": "7.5.0",
+  "description": "五大联赛预测模型 v7.5 - 全栈AI预测系统",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "server:dev": "nodemon server/index.js",
+    "client": "vite --config vite.config.js",
+    "client:build": "vite build --config vite.config.js",
+    "build": "npm run client:build",
+    "start": "node server/index.js",
+    "test": "echo \"No tests configured\" && exit 0",
+    "test:full": "echo \"No tests configured\" && exit 0",
+    "predict": "node cli-predict.js",
+    "data:collect": "node scripts/data-collector.js",
+    "data:update": "node scripts/update-team-data.js",
+    "postinstall": "node scripts/patch-rc-picker.js"
+  },
+  "keywords": [
+    "five-leagues",
+    "football-prediction",
+    "bayesian",
+    "poisson",
+    "full-stack",
+    "react",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.18.1",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^13.0.3",
+    "bull": "^4.12.0",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "js-yaml": "^4.3.0",
+    "jsdom": "^29.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "moment": "^2.29.4",
+    "node-fetch": "^3.3.2",
+    "node-schedule": "^2.1.1",
+    "qs": "^6.15.3",
+    "redis": "^4.6.10",
+    "sql.js": "^1.14.1",
+    "sqlite3": "^6.0.1",
+    "uuid": "^9.0.0",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "antd": "^5.12.0",
+    "concurrently": "^8.2.2",
+    "echarts": "^5.4.3",
+    "echarts-for-react": "^3.0.2",
+    "nodemon": "^3.0.2",
+    "pm2": "^7.0.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
+    "terser": "^5.48.0",
+    "vite": "^5.0.0"
+  },
+  "allowScripts": {
+    "sqlite3@6.0.1": true
+  },
+  "optionalDependencies": {
+    "@esbuild/win32-x64": "^0.28.1",
+    "@rollup/rollup-win32-x64-msvc": "^4.62.2"
+  }
+}

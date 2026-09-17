@@ -1,0 +1,1327 @@
+{
+  "meta": {
+    "test_time": "2026-08-15 20:57:03",
+    "sample_size": 50,
+    "method": "Poisson + Dixon-Coles (v4)",
+    "date_range": "2026-05-11 ~ 2026-05-25"
+  },
+  "summary": {
+    "exact_hit_rate": 12.0,
+    "top3_hit_rate": 26.0,
+    "top5_hit_rate": 34.0,
+    "exact_hits": 6,
+    "top3_hits": 13,
+    "top5_hits": 17,
+    "avg_top1_prob": 0.1063,
+    "avg_lambda_home": 2.24,
+    "avg_lambda_away": 1.55
+  },
+  "comparison": {
+    "claimed_accuracy": 64.66,
+    "verified_accuracy": 12.0,
+    "gap_pp": 52.66,
+    "verdict": "需要验证指标定义"
+  },
+  "details": [
+    {
+      "home_team": "美因茨",
+      "away_team": "柏林联合",
+      "date": "2026-05-11",
+      "league": "德甲",
+      "actual_score": "1:3",
+      "lambda_home": 2.16,
+      "lambda_away": 1.01,
+      "top1_score": "1:1",
+      "top1_prob": 0.1186,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "2:0"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "2:0",
+        "3:1",
+        "3:0"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "布雷斯特",
+      "away_team": "斯特拉斯堡",
+      "date": "2026-05-14",
+      "league": "法甲",
+      "actual_score": "1:2",
+      "lambda_home": 2.4,
+      "lambda_away": 1.4,
+      "top1_score": "1:1",
+      "top1_prob": 0.0969,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "3:1"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "3:1",
+        "2:0",
+        "2:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "拜仁慕尼黑",
+      "away_team": "科隆",
+      "date": "2026-05-16",
+      "league": "德甲",
+      "actual_score": "5:1",
+      "lambda_home": 6.0,
+      "lambda_away": 0.82,
+      "top1_score": "5:0",
+      "top1_prob": 0.0966,
+      "top3_scores": [
+        "5:0",
+        "6:0",
+        "7:0"
+      ],
+      "top5_scores": [
+        "5:0",
+        "6:0",
+        "7:0",
+        "5:1",
+        "6:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": true
+    },
+    {
+      "home_team": "门兴格拉德巴赫",
+      "away_team": "霍芬海姆",
+      "date": "2026-05-16",
+      "league": "德甲",
+      "actual_score": "4:0",
+      "lambda_home": 2.83,
+      "lambda_away": 2.36,
+      "top1_score": "3:2",
+      "top1_prob": 0.0609,
+      "top3_scores": [
+        "3:2",
+        "2:2",
+        "2:1"
+      ],
+      "top5_scores": [
+        "3:2",
+        "2:2",
+        "2:1",
+        "2:3",
+        "3:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "法兰克福",
+      "away_team": "斯图加特",
+      "date": "2026-05-16",
+      "league": "德甲",
+      "actual_score": "2:2",
+      "lambda_home": 2.97,
+      "lambda_away": 2.48,
+      "top1_score": "3:2",
+      "top1_prob": 0.0602,
+      "top3_scores": [
+        "3:2",
+        "2:2",
+        "2:3"
+      ],
+      "top5_scores": [
+        "3:2",
+        "2:2",
+        "2:3",
+        "3:3",
+        "2:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "圣保利",
+      "away_team": "沃尔夫斯堡",
+      "date": "2026-05-16",
+      "league": "德甲",
+      "actual_score": "1:3",
+      "lambda_home": 1.35,
+      "lambda_away": 1.87,
+      "top1_score": "1:1",
+      "top1_prob": 0.1306,
+      "top3_scores": [
+        "1:1",
+        "1:2",
+        "0:0"
+      ],
+      "top5_scores": [
+        "1:1",
+        "1:2",
+        "0:0",
+        "0:2",
+        "2:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "弗赖堡",
+      "away_team": "莱比锡红牛",
+      "date": "2026-05-16",
+      "league": "德甲",
+      "actual_score": "4:1",
+      "lambda_home": 2.66,
+      "lambda_away": 2.34,
+      "top1_score": "2:2",
+      "top1_prob": 0.0637,
+      "top3_scores": [
+        "2:2",
+        "3:2",
+        "2:1"
+      ],
+      "top5_scores": [
+        "2:2",
+        "3:2",
+        "2:1",
+        "1:1",
+        "2:3"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "云达不来梅",
+      "away_team": "多特蒙德",
+      "date": "2026-05-16",
+      "league": "德甲",
+      "actual_score": "0:2",
+      "lambda_home": 1.77,
+      "lambda_away": 2.64,
+      "top1_score": "1:2",
+      "top1_prob": 0.0739,
+      "top3_scores": [
+        "1:2",
+        "1:1",
+        "2:2"
+      ],
+      "top5_scores": [
+        "1:2",
+        "1:1",
+        "2:2",
+        "1:3",
+        "2:3"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "海登海姆",
+      "away_team": "美因茨",
+      "date": "2026-05-16",
+      "league": "德甲",
+      "actual_score": "0:2",
+      "lambda_home": 2.05,
+      "lambda_away": 2.43,
+      "top1_score": "1:1",
+      "top1_prob": 0.0721,
+      "top3_scores": [
+        "1:1",
+        "2:2",
+        "1:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:2",
+        "1:2",
+        "2:3",
+        "2:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "勒沃库森",
+      "away_team": "汉堡",
+      "date": "2026-05-16",
+      "league": "德甲",
+      "actual_score": "1:1",
+      "lambda_home": 4.2,
+      "lambda_away": 0.85,
+      "top1_score": "4:0",
+      "top1_prob": 0.0873,
+      "top3_scores": [
+        "4:0",
+        "3:0",
+        "4:1"
+      ],
+      "top5_scores": [
+        "4:0",
+        "3:0",
+        "4:1",
+        "5:0",
+        "3:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "柏林联合",
+      "away_team": "奥格斯堡",
+      "date": "2026-05-16",
+      "league": "德甲",
+      "actual_score": "4:0",
+      "lambda_home": 2.37,
+      "lambda_away": 1.72,
+      "top1_score": "1:1",
+      "top1_prob": 0.0875,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "2:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "2:2",
+        "3:1",
+        "1:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "布雷斯特",
+      "away_team": "昂热",
+      "date": "2026-05-18",
+      "league": "法甲",
+      "actual_score": "1:1",
+      "lambda_home": 2.19,
+      "lambda_away": 0.79,
+      "top1_score": "2:0",
+      "top1_prob": 0.1222,
+      "top3_scores": [
+        "2:0",
+        "1:1",
+        "2:1"
+      ],
+      "top5_scores": [
+        "2:0",
+        "1:1",
+        "2:1",
+        "3:0",
+        "1:0"
+      ],
+      "exact_hit": false,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "里尔",
+      "away_team": "欧塞尔",
+      "date": "2026-05-18",
+      "league": "法甲",
+      "actual_score": "0:2",
+      "lambda_home": 2.8,
+      "lambda_away": 1.06,
+      "top1_score": "2:1",
+      "top1_prob": 0.0874,
+      "top3_scores": [
+        "2:1",
+        "2:0",
+        "3:1"
+      ],
+      "top5_scores": [
+        "2:1",
+        "2:0",
+        "3:1",
+        "1:1",
+        "3:0"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "洛里昂",
+      "away_team": "勒阿弗尔",
+      "date": "2026-05-18",
+      "league": "法甲",
+      "actual_score": "0:2",
+      "lambda_home": 2.53,
+      "lambda_away": 1.58,
+      "top1_score": "1:1",
+      "top1_prob": 0.0841,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "3:1"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "3:1",
+        "2:2",
+        "3:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "南特",
+      "away_team": "图卢兹",
+      "date": "2026-05-18",
+      "league": "法甲",
+      "actual_score": "0:0",
+      "lambda_home": 1.25,
+      "lambda_away": 1.82,
+      "top1_score": "1:1",
+      "top1_prob": 0.137,
+      "top3_scores": [
+        "1:1",
+        "1:2",
+        "0:0"
+      ],
+      "top5_scores": [
+        "1:1",
+        "1:2",
+        "0:0",
+        "0:2",
+        "2:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "尼斯",
+      "away_team": "梅斯",
+      "date": "2026-05-18",
+      "league": "法甲",
+      "actual_score": "0:0",
+      "lambda_home": 2.92,
+      "lambda_away": 0.92,
+      "top1_score": "2:0",
+      "top1_prob": 0.0921,
+      "top3_scores": [
+        "2:0",
+        "3:0",
+        "2:1"
+      ],
+      "top5_scores": [
+        "2:0",
+        "3:0",
+        "2:1",
+        "3:1",
+        "1:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "里昂",
+      "away_team": "朗斯",
+      "date": "2026-05-18",
+      "league": "法甲",
+      "actual_score": "0:4",
+      "lambda_home": 1.93,
+      "lambda_away": 1.77,
+      "top1_score": "1:1",
+      "top1_prob": 0.1089,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "1:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "1:2",
+        "2:2",
+        "3:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "马赛",
+      "away_team": "雷恩",
+      "date": "2026-05-18",
+      "league": "法甲",
+      "actual_score": "3:1",
+      "lambda_home": 3.51,
+      "lambda_away": 1.5,
+      "top1_score": "3:1",
+      "top1_prob": 0.072,
+      "top3_scores": [
+        "3:1",
+        "4:1",
+        "2:1"
+      ],
+      "top5_scores": [
+        "3:1",
+        "4:1",
+        "2:1",
+        "3:2",
+        "4:2"
+      ],
+      "exact_hit": true,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "巴黎FC",
+      "away_team": "巴黎圣日尔曼",
+      "date": "2026-05-18",
+      "league": "法甲",
+      "actual_score": "2:1",
+      "lambda_home": 1.43,
+      "lambda_away": 3.48,
+      "top1_score": "1:3",
+      "top1_prob": 0.074,
+      "top3_scores": [
+        "1:3",
+        "1:4",
+        "1:2"
+      ],
+      "top5_scores": [
+        "1:3",
+        "1:4",
+        "1:2",
+        "2:3",
+        "0:3"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "斯特拉斯堡",
+      "away_team": "摩纳哥",
+      "date": "2026-05-18",
+      "league": "法甲",
+      "actual_score": "5:4",
+      "lambda_home": 2.58,
+      "lambda_away": 2.02,
+      "top1_score": "2:2",
+      "top1_prob": 0.067,
+      "top3_scores": [
+        "2:2",
+        "1:1",
+        "2:1"
+      ],
+      "top5_scores": [
+        "2:2",
+        "1:1",
+        "2:1",
+        "3:2",
+        "3:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "佛罗伦萨",
+      "away_team": "亚特兰大",
+      "date": "2026-05-23",
+      "league": "意甲",
+      "actual_score": "1:1",
+      "lambda_home": 1.56,
+      "lambda_away": 1.73,
+      "top1_score": "1:1",
+      "top1_prob": 0.1298,
+      "top3_scores": [
+        "1:1",
+        "1:2",
+        "2:1"
+      ],
+      "top5_scores": [
+        "1:1",
+        "1:2",
+        "2:1",
+        "2:2",
+        "0:0"
+      ],
+      "exact_hit": true,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "帕尔马",
+      "away_team": "萨索洛",
+      "date": "2026-05-24",
+      "league": "意甲",
+      "actual_score": "1:0",
+      "lambda_home": 1.74,
+      "lambda_away": 1.41,
+      "top1_score": "1:1",
+      "top1_prob": 0.1361,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "1:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "1:2",
+        "0:0",
+        "2:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "拉齐奥",
+      "away_team": "比萨",
+      "date": "2026-05-24",
+      "league": "意甲",
+      "actual_score": "2:1",
+      "lambda_home": 3.24,
+      "lambda_away": 0.96,
+      "top1_score": "3:0",
+      "top1_prob": 0.0855,
+      "top3_scores": [
+        "3:0",
+        "3:1",
+        "2:0"
+      ],
+      "top5_scores": [
+        "3:0",
+        "3:1",
+        "2:0",
+        "2:1",
+        "4:0"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": true
+    },
+    {
+      "home_team": "博洛尼亚",
+      "away_team": "国际米兰",
+      "date": "2026-05-24",
+      "league": "意甲",
+      "actual_score": "3:3",
+      "lambda_home": 0.94,
+      "lambda_away": 1.84,
+      "top1_score": "1:1",
+      "top1_prob": 0.139,
+      "top3_scores": [
+        "1:1",
+        "0:2",
+        "1:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "0:2",
+        "1:2",
+        "0:0",
+        "0:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "巴伦西亚",
+      "away_team": "巴塞罗那",
+      "date": "2026-05-24",
+      "league": "西甲",
+      "actual_score": "3:1",
+      "lambda_home": 1.44,
+      "lambda_away": 2.05,
+      "top1_score": "1:1",
+      "top1_prob": 0.1167,
+      "top3_scores": [
+        "1:1",
+        "1:2",
+        "2:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "1:2",
+        "2:2",
+        "2:1",
+        "0:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "皇家马德里",
+      "away_team": "毕尔巴鄂竞技",
+      "date": "2026-05-24",
+      "league": "西甲",
+      "actual_score": "4:2",
+      "lambda_home": 2.88,
+      "lambda_away": 0.79,
+      "top1_score": "2:0",
+      "top1_prob": 0.1062,
+      "top3_scores": [
+        "2:0",
+        "3:0",
+        "2:1"
+      ],
+      "top5_scores": [
+        "2:0",
+        "3:0",
+        "2:1",
+        "3:1",
+        "1:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "西班牙人",
+      "away_team": "皇家社会",
+      "date": "2026-05-24",
+      "league": "西甲",
+      "actual_score": "1:1",
+      "lambda_home": 1.43,
+      "lambda_away": 1.18,
+      "top1_score": "1:1",
+      "top1_prob": 0.1608,
+      "top3_scores": [
+        "1:1",
+        "0:0",
+        "2:1"
+      ],
+      "top5_scores": [
+        "1:1",
+        "0:0",
+        "2:1",
+        "2:0",
+        "1:2"
+      ],
+      "exact_hit": true,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "阿拉维斯",
+      "away_team": "巴列卡诺",
+      "date": "2026-05-24",
+      "league": "西甲",
+      "actual_score": "1:2",
+      "lambda_home": 1.26,
+      "lambda_away": 0.79,
+      "top1_score": "0:0",
+      "top1_prob": 0.1671,
+      "top3_scores": [
+        "0:0",
+        "1:1",
+        "1:0"
+      ],
+      "top5_scores": [
+        "0:0",
+        "1:1",
+        "1:0",
+        "2:0",
+        "2:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "西汉姆联",
+      "away_team": "利兹联",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "3:0",
+      "lambda_home": 2.46,
+      "lambda_away": 1.6,
+      "top1_score": "1:1",
+      "top1_prob": 0.0873,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "3:1"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "3:1",
+        "2:2",
+        "3:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "托特纳姆热刺",
+      "away_team": "埃弗顿",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "1:0",
+      "lambda_home": 2.12,
+      "lambda_away": 1.48,
+      "top1_score": "1:1",
+      "top1_prob": 0.1108,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "2:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "2:2",
+        "3:1",
+        "1:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "桑德兰",
+      "away_team": "切尔西",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "2:1",
+      "lambda_home": 1.93,
+      "lambda_away": 1.63,
+      "top1_score": "1:1",
+      "top1_prob": 0.1152,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "1:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "1:2",
+        "2:2",
+        "3:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "布赖顿",
+      "away_team": "曼彻斯特联",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "0:3",
+      "lambda_home": 2.14,
+      "lambda_away": 1.63,
+      "top1_score": "1:1",
+      "top1_prob": 0.1039,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "2:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "2:2",
+        "1:2",
+        "3:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "曼彻斯特城",
+      "away_team": "阿斯顿维拉",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "1:2",
+      "lambda_home": 3.66,
+      "lambda_away": 1.17,
+      "top1_score": "3:1",
+      "top1_prob": 0.0772,
+      "top3_scores": [
+        "3:1",
+        "4:1",
+        "3:0"
+      ],
+      "top5_scores": [
+        "3:1",
+        "4:1",
+        "3:0",
+        "2:1",
+        "4:0"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "维戈塞尔塔",
+      "away_team": "塞维利亚",
+      "date": "2026-05-24",
+      "league": "西甲",
+      "actual_score": "1:0",
+      "lambda_home": 2.23,
+      "lambda_away": 1.42,
+      "top1_score": "1:1",
+      "top1_prob": 0.1063,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "3:1"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "3:1",
+        "2:2",
+        "2:0"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "富勒姆",
+      "away_team": "纽卡斯尔联",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "2:0",
+      "lambda_home": 2.34,
+      "lambda_away": 1.73,
+      "top1_score": "1:1",
+      "top1_prob": 0.0885,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "2:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "2:2",
+        "3:1",
+        "1:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "水晶宫",
+      "away_team": "阿森纳",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "1:2",
+      "lambda_home": 1.06,
+      "lambda_away": 2.32,
+      "top1_score": "1:1",
+      "top1_prob": 0.1083,
+      "top3_scores": [
+        "1:1",
+        "1:2",
+        "0:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "1:2",
+        "0:2",
+        "1:3",
+        "0:3"
+      ],
+      "exact_hit": false,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "利物浦",
+      "away_team": "布伦特福德",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "1:1",
+      "lambda_home": 3.04,
+      "lambda_away": 1.15,
+      "top1_score": "3:1",
+      "top1_prob": 0.0815,
+      "top3_scores": [
+        "3:1",
+        "2:1",
+        "3:0"
+      ],
+      "top5_scores": [
+        "3:1",
+        "2:1",
+        "3:0",
+        "2:0",
+        "1:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": true
+    },
+    {
+      "home_team": "诺丁汉森林",
+      "away_team": "伯恩茅斯",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "1:1",
+      "lambda_home": 2.18,
+      "lambda_away": 1.82,
+      "top1_score": "1:1",
+      "top1_prob": 0.0937,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "2:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "2:2",
+        "1:2",
+        "3:1"
+      ],
+      "exact_hit": true,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "马洛卡",
+      "away_team": "奥维耶多",
+      "date": "2026-05-24",
+      "league": "西甲",
+      "actual_score": "3:0",
+      "lambda_home": 2.48,
+      "lambda_away": 0.86,
+      "top1_score": "2:0",
+      "top1_prob": 0.1093,
+      "top3_scores": [
+        "2:0",
+        "1:1",
+        "2:1"
+      ],
+      "top5_scores": [
+        "2:0",
+        "1:1",
+        "2:1",
+        "3:0",
+        "3:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": true
+    },
+    {
+      "home_team": "赫罗纳",
+      "away_team": "埃尔切",
+      "date": "2026-05-24",
+      "league": "西甲",
+      "actual_score": "1:1",
+      "lambda_home": 3.33,
+      "lambda_away": 1.27,
+      "top1_score": "3:1",
+      "top1_prob": 0.0785,
+      "top3_scores": [
+        "3:1",
+        "2:1",
+        "4:1"
+      ],
+      "top5_scores": [
+        "3:1",
+        "2:1",
+        "4:1",
+        "3:0",
+        "2:0"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "赫塔费",
+      "away_team": "奥萨苏纳",
+      "date": "2026-05-24",
+      "league": "西甲",
+      "actual_score": "1:0",
+      "lambda_home": 1.3,
+      "lambda_away": 0.89,
+      "top1_score": "1:1",
+      "top1_prob": 0.1681,
+      "top3_scores": [
+        "1:1",
+        "0:0",
+        "1:0"
+      ],
+      "top5_scores": [
+        "1:1",
+        "0:0",
+        "1:0",
+        "2:0",
+        "2:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "皇家贝蒂斯",
+      "away_team": "莱万特",
+      "date": "2026-05-24",
+      "league": "西甲",
+      "actual_score": "2:1",
+      "lambda_home": 2.66,
+      "lambda_away": 1.08,
+      "top1_score": "2:1",
+      "top1_prob": 0.0904,
+      "top3_scores": [
+        "2:1",
+        "1:1",
+        "2:0"
+      ],
+      "top5_scores": [
+        "2:1",
+        "1:1",
+        "2:0",
+        "3:1",
+        "3:0"
+      ],
+      "exact_hit": true,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "伯恩利",
+      "away_team": "狼队",
+      "date": "2026-05-24",
+      "league": "英超",
+      "actual_score": "1:1",
+      "lambda_home": 1.7,
+      "lambda_away": 1.84,
+      "top1_score": "1:1",
+      "top1_prob": 0.1167,
+      "top3_scores": [
+        "1:1",
+        "1:2",
+        "2:1"
+      ],
+      "top5_scores": [
+        "1:1",
+        "1:2",
+        "2:1",
+        "2:2",
+        "0:0"
+      ],
+      "exact_hit": true,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "比利亚雷亚尔",
+      "away_team": "马德里竞技",
+      "date": "2026-05-25",
+      "league": "西甲",
+      "actual_score": "5:1",
+      "lambda_home": 2.32,
+      "lambda_away": 1.74,
+      "top1_score": "1:1",
+      "top1_prob": 0.0897,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "2:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "2:2",
+        "3:1",
+        "1:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "莱切",
+      "away_team": "热那亚",
+      "date": "2026-05-25",
+      "league": "意甲",
+      "actual_score": "1:0",
+      "lambda_home": 0.9,
+      "lambda_away": 1.26,
+      "top1_score": "1:1",
+      "top1_prob": 0.1699,
+      "top3_scores": [
+        "1:1",
+        "0:0",
+        "0:1"
+      ],
+      "top5_scores": [
+        "1:1",
+        "0:0",
+        "0:1",
+        "0:2",
+        "1:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "克雷莫纳",
+      "away_team": "科莫",
+      "date": "2026-05-25",
+      "league": "意甲",
+      "actual_score": "1:4",
+      "lambda_home": 0.94,
+      "lambda_away": 1.93,
+      "top1_score": "1:1",
+      "top1_prob": 0.1337,
+      "top3_scores": [
+        "1:1",
+        "0:2",
+        "1:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "0:2",
+        "1:2",
+        "0:0",
+        "0:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "AC米兰",
+      "away_team": "卡利亚里",
+      "date": "2026-05-25",
+      "league": "意甲",
+      "actual_score": "1:2",
+      "lambda_home": 2.53,
+      "lambda_away": 0.75,
+      "top1_score": "2:0",
+      "top1_prob": 0.1204,
+      "top3_scores": [
+        "2:0",
+        "3:0",
+        "1:1"
+      ],
+      "top5_scores": [
+        "2:0",
+        "3:0",
+        "1:1",
+        "2:1",
+        "3:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "维罗纳",
+      "away_team": "罗马",
+      "date": "2026-05-25",
+      "league": "意甲",
+      "actual_score": "0:2",
+      "lambda_home": 0.98,
+      "lambda_away": 1.88,
+      "top1_score": "1:1",
+      "top1_prob": 0.1372,
+      "top3_scores": [
+        "1:1",
+        "0:2",
+        "1:2"
+      ],
+      "top5_scores": [
+        "1:1",
+        "0:2",
+        "1:2",
+        "0:0",
+        "0:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": true,
+      "top5_hit": true
+    },
+    {
+      "home_team": "都灵",
+      "away_team": "尤文图斯",
+      "date": "2026-05-25",
+      "league": "意甲",
+      "actual_score": "2:2",
+      "lambda_home": 1.04,
+      "lambda_away": 1.31,
+      "top1_score": "1:1",
+      "top1_prob": 0.1686,
+      "top3_scores": [
+        "1:1",
+        "0:0",
+        "0:1"
+      ],
+      "top5_scores": [
+        "1:1",
+        "0:0",
+        "0:1",
+        "1:2",
+        "0:2"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    },
+    {
+      "home_team": "那不勒斯",
+      "away_team": "乌迪内斯",
+      "date": "2026-05-25",
+      "league": "意甲",
+      "actual_score": "1:0",
+      "lambda_home": 2.06,
+      "lambda_away": 1.04,
+      "top1_score": "1:1",
+      "top1_prob": 0.1251,
+      "top3_scores": [
+        "1:1",
+        "2:1",
+        "2:0"
+      ],
+      "top5_scores": [
+        "1:1",
+        "2:1",
+        "2:0",
+        "0:0",
+        "3:1"
+      ],
+      "exact_hit": false,
+      "top3_hit": false,
+      "top5_hit": false
+    }
+  ]
+}

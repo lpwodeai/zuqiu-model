@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TRAIN_SCRIPT = os.path.join(PROJECT_ROOT, 'scripts', 'train_models_v2.py')
+TRAIN_SCRIPT = os.path.join(PROJECT_ROOT, 'scripts', 'train_models.py')
 DB_PATH = os.path.join(PROJECT_ROOT, 'data', 'five_leagues.db')
 MODEL_DIR = os.path.join(PROJECT_ROOT, 'assets')
 CONFIG_PATH = os.path.join(PROJECT_ROOT, 'config.yaml')

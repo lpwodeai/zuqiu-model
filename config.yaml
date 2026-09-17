@@ -1,0 +1,495 @@
+training:
+  # feature_time_decay: 用于特征工程内部的滚动统计窗口（球队历史胜率/进球）
+  feature_time_decay:
+    enabled: true
+    decay_type: exponential
+    half_life_days: 14
+    min_weight: 0.01
+    max_history_days: 90
+  # sample_time_decay: 用于训练 sample_weight 的赛季级时间衰减（方案C/D）
+  sample_time_decay:
+    enabled: true
+    # 自动模式：根据最新比赛日期与最近赛季样本量，在"方案C-温和衰减（休赛期）"和"方案D-平衡衰减（赛中）"之间自动切换
+    auto_mode: true
+    # 切换阈值：当最近赛季(0-365天)样本 >= mid_season_sample_threshold 时，自动切到方案D
+    mid_season_sample_threshold: 1000
+    # 方案C — 温和衰减（休赛期/赛季初，优先保障样本量）
+    profile_c:
+      enabled: true
+      decay_type: exponential
+      half_life_days: 365
+      min_weight: 0.01
+      max_history_days: 1095
+    # 方案D — 平衡衰减（赛季中期，近赛季样本充足时）
+    profile_d:
+      enabled: true
+      decay_type: exponential
+      half_life_days: 180
+      min_weight: 0.01
+      max_history_days: 730
+    # 手动覆盖：若提供则优先使用该配置
+    manual:
+      enabled: false
+      decay_type: exponential
+      half_life_days: 365
+      min_weight: 0.01
+      max_history_days: 1095
+  # 联赛补偿：德甲/法甲每赛季仅306场 vs 英/西/意380场，结构性弱势需要补偿
+  league_compensation:
+    enabled: true
+    default_weight: 1.0
+    weights:
+      英超: 1.0
+      西甲: 1.0
+      意甲: 1.0
+      德甲: 1.20
+      法甲: 1.20
+    # 全局联赛阶层权重文件（保留向后兼容）
+    tier_weight_file: 'assets/league_tier_weight.json'
+  incremental:
+    enabled: true
+    batch_size: 100
+  class_weight:
+    enabled: true
+  validation_split: 0.2
+  # score_matrix_tuning: 比分矩阵参数调优 (论文策略2+3)
+  # 用于 Dixon-Coles 比分矩阵构建和尾部候选增强
+  score_matrix_tuning:
+    # 启用 ρ × lambda_boost 联合网格搜索
+    grid_search:
+      enabled: true
+      # ρ 搜索范围 (Dixon-Coles 低比分修正参数)
+      rho_grid: [-0.25, -0.30, -0.35, -0.40, -0.45]
+      # lambda_boost 搜索范围 (λ 放大系数，解决中比分Top-1=0%问题)
+      lambda_boost_grid: [1.2, 1.5, 1.8, 2.2, 2.6, 3.0]
+      # 优化目标: 综合评分 (40% Top-3 + 30% 中比分Top-3 + 30% 高比分Top-3)
+      optimization_target: composite_score
+      # 综合评分权重
+      composite_weights:
+        overall_top3: 0.4
+        mid_score_top3: 0.3
+        high_score_top3: 0.3
+    # 最优参数 (由综合评分网格搜索填充)
+    optimal_params:
+      rho: -0.45
+      lambda_boost: 3.0
+    # 尾部候选增强配置 (论文策略3增强版v2)
+    tail_anchor_injection:
+      enabled: true
+      # 高比分锚点注入: λ_sum > 2.2 时触发 (放宽阈值)
+      lambda_sum_threshold: 2.2
+      # 大分差锚点注入: λ_diff > 0.5 时触发 (放宽阈值)
+      lambda_diff_threshold: 0.5
+      # 自适应 max_goals: λ_sum > 3.5 时使用 8, 否则 7
+      adaptive_max_goals_threshold: 3.5
+      # 高比分锚点候选池 (覆盖 5+ 球比分)
+      high_score_anchors:
+        - [2, 3]
+        - [3, 2]
+        - [3, 3]
+        - [2, 4]
+        - [4, 2]
+        - [3, 4]
+        - [4, 3]
+        - [4, 4]
+        - [1, 4]
+        - [4, 1]
+        - [2, 2]
+        - [1, 3]
+        - [3, 1]
+      # 大分差锚点 (主胜场景)
+      big_diff_home_anchors:
+        - [3, 0]
+        - [4, 0]
+        - [3, 1]
+        - [4, 1]
+        - [2, 0]
+        - [2, 1]
+        - [1, 0]
+      # 大分差锚点 (客胜场景)
+      big_diff_away_anchors:
+        - [0, 3]
+        - [0, 4]
+        - [1, 3]
+        - [1, 4]
+        - [0, 2]
+        - [1, 2]
+        - [0, 1]
+auto_train:
+  schedule:
+    type: daily
+    interval_hours: 24
+    start_time: 02:00
+  data_check:
+    min_matches: 100
+    new_match_days: 7
+  timeout:
+    training_seconds: 300
+    retry_count: 3
+  emergency_trigger:
+    enabled: true
+logging:
+  level: INFO
+  format: '%(asctime)s - %(levelname)s - %(message)s'
+  max_file_size_mb: 10
+  backup_count: 5
+prediction:
+  class_to_probs:
+    base_prob: 0.33
+    certainty: 0.2
+model:
+  xgboost:
+    max_depth: 4
+    learning_rate: 0.03
+    subsample: 0.6650811718473632
+    colsample_bytree: 0.5012792377722143
+    gamma: 4.956385980717997
+    min_child_weight: 13
+    reg_alpha: 0.0637473411107336
+    reg_lambda: 8.003104882097823
+    max_delta_step: 9
+    scale_pos_weight: 1.9713686038790246
+    num_boost_round: 300
+    early_stopping_rounds: 20
+  lightgbm:
+    max_depth: 3
+    learning_rate: 0.010611228531870624
+    num_leaves: 202
+    subsample: 0.9977564395215165
+    colsample_bytree: 0.7867816140734276
+    reg_alpha: 0.15266573596777044
+    reg_lambda: 1.4618378148431221
+    min_child_weight: 6
+    min_data_in_leaf: 23
+    feature_fraction: 0.9288484948848426
+    bagging_fraction: 0.6075695015110804
+    bagging_freq: 8
+    num_boost_round: 164
+    early_stopping_rounds: 15
+optuna:
+  enabled: true
+  n_trials: 30
+  timeout_seconds: 3600
+  direction: maximize
+  metric: accuracy
+  xgboost_search_space:
+    max_depth:
+      type: int
+      min: 3
+      max: 10
+    learning_rate:
+      type: float
+      min: 0.03
+      max: 0.12
+      step: 0.01
+    n_estimators:
+      type: int
+      min: 100
+      max: 500
+    subsample:
+      type: float
+      min: 0.5
+      max: 0.95
+    colsample_bytree:
+      type: float
+      min: 0.5
+      max: 0.95
+    gamma:
+      type: float
+      min: 0
+      max: 5.0
+    min_child_weight:
+      type: int
+      min: 3
+      max: 20
+    reg_alpha:
+      type: float
+      min: 0.001
+      max: 5.0
+      log: true
+    reg_lambda:
+      type: float
+      min: 0.01
+      max: 20.0
+      log: true
+    max_delta_step:
+      type: int
+      min: 0
+      max: 10
+    scale_pos_weight:
+      type: float
+      min: 0.5
+      max: 3.0
+  lightgbm_search_space:
+    max_depth:
+      type: int
+      min: 2
+      max: 10
+    learning_rate:
+      type: float
+      min: 0.03
+      max: 0.12
+      step: 0.01
+    n_estimators:
+      type: int
+      min: 100
+      max: 500
+    num_leaves:
+      type: int
+      min: 8
+      max: 63
+    subsample:
+      type: float
+      min: 0.5
+      max: 0.95
+    colsample_bytree:
+      type: float
+      min: 0.5
+      max: 0.95
+    reg_alpha:
+      type: float
+      min: 0.001
+      max: 5.0
+      log: true
+    reg_lambda:
+      type: float
+      min: 0.01
+      max: 20.0
+      log: true
+    min_child_weight:
+      type: int
+      min: 3
+      max: 20
+    min_data_in_leaf:
+      type: int
+      min: 10
+      max: 100
+    feature_fraction:
+      type: float
+      min: 0.5
+      max: 0.95
+    bagging_fraction:
+      type: float
+      min: 0.5
+      max: 0.95
+    bagging_freq:
+      type: int
+      min: 1
+      max: 10
+calibration:
+  method: platt_scaling
+  enabled: true
+
+# 平局决策阈值因子：不修改概率，仅调整分类决策
+# 语义: factor<=0 或 =1.0 等价 argmax；0<factor<1 反压低平局（抬高平局门槛）；factor>1 上浮平局
+# C-20260820-036(重训): 用修复后 209 维 pipeline 重训（lgb_model_20260820_190130），消除列不一致
+# C-20260820-037(完整网格重校准): 网格 [0.80~1.10] 逐联赛校准——高平局联赛「反压低平局」可提升准确率
+#   各联赛实际平局率: 意甲 28.1% > 西甲 26.0% > 德甲 25.5% > 英超 24.5% > 法甲 23.8%
+#   准确率最优: 西甲 0.80(+1.05pp) / 意甲 0.85(+0.97pp) / 德甲 0.85(+0.87pp) / 英超·法甲 argmax
+#   全局 argmax(1.0)=55.16%，最优 0.90=55.25%(+0.09pp 处于噪声区间，默认仍取 1.0)
+# 平局阈值模式: argmax(默认,全局) / league_specific(逐联赛因子) — 切换此处即可，无需改代码 (D3: JS 运行时读取本文件)
+draw_threshold_mode: argmax
+draw_threshold_factor: 1.0
+draw_threshold_factor_league:
+  FL1: 0.0    # 法甲 — argmax（上浮/反压均无收益）            (C-20260820-037)
+  BL1: 0.85   # 德甲 — 反压低平局 +0.87pp                    (C-20260820-037)
+  IT: 0.85    # 意甲 — 反压低平局 +0.97pp                    (C-20260820-037)
+  LaLiga: 0.80 # 西甲 — 反压低平局 +1.05pp                    (C-20260820-037)
+  PL: 0.0     # 英超 — argmax（上浮/反压均无收益）            (C-20260820-037)
+
+# C-20260816-208: Poisson λ 增强参数 — 赛后复盘验证通过
+# 基于西甲第1轮两场比赛复盘: 旧 λ 系统性低估 (+0.64~+1.77), 实际进球均超预期
+# 验证结果 (阿拉维斯 vs 赫塔费): 期望总进球 1.42→2.01, 大球概率 17.1%→32.6%, 主胜置信度 30.0%→33.4%
+lambda_adjustment:
+  # P0: 赛季前3轮 λ 自动上浮 25% — 补偿新赛季阵容磨合不确定性
+  season_boost:
+    enabled: true
+    max_round: 3          # 前3轮生效
+    factor: 1.25           # λ 乘数
+  # P1: 赔率时序信号作为 λ 调整因子 — 市场资金流向反映预期进球方向
+  odds_trend_boost:
+    enabled: true
+    home_down: 1.05        # 主胜赔率↓ → 主队 λ ×1.05
+    draw_down: 1.03        # 平局赔率↓ → 双方 λ ×1.03
+    away_up: 0.95          # 客胜赔率↑ → 客队 λ ×0.95
+  # P1: 联赛专属 λ 基线上调 — 西甲场均进球 2.67 高于模型基准
+  league_boost:
+    LaLiga: 1.10           # 西甲 λ ×1.10
+    # 预留: PL/BL1/IT/FL1 当前为 1.0 (不调整)
+  # P1: 比分分布拓宽 — 覆盖长尾冷门比分 (3:0/4:0)
+  poisson_max_goals: 10    # 旧值 7 → 新值 10
+
+realtime_data:
+  fetch:
+    interval_minutes: 60
+    enabled: true
+  injury_sources:
+  - name: transfermarkt
+    url: https://www.transfermarkt.com/
+  - name: premierleague
+    url: https://www.premierleague.com/
+  football_data_api:
+    api_key: ${FOOTBALL_DATA_API_KEY}
+    base_url: https://api.football-data.org/v4
+    timeout: 10000
+    cache_ttl_seconds: 3600
+    endpoints:
+      competitions: /competitions
+      matches: /matches
+      teams: /teams
+      standings: /competitions/{id}/standings
+  odds_api:
+    api_key: ${ODDS_API_KEY}
+    base_url: https://api.the-odds-api.com/v4
+    timeout: 10000
+    cache_ttl_seconds: 300
+    regions:
+    - uk
+    - eu
+    - us
+    markets:
+    - h2h
+    - spreads
+    - totals
+    sports:
+    - soccer_epl
+    - soccer_spain_la_liga
+    - soccer_germany_bundesliga
+    - soccer_italy_serie_a
+    - soccer_france_ligue_one
+  understat_api:
+    enabled: true
+    base_url: https://understat.com
+    timeout: 15000
+    cache_ttl_seconds: 7200
+  resource_limits:
+    max_cpu: 80
+    max_memory: 85
+
+league_specific:
+  EPL:
+    avg_home_goals: 1.53
+    avg_away_goals: 1.22
+    avg_total_goals: 2.75
+    home_advantage_factor: 1.42
+    home_goal_advantage: 0.30
+    avg_draw_rate: 0.27
+    avg_home_shots: 13.8
+    avg_away_shots: 11.2
+    market_efficiency_baseline: 1.08
+  BUNDESLIGA:
+    avg_home_goals: 1.78
+    avg_away_goals: 1.46
+    avg_total_goals: 3.24
+    home_advantage_factor: 1.38
+    home_goal_advantage: 0.32
+    avg_draw_rate: 0.25
+    avg_home_shots: 14.6
+    avg_away_shots: 11.9
+    market_efficiency_baseline: 1.06
+  LALIGA:
+    avg_home_goals: 1.57
+    avg_away_goals: 1.12
+    avg_total_goals: 2.69
+    home_advantage_factor: 1.84
+    home_goal_advantage: 0.45
+    avg_draw_rate: 0.25
+    avg_home_shots: 13.9
+    avg_away_shots: 11.1
+    market_efficiency_baseline: 1.10
+  SERIEA:
+    avg_home_goals: 1.28
+    avg_away_goals: 1.15
+    avg_total_goals: 2.43
+    home_advantage_factor: 1.11
+    home_goal_advantage: 0.13
+    avg_draw_rate: 0.26
+    avg_home_shots: 13.7
+    avg_away_shots: 11.0
+    market_efficiency_baseline: 1.09
+  LIGUE1:
+    avg_home_goals: 1.58
+    avg_away_goals: 1.24
+    avg_total_goals: 2.82
+    home_advantage_factor: 1.57
+    home_goal_advantage: 0.34
+    avg_draw_rate: 0.25
+    avg_home_shots: 13.7
+    avg_away_shots: 11.1
+    market_efficiency_baseline: 1.07
+
+# ============================================================
+# C-20260823-P0: 比赛条件特征（修复天气/伤病硬编码默认值）
+# 优先级: Python match_condition_features.py 生成 > 硬编码默认值
+# ============================================================
+match_conditions:
+  enabled: true
+  # 伤病因子（基于 SofaScore 球员出场数据）
+  injury:
+    enabled: true
+    # 核心球员判定: 近 N 场出场率 > 60% 且评分前 5
+    core_player:
+      min_appearance_rate: 0.6
+      top_n_rating: 5
+    # 扣减因子范围
+    impact_range:
+      min: 0.85       # 最严重缺阵时攻击力扣减到 85%
+      max: 1.0        # 全员健康时无扣减
+    # 缺阵球员 xG 占比 → 扣减因子映射
+    missing_xg_factor: 0.3  # 缺阵 xG 占比 × 0.3 = 扣减比例
+    core_missing_factor: 0.2  # 核心球员缺阵率 × 0.2 = 额外扣减
+  # 天气因子（降级方案: 联赛-月份气候均值）
+  weather:
+    enabled: true
+    # 气候均值数据源: LEAGUE_MONTH_CLIMATE (1991-2020 30年均值)
+    data_source: climate_estimate
+    # 未来接入实时天气 API 时切换为 live_weather
+    # api_endpoint: ${WEATHER_API_ENDPOINT}
+    # api_key: ${WEATHER_API_KEY}
+    # 影响因子范围
+    impact_range:
+      attack_min: 0.80
+      attack_max: 1.0
+      defence_min: 1.0
+      defence_max: 1.20
+    # 天气类型阈值
+    thresholds:
+      heavy_rain_prob: 0.6
+      rain_prob: 0.35
+      cloudy_prob: 0.15
+      extreme_wind: 25
+      wind: 18
+      snow_temp: 1
+      fog_temp: 5
+
+# ============================================================
+# C-20260823-P0-4: 统一比分-胜平负预测引擎
+# Dixon-Coles 比分矩阵 → 统一导出 WDL / 让球 / 大小球 / 精确比分
+# ============================================================
+unified_engine:
+  enabled: true  # C-20260909-007 灰度开启（统一引擎 C→A→B 已实施，验证见 change_log）
+  fallback_legacy: true  # 失败时回退到旧 T-005/T-006 架构
+  dixon_coles:
+    rho_default: -0.30  # 默认 ρ（对齐 T006_RHO，低比分平局修正）
+    max_goals: 7  # 最大进球截断（对齐 T-006 max_goals=7）
+    leagues:
+      英超: -0.08
+      西甲: -0.12
+      意甲: -0.15
+      德甲: -0.05
+      法甲: -0.10
+  # ML 回归 λ 的训练目标
+  training:
+    objective: count:poisson  # Poisson 回归（而非平方误差）
+    lambda_home_col: expected_home_goals
+    lambda_away_col: expected_away_goals
+
+# ============================================================
+# P1-10: EV 决策引擎全局配置（第二层决策层，D3 运行时读取）
+# generate_unified_report.py 预测时读取本段并写入 model_predictions
+# （ev_threshold_used / kelly_strategy），避免阈值/仓位参数散落硬编码。
+# ============================================================
+ev:
+  ev_threshold_default: 0.02       # EV 入场阈值（如回测发现联赛最优阈值不同，改此处即可）
+  kelly_default_strategy: quarter  # full / half / quarter
+  kelly_upper_cap: 0.25            # 单场凯利建议仓位上限（0-1）

@@ -1,0 +1,15 @@
+{
+  "model_type": "EPL-specific",
+  "timestamp": "20260816_124747",
+  "n_samples": 1141,
+  "feature_dim": 183,
+  "draw_threshold_factor": 1.1,
+  "lgb_accuracy": 0.9991235758106923,
+  "lgb_cv_accuracy": 0.44526315789473686,
+  "xgb_accuracy": 0.9991235758106923,
+  "ece": [
+    0.04273904763579891,
+    0.04160938775669476,
+    0.05222985762185729
+  ]
+}

@@ -1,0 +1,461 @@
+﻿==========================================================================================
+英超第一轮 (2026/27 赛季) 赛前数据抓取核对报告
+==========================================================================================
+
+==========================================================================================
+【比赛 1/10】Event ID: 16363238
+==========================================================================================
+📅 比赛日期: 2026-08-22
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Nottingham Forest vs Leeds United
+🇨🇳 中文: Nottingham Forest vs Leeds United
+📋 阵容记录: 22 条 | 球员统计: 22 条 (0 条有实际数据)
+
+  ▶ Leeds United | 阵型: 3-4-2-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 James Trafford [G]
+    │  ⭐ # 2 Jayden Bogle [D]
+    │  ⭐ # 4 Ethan Ampadu [M]
+    │  ⭐ # 5 Tarik Muharemović [D]
+    │  ⭐ # 6 Joe Rodon [D]
+    │  ⭐ # 9 Dominic Calvert-Lewin [F]
+    │  ⭐ #11 Brenden Aaronson [M]
+    │  ⭐ #15 Jaka Bijol [D]
+    │  ⭐ #17 Harry Wilson [M]
+    │  ⭐ #18 Anton Stach [M]
+    │  ⭐ #24 James Justin [D]
+    └─ 替补 (0 人)
+
+  ▶ Nottingham Forest | 阵型: 3-4-2-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 2 Ousmane Diomande [D]
+    │  ⭐ # 3 Neco Williams [D]
+    │  ⭐ # 5 Murillo [D]
+    │  ⭐ # 6 Ibrahim Sangaré [M]
+    │  ⭐ #10 Morgan Gibbs-White [M]
+    │  ⭐ #14 Dan Ndoye [M]
+    │  ⭐ #19 Igor Jesus [F]
+    │  ⭐ #21 Xaver Schlager [M]
+    │  ⭐ #26 Matz Sels [G]
+    │  ⭐ #31 Nikola Milenković [D]
+    │  ⭐ #34 Ola Aina [D]
+    └─ 替补 (0 人)
+
+  📊 球员统计: 赛前无数据 (待比赛结束后更新)
+
+==========================================================================================
+【比赛 2/10】Event ID: 16363633
+==========================================================================================
+📅 比赛日期: 2026-08-22
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Arsenal vs Coventry City
+🇨🇳 中文: Arsenal vs Coventry City
+📋 阵容记录: 40 条 | 球员统计: 40 条 (5 条有实际数据)
+
+  ▶ Arsenal | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 David Raya [G]
+    │  ⭐ # 3 Cristhian Mosquera [D]
+    │  ⭐ # 4 Ben White [D]
+    │  ⭐ # 6 Gabriel Magalhães [D]
+    │  ⭐ # 7 Bukayo Saka [M]
+    │  ⭐ # 8 Martin Ødegaard [M] (队长)
+    │  ⭐ #17 Christos Tzolis [M]
+    │  ⭐ #29 Kai Havertz [F]
+    │  ⭐ #33 Riccardo Calafiori [D]
+    │  ⭐ #41 Declan Rice [M]
+    │  ⭐ #49 Myles Lewis-Skelly [M]
+    └─ 替补 (9 人)
+      🔄 # 5 Piero Hincapié [D]
+      🔄 #10 Eberechi Eze [M]
+      🔄 #13 Kepa Arrizabalaga [G]
+      🔄 #14 Viktor Gyökeres [F]
+      🔄 #20 Noni Madueke [F]
+      🔄 #22 Ethan Nwaneri [M]
+      🔄 #23 Mikel Merino [M]
+      🔄 #36 Martín Zubimendi [M]
+      🔄 #56 Max Dowman [M]
+
+  ▶ Coventry City | 阵型: 4-1-4-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 3 Jay DaSilva [D]
+    │  ⭐ # 4 Bobby Thomas [D]
+    │  ⭐ # 6 Matt Grimes [M] (队长)
+    │  ⭐ # 8 Caleb Yirenkyi [M]
+    │  ⭐ # 9 Ellis Simms [F]
+    │  ⭐ #16 Frank Onyeka [M]
+    │  ⭐ #18 Loum Tchaouna [M]
+    │  ⭐ #19 Carl Rushworth [G]
+    │  ⭐ #23 Brandon Thomas-Asante [M]
+    │  ⭐ #24 Aurèle Amenda [D]
+    │  ⭐ #27 Milan van Ewijk [D]
+    └─ 替补 (9 人)
+      🔄 # 5 Jack Rudoni [M]
+      🔄 # 7 Tatsuhiro Sakamoto [M]
+      🔄 #13 Ben Wilson [G]
+      🔄 #14 Taiwo Awoniyi [F]
+      🔄 #15 Liam Kitching [D]
+      🔄 #22 Joel Latibeaudiere [D]
+      🔄 #28 Josh Eccles [M]
+      🔄 #29 Victor Torp [M]
+      🔄 #38 Gustavo Hamer [M]
+
+  📊 有数据的球员:
+    Ben White (Arsenal): 助攻🅰️1
+    Riccardo Calafiori (Arsenal): 助攻🅰️1
+    Bukayo Saka (Arsenal): 进球⚽1
+    Martin Ødegaard (Arsenal): 进球⚽1
+    Kai Havertz (Arsenal): 进球⚽1
+
+==========================================================================================
+【比赛 3/10】Event ID: 16363634
+==========================================================================================
+📅 比赛日期: 2026-08-22
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Hull City vs Manchester United
+🇨🇳 中文: Hull City vs Manchester United
+📋 阵容记录: 22 条 | 球员统计: 22 条 (0 条有实际数据)
+
+  ▶ Hull City | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 2 Lewie Coyle [D]
+    │  ⭐ # 3 Ryan Giles [D]
+    │  ⭐ # 6 Semi Ajayi [D]
+    │  ⭐ # 9 Oli McBurnie [F]
+    │  ⭐ #10 Mohamed Belloumi [M]
+    │  ⭐ #14 Jens Hjertø-Dahl [M]
+    │  ⭐ #15 John Egan [D]
+    │  ⭐ #19 Konstantinos Tzolakis [G]
+    │  ⭐ #25 Matt Crooks [M]
+    │  ⭐ #27 Regan Slater [M]
+    │  ⭐ #35 Elliot Stroud [M]
+    └─ 替补 (0 人)
+
+  ▶ Manchester United | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Senne Lammens [G]
+    │  ⭐ # 2 Diogo Dalot [D]
+    │  ⭐ # 5 Harry Maguire [D]
+    │  ⭐ # 8 Bruno Fernandes [M]
+    │  ⭐ #10 Matheus Cunha [F]
+    │  ⭐ #15 Leny Yoro [D]
+    │  ⭐ #16 Amad Diallo [M]
+    │  ⭐ #17 Andrey Santos [M]
+    │  ⭐ #18 Youri Tielemans [M]
+    │  ⭐ #19 Bryan Mbeumo [F]
+    │  ⭐ #23 Luke Shaw [D]
+    └─ 替补 (0 人)
+
+  📊 球员统计: 赛前无数据 (待比赛结束后更新)
+
+==========================================================================================
+【比赛 4/10】Event ID: 16363635
+==========================================================================================
+📅 比赛日期: 2026-08-22
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Everton vs Crystal Palace
+🇨🇳 中文: Everton vs Crystal Palace
+📋 阵容记录: 22 条 | 球员统计: 22 条 (0 条有实际数据)
+
+  ▶ Crystal Palace | 阵型: 3-4-2-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Dean Henderson [G]
+    │  ⭐ # 3 Tyrick Mitchell [M]
+    │  ⭐ # 6 Jaydee Canvot [D]
+    │  ⭐ # 7 Ismaïla Sarr [F]
+    │  ⭐ #11 Dwight McNeil [M]
+    │  ⭐ #18 Daichi Kamada [M]
+    │  ⭐ #20 Adam Wharton [M]
+    │  ⭐ #22 Jørgen Strand Larsen [F]
+    │  ⭐ #26 Chris Richards [D]
+    │  ⭐ #30 Óscar Mingueza [M]
+    │  ⭐ #34 Chadi Riad [D]
+    └─ 替补 (0 人)
+
+  ▶ Everton | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Jordan Pickford [G]
+    │  ⭐ # 6 James Tarkowski [D]
+    │  ⭐ # 8 Kiernan Dewsbury-Hall [M]
+    │  ⭐ #10 Iliman Ndiaye [M]
+    │  ⭐ #11 Thierno Barry [F]
+    │  ⭐ #15 Jake O'Brien [D]
+    │  ⭐ #16 Vitaliy Mykolenko [D]
+    │  ⭐ #30 Hayden Hackney [M]
+    │  ⭐ #32 Jarrad Branthwaite [D]
+    │  ⭐ #34 Merlin Röhl [M]
+    │  ⭐ #45 Harrison Armstrong [M]
+    └─ 替补 (0 人)
+
+  📊 球员统计: 赛前无数据 (待比赛结束后更新)
+
+==========================================================================================
+【比赛 5/10】Event ID: 16363636
+==========================================================================================
+📅 比赛日期: 2026-08-22
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Ipswich Town vs Sunderland
+🇨🇳 中文: Ipswich Town vs Sunderland
+📋 阵容记录: 22 条 | 球员统计: 22 条 (0 条有实际数据)
+
+  ▶ Ipswich Town | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 2 Issa Diop [D]
+    │  ⭐ # 3 Leif Davis [D]
+    │  ⭐ # 6 Saša Lukić [M]
+    │  ⭐ #12 Daizen Maeda [F]
+    │  ⭐ #13 Emersonn [F]
+    │  ⭐ #15 Abdul Fatawu Issahaku [M]
+    │  ⭐ #16 Florentino Luís [M]
+    │  ⭐ #22 Kjell Scherpen [G]
+    │  ⭐ #24 Jacob Greaves [D]
+    │  ⭐ #26 Dara O'Shea [D]
+    │  ⭐ #32 Marcelino Núñez [M]
+    └─ 替补 (0 人)
+
+  ▶ Sunderland | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 5 Daniel Ballard [D]
+    │  ⭐ # 7 Chemsdine Talbi [M]
+    │  ⭐ # 9 Brian Brobbey [F]
+    │  ⭐ #10 Nilson Angulo [M]
+    │  ⭐ #13 Luke O'Nien [D]
+    │  ⭐ #17 Reinildo Mandava [D]
+    │  ⭐ #22 Robin Roefs [G]
+    │  ⭐ #27 Noah Sadiki [M]
+    │  ⭐ #28 Enzo Le Fée [M]
+    │  ⭐ #32 Trai Hume [D]
+    │  ⭐ #34 Granit Xhaka [M]
+    └─ 替补 (0 人)
+
+  📊 球员统计: 赛前无数据 (待比赛结束后更新)
+
+==========================================================================================
+【比赛 6/10】Event ID: 16363236
+==========================================================================================
+📅 比赛日期: 2026-08-23
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Brighton & Hove Albion vs Aston Villa
+🇨🇳 中文: Brighton & Hove Albion vs Aston Villa
+📋 阵容记录: 22 条 | 球员统计: 22 条 (0 条有实际数据)
+
+  ▶ Aston Villa | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 2 Matty Cash [D]
+    │  ⭐ # 5 Tyrone Mings [D]
+    │  ⭐ # 6 Ross Barkley [M]
+    │  ⭐ # 7 John McGinn [M]
+    │  ⭐ # 8 Boubacar Kamara [M]
+    │  ⭐ #10 Emiliano Buendía [M]
+    │  ⭐ #14 Pau Torres [D]
+    │  ⭐ #17 Alejandro Garnacho [F]
+    │  ⭐ #18 Tammy Abraham [F]
+    │  ⭐ #22 Ian Maatsen [D]
+    │  ⭐ #54 Zion Suzuki [G]
+    └─ 替补 (0 人)
+
+  ▶ Brighton & Hove Albion | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Bart Verbruggen [G]
+    │  ⭐ #10 Georginio Rutter [M]
+    │  ⭐ #13 Jack Hinshelwood [M]
+    │  ⭐ #21 Olivier Boscagli [D]
+    │  ⭐ #24 Ferdi Kadıoğlu [D]
+    │  ⭐ #25 Diego Gómez [M]
+    │  ⭐ #26 Yasin Ayari [M]
+    │  ⭐ #27 Mats Wieffer [D]
+    │  ⭐ #29 Maxim De Cuyper [D]
+    │  ⭐ #30 Pascal Groß [M]
+    │  ⭐ #44 Luka Vušković [D]
+    └─ 替补 (0 人)
+
+  📊 球员统计: 赛前无数据 (待比赛结束后更新)
+
+==========================================================================================
+【比赛 7/10】Event ID: 16363242
+==========================================================================================
+📅 比赛日期: 2026-08-23
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Brentford vs Tottenham Hotspur
+🇨🇳 中文: Brentford vs Tottenham Hotspur
+📋 阵容记录: 22 条 | 球员统计: 22 条 (0 条有实际数据)
+
+  ▶ Brentford | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Caoimhin Kelleher [G]
+    │  ⭐ # 7 Kevin Schade [M]
+    │  ⭐ # 8 Mathias Jensen [M]
+    │  ⭐ # 9 Igor Thiago [F]
+    │  ⭐ #18 Mamadou Sangare [M]
+    │  ⭐ #19 Dango Ouattara [M]
+    │  ⭐ #20 Kristoffer Ajer [D]
+    │  ⭐ #22 Nathan Collins [D]
+    │  ⭐ #23 Keane Lewis-Potter [D]
+    │  ⭐ #27 Vitaly Janelt [M]
+    │  ⭐ #33 Michael Kayode [D]
+    └─ 替补 (0 人)
+
+  ▶ Tottenham Hotspur | 阵型: 4-3-2-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 3 Andy Robertson [D]
+    │  ⭐ # 5 Marcos Senesi [D]
+    │  ⭐ # 6 Jan Paul van Hecke [D]
+    │  ⭐ # 8 Conor Gallagher [M]
+    │  ⭐ # 9 Richarlison [F]
+    │  ⭐ #11 Mathys Tel [F]
+    │  ⭐ #14 Archie Gray [M]
+    │  ⭐ #16 Sandro Tonali [M]
+    │  ⭐ #18 Mateus Fernandes [M]
+    │  ⭐ #31 Antonín Kinský [G]
+    │  ⭐ #47 Mikey Moore [F]
+    └─ 替补 (0 人)
+
+  📊 球员统计: 赛前无数据 (待比赛结束后更新)
+
+==========================================================================================
+【比赛 8/10】Event ID: 16363243
+==========================================================================================
+📅 比赛日期: 2026-08-23
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Manchester City vs Bournemouth
+🇨🇳 中文: Manchester City vs Bournemouth
+📋 阵容记录: 22 条 | 球员统计: 22 条 (0 条有实际数据)
+
+  ▶ Bournemouth | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Đorđe Petrović [G]
+    │  ⭐ # 3 Adrien Truffert [D]
+    │  ⭐ # 4 Lewis Cook [M]
+    │  ⭐ # 5 James Hill [D]
+    │  ⭐ # 8 Alex Scott [M]
+    │  ⭐ # 9 Evanilson [F]
+    │  ⭐ #14 António Silva [D]
+    │  ⭐ #15 Adam Smith [D]
+    │  ⭐ #16 Marcus Tavernier [M]
+    │  ⭐ #19 Justin Kluivert [M]
+    │  ⭐ #37 Rayan [M]
+    └─ 替补 (0 人)
+
+  ▶ Manchester City | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Gianluigi Donnarumma [G]
+    │  ⭐ # 3 Rúben Dias [D]
+    │  ⭐ # 5 Elliot Anderson [M]
+    │  ⭐ # 8 Mateo Kovačić [M]
+    │  ⭐ # 9 Erling Haaland [F]
+    │  ⭐ #10 Rayan Cherki [M]
+    │  ⭐ #24 Joško Gvardiol [D]
+    │  ⭐ #27 Matheus Nunes [D]
+    │  ⭐ #33 Nico O'Reilly [D]
+    │  ⭐ #42 Antoine Semenyo [M]
+    │  ⭐ #47 Phil Foden [M]
+    └─ 替补 (0 人)
+
+  📊 球员统计: 赛前无数据 (待比赛结束后更新)
+
+==========================================================================================
+【比赛 9/10】Event ID: 16363246
+==========================================================================================
+📅 比赛日期: 2026-08-23
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Newcastle United vs Liverpool FC
+🇨🇳 中文: Newcastle United vs Liverpool FC
+📋 阵容记录: 22 条 | 球员统计: 22 条 (0 条有实际数据)
+
+  ▶ Liverpool FC | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Alisson [G]
+    │  ⭐ # 4 Virgil van Dijk [D]
+    │  ⭐ # 5 Jérémy Jacquet [D]
+    │  ⭐ # 6 Miloš Kerkez [D]
+    │  ⭐ # 7 Florian Wirtz [M]
+    │  ⭐ # 8 Dominik Szoboszlai [M]
+    │  ⭐ # 9 Alexander Isak [F]
+    │  ⭐ #18 Cody Gakpo [M]
+    │  ⭐ #30 Jeremie Frimpong [D]
+    │  ⭐ #38 Ryan Gravenberch [M]
+    │  ⭐ #73 Rio Ngumoha [F]
+    └─ 替补 (0 人)
+
+  ▶ Newcastle United | 阵型: 4-3-3
+    ┌─ 首发 (11 人)
+    │  ⭐ # 3 Lewis Hall [D]
+    │  ⭐ # 4 Sven Botman [D]
+    │  ⭐ # 8 Aladji Bamba [M]
+    │  ⭐ # 9 Yoane Wissa [F]
+    │  ⭐ #10 William Osula [F]
+    │  ⭐ #11 Harvey Barnes [F]
+    │  ⭐ #12 Malick Thiaw [D]
+    │  ⭐ #19 Anthony Elanga [F]
+    │  ⭐ #21 Lukáš Horníček [G]
+    │  ⭐ #41 Jacob Ramsey [M]
+    │  ⭐ #68 Amar Dedić [D]
+    └─ 替补 (0 人)
+
+  📊 球员统计: 赛前无数据 (待比赛结束后更新)
+
+==========================================================================================
+【比赛 10/10】Event ID: 16363244
+==========================================================================================
+📅 比赛日期: 2026-08-25
+🏆 联赛: 英超 (26/27 赛季) | 第 1 轮
+⚔️ 对阵: Fulham vs Chelsea
+🇨🇳 中文: Fulham vs Chelsea
+📋 阵容记录: 22 条 | 球员统计: 22 条 (0 条有实际数据)
+
+  ▶ Chelsea | 阵型: 3-4-2-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Robert Sánchez [G]
+    │  ⭐ # 2 Marco Palestra [M]
+    │  ⭐ # 6 Levi Colwill [D]
+    │  ⭐ # 7 Pedro Neto [M]
+    │  ⭐ # 8 Enzo Fernández [M]
+    │  ⭐ #10 Cole Palmer [M]
+    │  ⭐ #17 Morgan Rogers [M]
+    │  ⭐ #20 João Pedro [F]
+    │  ⭐ #23 Maxence Lacroix [D]
+    │  ⭐ #24 Reece James [D]
+    │  ⭐ #25 Moisés Caicedo [M]
+    └─ 替补 (0 人)
+
+  ▶ Fulham | 阵型: 4-2-3-1
+    ┌─ 首发 (11 人)
+    │  ⭐ # 1 Bernd Leno [G]
+    │  ⭐ # 3 Calvin Bassey [D]
+    │  ⭐ # 4 Jorge Cuenca [D]
+    │  ⭐ # 7 Gonzalo García [F]
+    │  ⭐ # 8 César Palacios [M]
+    │  ⭐ #14 Oscar Bobb [M]
+    │  ⭐ #16 Sander Berge [M]
+    │  ⭐ #17 Alex Iwobi [M]
+    │  ⭐ #21 Timothy Castagne [D]
+    │  ⭐ #24 Joshua King [M]
+    │  ⭐ #33 Antonee Robinson [D]
+    └─ 替补 (0 人)
+
+  📊 球员统计: 赛前无数据 (待比赛结束后更新)
+
+==========================================================================================
+📋 数据核对总结
+==========================================================================================
+
+✅ 比赛总数: 10 场
+✅ 阵容总记录: 238 条
+✅ 球员统计总记录: 238 条
+📊 有实际数据的球员: 5 人 (仅 Arsenal 场有历史数据)
+
+🔍 阵容完整性检查:
+    16363238: Nottingham Forest vs Leeds United - ✅ 完整 (22 人)
+    16363633: Arsenal vs Coventry City - ✅ 完整 (40 人)
+    16363634: Hull City vs Manchester United - ✅ 完整 (22 人)
+    16363635: Everton vs Crystal Palace - ✅ 完整 (22 人)
+    16363636: Ipswich Town vs Sunderland - ✅ 完整 (22 人)
+    16363236: Brighton & Hove Albion vs Aston Villa - ✅ 完整 (22 人)
+    16363242: Brentford vs Tottenham Hotspur - ✅ 完整 (22 人)
+    16363243: Manchester City vs Bournemouth - ✅ 完整 (22 人)
+    16363246: Newcastle United vs Liverpool FC - ✅ 完整 (22 人)
+    16363244: Fulham vs Chelsea - ✅ 完整 (22 人)
+
+==========================================================================================
+核对完成！请对照 SofaScore 网站验证上述信息。
+==========================================================================================

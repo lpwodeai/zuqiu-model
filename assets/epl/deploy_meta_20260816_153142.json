@@ -1,0 +1,11 @@
+{
+  "model_type": "EPL-tuned",
+  "timestamp": "20260816_153142",
+  "n_samples": 1141,
+  "feature_dim": 183,
+  "n_trees": 114,
+  "cv_accuracy": 0.46,
+  "target_file": "lgb_model_epl_export.js",
+  "scaler_file": "scaler_epl_export.js",
+  "features_file": "selected_features_epl_export.js"
+}

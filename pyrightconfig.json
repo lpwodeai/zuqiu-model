@@ -1,0 +1,32 @@
+{
+    "exclude": [
+        "**/node_modules",
+        "**/node_modules_old",
+        "**/.git",
+        "**/data/cache",
+        "**/logs",
+        "**/docker",
+        "**/docs",
+        "**/client",
+        "**/server",
+        "**/shared",
+        "**/assets",
+        "**/*.xlsx",
+        "**/*.csv",
+        "**/*.log",
+        "**/*.md",
+        "**/*.html",
+        "**/*.js",
+        "**/*.mjs",
+        "**/*.cjs",
+        "**/*.yml",
+        "**/*.yaml",
+        "**/*.css",
+        "**/*.png",
+        "**/*.ps1",
+        "**/*.conf",
+        "**/*.db",
+        "**/*.pkl"
+    ],
+    "pythonVersion": "3.10"
+}

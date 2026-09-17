@@ -1,0 +1,20 @@
+{
+  "trigger_type": "deploy",
+  "model_version": "20260815_125649",
+  "created_at": "2026-08-15T12:56:49.938939",
+  "model_paths": {
+    "draw_detector": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_draw_detector.pkl",
+    "direction_predictor": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_direction_predictor.pkl",
+    "metadata": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_metadata.json"
+  },
+  "auto_retrain": {
+    "enabled": true,
+    "schedule": "weekly (every Monday)",
+    "retrain_script": "scripts/deploy_t005v3_final.py",
+    "condition": "new_data_available OR 7_days_elapsed",
+    "performance_gate": {
+      "min_draw_recall": 0.3,
+      "max_rate_deviation": 0.02
+    }
+  }
+}

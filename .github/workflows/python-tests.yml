@@ -33,19 +33,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pandas numpy scikit-learn xgboost lightgbm psutil pyyaml
+        pip install pandas numpy scikit-learn xgboost lightgbm psutil pyyaml pytest optuna
 
-    - name: Run unit tests
+    - name: Run tests
       run: |
-        python -m unittest tests.test_auto_train -v
-
-    - name: Run integration tests
-      run: |
-        python -m unittest tests.test_integration -v
-
-    - name: Run all tests
-      run: |
-        python -m unittest discover -s tests -v
+        python -m pytest tests -v
 
   lint:
     runs-on: ubuntu-latest
@@ -63,8 +55,8 @@ jobs:
 
     - name: Run flake8
       run: |
-        flake8 scripts/auto_train.py --max-line-length=120
+        flake8 scripts features modules collection --max-line-length=120
 
     - name: Run pylint
       run: |
-        pylint scripts/auto_train.py --disable=all --enable=E,W,F
+        pylint scripts features modules collection --disable=all --enable=E,W,F

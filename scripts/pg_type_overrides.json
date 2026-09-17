@@ -1,0 +1,8 @@
+{
+ "float_in_int": {
+  "match_player_stats": [
+   "assists"
+  ]
+ },
+ "bad_bool": {}
+}

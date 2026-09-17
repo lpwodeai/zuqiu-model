@@ -1,0 +1,452 @@
+{
+  "event": {
+    "eventState": {},
+    "tournament": {
+      "name": "Premier League",
+      "slug": "premier-league",
+      "category": {
+        "name": "England",
+        "slug": "england",
+        "sport": {
+          "name": "Football",
+          "slug": "football",
+          "id": 1
+        },
+        "priority": 10,
+        "country": {
+          "alpha2": "EN",
+          "alpha3": "ENG",
+          "name": "England",
+          "slug": "england"
+        },
+        "id": 1,
+        "flag": "england",
+        "alpha2": "EN",
+        "fieldTranslations": {
+          "nameTranslation": {
+            "ar": "إنجلترا",
+            "hi": "इंग्लैंड",
+            "bn": "ইংল্যান্ড",
+            "ru": "Англия"
+          },
+          "shortNameTranslation": {}
+        }
+      },
+      "uniqueTournament": {
+        "name": "Premier League",
+        "slug": "premier-league",
+        "primaryColorHex": "#3c1c5a",
+        "secondaryColorHex": "#f80158",
+        "category": {
+          "name": "England",
+          "slug": "england",
+          "sport": {
+            "name": "Football",
+            "slug": "football",
+            "id": 1
+          },
+          "priority": 10,
+          "country": {
+            "alpha2": "EN",
+            "alpha3": "ENG",
+            "name": "England",
+            "slug": "england"
+          },
+          "id": 1,
+          "flag": "england",
+          "alpha2": "EN",
+          "fieldTranslations": {
+            "nameTranslation": {
+              "ar": "إنجلترا",
+              "hi": "इंग्लैंड",
+              "bn": "ইংল্যান্ড",
+              "ru": "Англия"
+            },
+            "shortNameTranslation": {}
+          }
+        },
+        "userCount": 1268135,
+        "hasRounds": true,
+        "hasPerformanceGraphFeature": true,
+        "country": {},
+        "id": 17,
+        "hasEventPlayerStatistics": true,
+        "displayInverseHomeAwayTeams": false,
+        "fieldTranslations": {
+          "nameTranslation": {
+            "ar": "الدوري الإنجليزي الممتاز",
+            "hi": "प्रिमियर लीग",
+            "bn": "প্রিমিয়ার লীগ",
+            "ru": "Премьер-лига"
+          },
+          "shortNameTranslation": {}
+        }
+      },
+      "priority": 703,
+      "isGroup": false,
+      "competitionType": 1,
+      "isLive": false,
+      "id": 1,
+      "fieldTranslations": {
+        "nameTranslation": {
+          "hi": "प्रिमियर लीग",
+          "ar": "الدوري الإنجليزي الممتاز",
+          "bn": "প্রিমিয়ার লীগ",
+          "ru": "Премьер-лига"
+        },
+        "shortNameTranslation": {}
+      }
+    },
+    "season": {
+      "name": "Premier League 25/26",
+      "year": "25/26",
+      "editor": false,
+      "id": 76986
+    },
+    "roundInfo": {
+      "round": 1
+    },
+    "customId": "Uskb",
+    "status": {
+      "code": 100,
+      "description": "Ended",
+      "type": "finished"
+    },
+    "winnerCode": 1,
+    "attendance": 60315,
+    "venue": {
+      "city": {
+        "name": "Liverpool",
+        "country": {
+          "alpha2": "EN",
+          "alpha3": "ENG",
+          "name": "England",
+          "slug": "england"
+        },
+        "id": 21511
+      },
+      "venueCoordinates": {
+        "latitude": 53.430916,
+        "longitude": -2.960931
+      },
+      "hidden": false,
+      "slug": "anfield",
+      "name": "Anfield",
+      "capacity": 61276,
+      "country": {
+        "alpha2": "EN",
+        "alpha3": "ENG",
+        "name": "England",
+        "slug": "england"
+      },
+      "id": 579,
+      "fieldTranslations": {
+        "nameTranslation": {
+          "ar": "أنفيلد",
+          "hi": "एनफील्ड",
+          "bn": "অ্যানফিল্ড",
+          "ru": "Стадион Anfield"
+        },
+        "shortNameTranslation": {}
+      },
+      "stadium": {
+        "name": "Anfield",
+        "capacity": 61276
+      }
+    },
+    "referee": {
+      "name": "Anthony Taylor",
+      "slug": "taylor-anthony",
+      "yellowCards": 2490,
+      "redCards": 68,
+      "yellowRedCards": 49,
+      "games": 658,
+      "sport": {
+        "id": 1,
+        "slug": "football",
+        "name": "Football"
+      },
+      "country": {
+        "alpha2": "EN",
+        "alpha3": "ENG",
+        "name": "England",
+        "slug": "england"
+      },
+      "id": 69853,
+      "fieldTranslations": {
+        "nameTranslation": {
+          "ar": "أنتوني تايلور",
+          "bn": "অ্যান্টনি টেলর",
+          "hi": "एंथनी टेलर",
+          "ru": "Энтони Тейлор"
+        },
+        "shortNameTranslation": {}
+      }
+    },
+    "homeTeam": {
+      "name": "Liverpool FC",
+      "slug": "liverpool",
+      "shortName": "Liverpool",
+      "gender": "M",
+      "sport": {
+        "name": "Football",
+        "slug": "football",
+        "id": 1
+      },
+      "userCount": 4117944,
+      "manager": {
+        "name": "Andoni Iraola",
+        "slug": "andoni-iraola",
+        "shortName": "A. Iraola",
+        "country": {
+          "alpha2": "ES",
+          "alpha3": "ESP",
+          "name": "Spain",
+          "slug": "spain"
+        },
+        "id": 790205,
+        "fieldTranslations": {
+          "nameTranslation": {
+            "ar": "أندوني إيراولا",
+            "bn": "আন্দোনি ইরাওলা",
+            "hi": "एन्डोनि इरोला",
+            "ru": "Андони Ираола"
+          },
+          "shortNameTranslation": {
+            "ar": "أ. إيراولا",
+            "bn": "এ. ইরাওলা",
+            "hi": "ए. इरोला",
+            "ru": "А. Ираола"
+          }
+        }
+      },
+      "venue": {
+        "city": {
+          "name": "Liverpool",
+          "country": {
+            "alpha2": "EN",
+            "alpha3": "ENG",
+            "name": "England",
+            "slug": "england"
+          },
+          "id": 21511
+        },
+        "venueCoordinates": {
+          "latitude": 53.430916,
+          "longitude": -2.960931
+        },
+        "hidden": false,
+        "slug": "anfield",
+        "name": "Anfield",
+        "capacity": 61276,
+        "country": {
+          "alpha2": "EN",
+          "alpha3": "ENG",
+          "name": "England",
+          "slug": "england"
+        },
+        "id": 579,
+        "fieldTranslations": {
+          "nameTranslation": {
+            "ar": "أنفيلد",
+            "hi": "एनफील्ड",
+            "bn": "অ্যানফিল্ড",
+            "ru": "Стадион Anfield"
+          },
+          "shortNameTranslation": {}
+        },
+        "stadium": {
+          "name": "Anfield",
+          "capacity": 61276
+        }
+      },
+      "nameCode": "LIV",
+      "class": 4,
+      "disabled": false,
+      "national": false,
+      "type": 0,
+      "country": {
+        "alpha2": "EN",
+        "alpha3": "ENG",
+        "name": "England",
+        "slug": "england"
+      },
+      "id": 44,
+      "fullName": "Liverpool FC",
+      "subTeams": [],
+      "teamColors": {
+        "primary": "#cc0000",
+        "secondary": "#ffffff",
+        "text": "#ffffff"
+      },
+      "foundationDateTimestamp": -2448144000,
+      "fieldTranslations": {
+        "nameTranslation": {
+          "ar": "ليفربول",
+          "bn": "লিভারপুল",
+          "hi": "लिवरपूल",
+          "ru": "Ливерпуль"
+        },
+        "shortNameTranslation": {}
+      },
+      "timeActive": []
+    },
+    "awayTeam": {
+      "name": "Bournemouth",
+      "slug": "bournemouth",
+      "shortName": "Bournemouth",
+      "gender": "M",
+      "sport": {
+        "name": "Football",
+        "slug": "football",
+        "id": 1
+      },
+      "userCount": 341959,
+      "manager": {
+        "name": "Marco Rose",
+        "slug": "marco-rose",
+        "shortName": "M. Rose",
+        "country": {
+          "alpha2": "DE",
+          "alpha3": "DEU",
+          "name": "Germany",
+          "slug": "germany"
+        },
+        "id": 193,
+        "fieldTranslations": {
+          "nameTranslation": {
+            "ar": "ماركو روز",
+            "bn": "মার্কো রোজ",
+            "hi": "मार्को रोज़",
+            "ru": "Марко Розе"
+          },
+          "shortNameTranslation": {
+            "ar": "م. روز",
+            "bn": "এম. রোজ",
+            "hi": "एम. रोज़",
+            "ru": "М. Розе"
+          }
+        }
+      },
+      "venue": {
+        "city": {
+          "name": "Bournemouth",
+          "country": {
+            "alpha2": "EN",
+            "alpha3": "ENG",
+            "name": "England",
+            "slug": "england"
+          },
+          "id": 24092
+        },
+        "venueCoordinates": {
+          "latitude": 50.735181,
+          "longitude": -1.838328
+        },
+        "hidden": false,
+        "slug": "vitality-stadium",
+        "name": "Vitality Stadium",
+        "capacity": 11307,
+        "country": {
+          "alpha2": "EN",
+          "alpha3": "ENG",
+          "name": "England",
+          "slug": "england"
+        },
+        "id": 2990,
+        "fieldTranslations": {
+          "nameTranslation": {
+            "ar": "ملعب فيتاليتي",
+            "hi": "विटैलिटी स्टेडियम",
+            "bn": "ভাইটালিটি স্টেডিয়াম",
+            "ru": "Стадион Vitality"
+          },
+          "shortNameTranslation": {}
+        },
+        "stadium": {
+          "name": "Vitality Stadium",
+          "capacity": 11307
+        }
+      },
+      "nameCode": "BOU",
+      "class": 0,
+      "disabled": false,
+      "national": false,
+      "type": 0,
+      "country": {
+        "alpha2": "EN",
+        "alpha3": "ENG",
+        "name": "England",
+        "slug": "england"
+      },
+      "id": 60,
+      "fullName": "Bournemouth",
+      "subTeams": [],
+      "teamColors": {
+        "primary": "#000000",
+        "secondary": "#cc0000",
+        "text": "#cc0000"
+      },
+      "foundationDateTimestamp": -2240524800,
+      "fieldTranslations": {
+        "nameTranslation": {
+          "ar": "بورنموث",
+          "bn": "বোর্নেমাউথ",
+          "hi": "बोर्नमाउथ",
+          "ru": "Борнмут"
+        },
+        "shortNameTranslation": {}
+      },
+      "timeActive": []
+    },
+    "homeScore": {
+      "current": 4,
+      "display": 4,
+      "period1": 1,
+      "period2": 3,
+      "normaltime": 4
+    },
+    "awayScore": {
+      "current": 2,
+      "display": 2,
+      "period1": 0,
+      "period2": 2,
+      "normaltime": 2
+    },
+    "time": {
+      "injuryTime1": 3,
+      "injuryTime2": 6,
+      "currentPeriodStartTimestamp": 1755288306
+    },
+    "changes": {
+      "changes": [
+        "status.code",
+        "status.description",
+        "status.type",
+        "homeScore.period2",
+        "homeScore.normaltime"
+      ],
+      "changeTimestamp": 1755291379
+    },
+    "hasGlobalHighlights": true,
+    "hasXg": true,
+    "hasEventPlayerStatistics": true,
+    "hasEventPlayerHeatMap": true,
+    "detailId": 1,
+    "crowdsourcingDataDisplayEnabled": false,
+    "correctAiInsight": true,
+    "correctHalftimeAiInsight": true,
+    "id": 14025013,
+    "defaultPeriodCount": 2,
+    "defaultPeriodLength": 45,
+    "defaultOvertimeLength": 15,
+    "slug": "bournemouth-liverpool",
+    "currentPeriodStartTimestamp": 1755288306,
+    "startTimestamp": 1755284400,
+    "finalResultOnly": false,
+    "feedLocked": true,
+    "seasonStatisticsType": "overall",
+    "showTotoPromo": true,
+    "isEditor": false
+  }
+}

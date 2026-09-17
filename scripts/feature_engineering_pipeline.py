@@ -16,8 +16,15 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from odds_temporal_features import build_odds_temporal_features_from_df
 
-DATA_DIR = "g:/zuqiu/五大联赛专属模型/五大联赛专属模型"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 
+DATA_DIR = PROJECT_DIR
+DB_PATH = os.path.join(PROJECT_DIR, "data", "five_leagues.db")
+CONFIG_PATH = os.path.join(PROJECT_DIR, "config.yaml")
+OUTPUT_DIR = os.path.join(PROJECT_DIR, "output")
+
+# CSV 数据源配置（用于数据导入/补充）
 CSV_FILES = {
     'EPL': 'EPL_2025-26.csv',
     'BUNDESLIGA': 'BUNDESLIGA_2025-26.csv',
@@ -26,9 +33,28 @@ CSV_FILES = {
     'LIGUE1': 'LIGUE1_2025-26.csv'
 }
 
-DB_PATH = "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/data/five_leagues.db"
-CONFIG_PATH = "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/config.yaml"
-OUTPUT_DIR = "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/output"
+CSV_FILES_DETAILED = {
+    'SERIEA': 'SERIEA_2025-26_DETAILED.csv',
+}
+
+
+def get_csv_file(league):
+    """获取指定联赛的CSV文件路径（支持新数据源优先）"""
+    data_path = os.path.join(DATA_DIR, 'data')
+    
+    if league in CSV_FILES_DETAILED:
+        detailed_path = os.path.join(data_path, CSV_FILES_DETAILED[league])
+        if os.path.exists(detailed_path):
+            print(f"  ✅ 使用新详细数据源: {CSV_FILES_DETAILED[league]}")
+            return detailed_path
+    
+    if league in CSV_FILES:
+        old_path = os.path.join(data_path, CSV_FILES[league])
+        if os.path.exists(old_path):
+            return old_path
+    
+    print(f"  ⚠️ 数据源文件不存在: {league}")
+    return None
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -41,6 +67,35 @@ def load_config():
 CONFIG = load_config()
 
 LEAGUE_CONSTANTS = CONFIG.get('league_specific', {})
+
+TEAM_NAME_MAPPING = {
+    'West Ham': 'West Ham United',
+    'Man United': 'Manchester United',
+    'Man City': 'Manchester City',
+    'Nott\'m Forest': 'Nottingham Forest',
+    'Tottenham': 'Tottenham Hotspur',
+    'Newcastle': 'Newcastle United',
+    'Brighton': 'Brighton & Hove Albion',
+    'Bournemouth': 'AFC Bournemouth',
+    'Leeds': 'Leeds United',
+    'Fulham': 'Fulham',
+    'Crystal Palace': 'Crystal Palace',
+    'Burnley': 'Burnley',
+    'Everton': 'Everton',
+    'Chelsea': 'Chelsea',
+    'Arsenal': 'Arsenal',
+    'Liverpool': 'Liverpool',
+    'Aston Villa': 'Aston Villa',
+    'Wolves': 'Wolverhampton Wanderers',
+    'Brentford': 'Brentford',
+    'Sunderland': 'Sunderland',
+}
+
+def normalize_team_name(name):
+    if pd.isna(name):
+        return name
+    name = str(name).strip()
+    return TEAM_NAME_MAPPING.get(name, name)
 
 DEFAULT_CONSTANTS = {
     'avg_home_goals': 1.5,
@@ -94,8 +149,8 @@ def normalize_league_data(df, league):
     
     if '日期' in df.columns:
         normalized['date'] = pd.to_datetime(df['日期'], format='%d/%m/%Y', errors='coerce')
-        normalized['home_team_name'] = df['主队']
-        normalized['away_team_name'] = df['客队']
+        normalized['home_team_name'] = df['主队'].apply(normalize_team_name)
+        normalized['away_team_name'] = df['客队'].apply(normalize_team_name)
         normalized['homeGoals'] = df['主队进球']
         normalized['awayGoals'] = df['客队进球']
         normalized['homeShots'] = df['主队射门'] if '主队射门' in df.columns else np.nan
@@ -1076,6 +1131,174 @@ def build_league_relative_features(df, match_features, team_features):
     
     return features, feature_info
 
+def build_poisson_features(df, team_features):
+    features = pd.DataFrame(index=df.index)
+    feature_info = {}
+    
+    features['poisson_lambda_home'] = team_features['home_weighted_avg_goals'].fillna(1.5)
+    features['poisson_lambda_away'] = team_features['away_weighted_avg_goals'].fillna(1.2)
+    
+    features['poisson_expected_total'] = features['poisson_lambda_home'] + features['poisson_lambda_away']
+    
+    poisson_win_probs = []
+    poisson_draw_probs = []
+    poisson_lose_probs = []
+    poisson_entropies = []
+    poisson_top1_probs = []
+    
+    for idx, row in df.iterrows():
+        lambda_home = features.loc[idx, 'poisson_lambda_home']
+        lambda_away = features.loc[idx, 'poisson_lambda_away']
+        
+        win_prob = 0.0
+        draw_prob = 0.0
+        lose_prob = 0.0
+        total_prob = 0.0
+        max_prob = 0.0
+        
+        for h in range(8):
+            for a in range(8):
+                prob = poisson.pmf(h, lambda_home) * poisson.pmf(a, lambda_away)
+                total_prob += prob
+                
+                if prob > max_prob:
+                    max_prob = prob
+                
+                if h > a:
+                    win_prob += prob
+                elif h == a:
+                    draw_prob += prob
+                else:
+                    lose_prob += prob
+        
+        if total_prob > 0:
+            win_prob /= total_prob
+            draw_prob /= total_prob
+            lose_prob /= total_prob
+            
+            entropy = -win_prob * np.log(win_prob + 1e-10) - draw_prob * np.log(draw_prob + 1e-10) - lose_prob * np.log(lose_prob + 1e-10)
+        else:
+            win_prob = 0.33
+            draw_prob = 0.34
+            lose_prob = 0.33
+            entropy = 1.1
+        
+        poisson_win_probs.append(win_prob)
+        poisson_draw_probs.append(draw_prob)
+        poisson_lose_probs.append(lose_prob)
+        poisson_entropies.append(entropy)
+        poisson_top1_probs.append(max_prob)
+    
+    features['poisson_prob_win'] = poisson_win_probs
+    features['poisson_prob_draw'] = poisson_draw_probs
+    features['poisson_prob_lose'] = poisson_lose_probs
+    features['poisson_entropy'] = poisson_entropies
+    features['poisson_top1_prob'] = poisson_top1_probs
+    
+    features['poisson_mode_goals'] = features['poisson_expected_total'].round().astype(int)
+    features['poisson_over_2_5_prob'] = features['poisson_expected_total'].apply(lambda x: 1 - poisson.cdf(2, x))
+    
+    feature_info['poisson_lambda_home'] = {'description': 'Poisson主队预期进球', 'source': 'home_weighted_avg_goals', 'calculation': '加权场均进球'}
+    feature_info['poisson_lambda_away'] = {'description': 'Poisson客队预期进球', 'source': 'away_weighted_avg_goals', 'calculation': '加权场均进球'}
+    feature_info['poisson_expected_total'] = {'description': 'Poisson预期总进球', 'source': 'lambda_home + lambda_away', 'calculation': '两个lambda之和'}
+    feature_info['poisson_prob_win'] = {'description': 'Poisson主胜概率', 'source': 'Poisson分布', 'calculation': '所有h>a比分概率之和'}
+    feature_info['poisson_prob_draw'] = {'description': 'Poisson平局概率', 'source': 'Poisson分布', 'calculation': '所有h=a比分概率之和'}
+    feature_info['poisson_prob_lose'] = {'description': 'Poisson客胜概率', 'source': 'Poisson分布', 'calculation': '所有h<a比分概率之和'}
+    feature_info['poisson_entropy'] = {'description': 'Poisson预测熵', 'source': 'Poisson概率', 'calculation': '-Σp*log(p)'}
+    feature_info['poisson_top1_prob'] = {'description': 'Poisson最可能比分概率', 'source': 'Poisson分布', 'calculation': '最大单比分概率'}
+    feature_info['poisson_mode_goals'] = {'description': 'Poisson最可能总进球数', 'source': 'expected_total', 'calculation': '四舍五入'}
+    feature_info['poisson_over_2_5_prob'] = {'description': 'Poisson大2.5概率', 'source': 'Poisson分布', 'calculation': '1 - P(X<=2)'}
+    
+    features['model_vs_poisson_win_diff'] = features['poisson_prob_win'] - features.get('pinnacle_implied_home', 0.33)
+    features['model_vs_poisson_draw_diff'] = features['poisson_prob_draw'] - features.get('pinnacle_implied_draw', 0.34)
+    features['model_vs_poisson_lose_diff'] = features['poisson_prob_lose'] - features.get('pinnacle_implied_away', 0.33)
+    
+    feature_info['model_vs_poisson_win_diff'] = {'description': '模型与Poisson主胜概率差', 'source': 'poisson_prob_win - pinnacle_implied_home', 'calculation': 'Poisson概率 - 赔率隐含概率'}
+    feature_info['model_vs_poisson_draw_diff'] = {'description': '模型与Poisson平局概率差', 'source': 'poisson_prob_draw - pinnacle_implied_draw', 'calculation': 'Poisson概率 - 赔率隐含概率'}
+    feature_info['model_vs_poisson_lose_diff'] = {'description': '模型与Poisson客胜概率差', 'source': 'poisson_prob_lose - pinnacle_implied_away', 'calculation': 'Poisson概率 - 赔率隐含概率'}
+    
+    return features, feature_info
+
+def build_upset_detection_features(df, team_features, static_odds_features, poisson_features):
+    features = pd.DataFrame(index=df.index)
+    feature_info = {}
+    
+    home_implied = static_odds_features.get('pinnacle_implied_home', 0.33)
+    away_implied = static_odds_features.get('pinnacle_implied_away', 0.33)
+    if not isinstance(home_implied, pd.Series):
+        home_implied = pd.Series([home_implied] * len(df), index=df.index)
+    if not isinstance(away_implied, pd.Series):
+        away_implied = pd.Series([away_implied] * len(df), index=df.index)
+    features['odds_market_favorite_home'] = (home_implied > away_implied).astype(int)
+    
+    pinnacle_win = static_odds_features.get('Pinnacle_胜', 3.0)
+    if not isinstance(pinnacle_win, pd.Series):
+        pinnacle_win = pd.Series([pinnacle_win] * len(df), index=df.index)
+    features['is_extreme_favorite'] = (pinnacle_win < 1.30).astype(int)
+    
+    features['is_heavy_favorite'] = (pinnacle_win < 1.50).astype(int)
+    
+    features['market_confidence'] = static_odds_features.get('pinnacle_implied_home', 0.33) - \
+                                    static_odds_features.get('pinnacle_implied_away', 0.33)
+    
+    features['poisson_confidence'] = poisson_features.get('poisson_prob_win', 0.33) - \
+                                     poisson_features.get('poisson_prob_lose', 0.33)
+    
+    features['confidence_divergence'] = features['market_confidence'] - features['poisson_confidence']
+    
+    features['poisson_vs_market_win_diff'] = poisson_features.get('poisson_prob_win', 0.33) - \
+                                              static_odds_features.get('pinnacle_implied_home', 0.33)
+    
+    features['poisson_vs_market_lose_diff'] = poisson_features.get('poisson_prob_lose', 0.33) - \
+                                               static_odds_features.get('pinnacle_implied_away', 0.33)
+    
+    features['away_recent_form_away'] = team_features.get('away_recent_form_5', 0.5)
+    
+    features['away_attack_strength'] = team_features.get('away_weighted_avg_goals', 1.0)
+    
+    features['home_defense_weakness'] = team_features.get('home_weighted_avg_opp_goals', 1.0)
+    
+    features['form_ratio'] = features['away_recent_form_away'] / (team_features.get('home_recent_form_5', 0.5) + 0.1)
+    features['form_ratio'] = features['form_ratio'].clip(0, 2.0)
+    
+    features['goal_ratio'] = features['away_attack_strength'] / (team_features.get('home_weighted_avg_goals', 1.0) + 0.1)
+    features['goal_ratio'] = features['goal_ratio'].clip(0, 2.0)
+    
+    features['favorite_degree'] = (1.0 / pinnacle_win).clip(0, 1.0)
+    
+    features['poisson_away_support'] = poisson_features.get('poisson_prob_lose', 0.33) - 0.33
+    
+    features['market_overconfidence'] = (home_implied - 0.5).clip(0, 0.5)
+    
+    poisson_away_prob = poisson_features.get('poisson_prob_lose', 0.33)
+    if not isinstance(poisson_away_prob, pd.Series):
+        poisson_away_prob = pd.Series([poisson_away_prob] * len(df), index=df.index)
+    
+    features['market_poisson_away_diff'] = poisson_away_prob - away_implied
+    
+    features['upset_risk_score'] = (features['is_extreme_favorite'] * 0.4 +
+                                    features['confidence_divergence'].abs() * 0.25 +
+                                    features['form_ratio'] * 0.2 +
+                                    features['goal_ratio'] * 0.1 +
+                                    features['market_poisson_away_diff'].clip(0, 0.5) * 0.05)
+    
+    feature_info['odds_market_favorite_home'] = {'description': '赔率市场看好主队', 'source': 'pinnacle_implied_home > pinnacle_implied_away', 'calculation': '二值特征'}
+    feature_info['is_extreme_favorite'] = {'description': '主队是极端热门(主胜赔率<1.30)', 'source': 'Pinnacle_胜', 'calculation': '主胜赔率<1.30为1'}
+    feature_info['is_heavy_favorite'] = {'description': '主队是重量级热门(主胜赔率<1.50)', 'source': 'Pinnacle_胜', 'calculation': '主胜赔率<1.50为1'}
+    feature_info['market_confidence'] = {'description': '市场对主队的信心度', 'source': 'pinnacle_implied_home - pinnacle_implied_away', 'calculation': '主客隐含概率差'}
+    feature_info['poisson_confidence'] = {'description': 'Poisson模型对主队的信心度', 'source': 'poisson_prob_win - poisson_prob_lose', 'calculation': '主客Poisson概率差'}
+    feature_info['confidence_divergence'] = {'description': '市场与Poisson信心度散度', 'source': 'market_confidence - poisson_confidence', 'calculation': '信心度差异'}
+    feature_info['poisson_vs_market_win_diff'] = {'description': 'Poisson与市场主胜概率差', 'source': 'poisson_prob_win - pinnacle_implied_home', 'calculation': '概率差异'}
+    feature_info['poisson_vs_market_lose_diff'] = {'description': 'Poisson与市场客胜概率差', 'source': 'poisson_prob_lose - pinnacle_implied_away', 'calculation': '概率差异'}
+    feature_info['away_recent_form_away'] = {'description': '客队近期客场状态', 'source': 'away_recent_form_5', 'calculation': '近5场客场胜率'}
+    feature_info['away_attack_strength'] = {'description': '客队进攻能力', 'source': 'away_weighted_avg_goals', 'calculation': '加权场均进球'}
+    feature_info['home_defense_weakness'] = {'description': '主队防守弱点', 'source': 'home_weighted_avg_opp_goals', 'calculation': '加权场均失球'}
+    feature_info['form_ratio'] = {'description': '客主状态比', 'source': 'away_recent_form_away / home_recent_form_5', 'calculation': '状态对比'}
+    feature_info['goal_ratio'] = {'description': '客主进球比', 'source': 'away_attack_strength / home_weighted_avg_goals', 'calculation': '进攻能力对比'}
+    feature_info['upset_risk_score'] = {'description': '冷门风险综合评分', 'source': '极端热门+信心散度+状态比+进球比', 'calculation': '加权组合评分'}
+    
+    return features, feature_info
+
 def build_all_features(df):
     temporal_features, temporal_info = build_temporal_features(df)
     league_features, league_info = build_league_features(df)
@@ -1088,8 +1311,13 @@ def build_all_features(df):
     
     temporal_odds_features, temporal_odds_info = build_odds_temporal_features_from_df(df)
     
+    poisson_features, poisson_info = build_poisson_features(df, team_features)
+    
+    upset_features, upset_info = build_upset_detection_features(df, team_features, static_odds_features, poisson_features)
+    
     all_features = pd.concat([temporal_features, league_features, match_features, team_features, 
-                              league_relative_features, static_odds_features, temporal_odds_features], axis=1)
+                              league_relative_features, static_odds_features, temporal_odds_features,
+                              poisson_features, upset_features], axis=1)
     all_features = all_features.loc[:, ~all_features.columns.duplicated()]
     
     for col in all_features.select_dtypes(include=[np.number]).columns:
@@ -1108,6 +1336,8 @@ def build_all_features(df):
                 del static_odds_info[col]
             if col in temporal_odds_info:
                 del temporal_odds_info[col]
+            if col in poisson_info:
+                del poisson_info[col]
     
     all_feature_info = {}
     all_feature_info.update(temporal_info)
@@ -1117,6 +1347,8 @@ def build_all_features(df):
     all_feature_info.update(league_relative_info)
     all_feature_info.update(static_odds_info)
     all_feature_info.update(temporal_odds_info)
+    all_feature_info.update(poisson_info)
+    all_feature_info.update(upset_info)
     
     return all_features, df['result'], all_feature_info
 
