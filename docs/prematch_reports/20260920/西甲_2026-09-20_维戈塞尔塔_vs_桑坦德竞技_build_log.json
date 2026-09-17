@@ -1,0 +1,32 @@
+{
+  "match_id": "2026-09-20_Celta Vigo_桑坦德竞技",
+  "home_team": "维戈塞尔塔",
+  "away_team": "桑坦德竞技",
+  "league": "西甲",
+  "generated_at": "2026-09-17 12:03:38",
+  "report_version": "v3.0",
+  "model_version": "v8.3 / v3.0",
+  "feature_version": "208",
+  "config_version": "—",
+  "completeness": 50,
+  "sections": {
+    "wdl": "ok",
+    "hcp": "ok",
+    "score": "ok",
+    "tg": "ok",
+    "sporttery_timing": "partial",
+    "ev_engine": "ok",
+    "ouzhi_500": "ok",
+    "betting_500": "ok",
+    "sofascore_team": "missing",
+    "standings": "ok",
+    "knowledge_base": "ok",
+    "p1_01_conf_breakdown": "ok",
+    "p1_02_sub_models": "ok",
+    "p1_03_timing_grid": "partial",
+    "p1_05_kelly_footnote": "ok",
+    "p1_06_edge_ev_conflict": "ok",
+    "p1_07_layer_hint": "ok",
+    "p1_08_ev_snapshot_trace": "ok"
+  }
+}

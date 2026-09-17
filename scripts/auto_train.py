@@ -37,11 +37,14 @@ def load_config():
 
 CONFIG = load_config()
 
+_log_dir = os.path.join(PROJECT_ROOT, 'logs')
+os.makedirs(_log_dir, exist_ok=True)  # 全新环境（CI/新克隆）logs/ 不存在，导入时自动创建
+
 logging.basicConfig(
     level=getattr(logging, CONFIG.get('logging', {}).get('level', 'INFO')),
     format=CONFIG.get('logging', {}).get('format', '%(asctime)s - %(levelname)s - %(message)s'),
     handlers=[
-        logging.FileHandler(os.path.join(PROJECT_ROOT, 'logs/auto_train.log'), encoding='utf-8'),
+        logging.FileHandler(os.path.join(_log_dir, 'auto_train.log'), encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
