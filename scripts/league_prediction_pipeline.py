@@ -358,11 +358,8 @@ def predict_total_goals(league: str):
     print(f"\n[{league}] 总进球预测 (T-004)...")
 
     try:
-        import pickle
         import sqlite3
-        from tg_features import extract_tg_features
-        from train_tg_model import add_elo_features_tg
-        from elo_rating import EloRating
+        from train_tg_model import predict_for_matches
 
         conn = sqlite3.connect(DB_PATH)
         league_cn = LEAGUE_NAMES.get(league, league)
@@ -374,32 +371,15 @@ def predict_total_goals(league: str):
         ORDER BY m.match_date
         """
         df = pd.read_sql_query(query, conn)
-        df['match_date'] = pd.to_datetime(df['match_date'])
-        df = df[df['actual_total_goals'].notna()].copy()
-
-        tg_features = extract_tg_features(df, conn)
         conn.close()
 
-        if tg_features is None or len(tg_features) == 0:
-            print(f"  ⚠️ 无法提取 TG 赔率特征")
+        df = df[df['actual_total_goals'].notna()].copy()
+        if len(df) == 0:
+            print("  ⚠️ 无有效场次")
             return None
 
-        elo = EloRating()
-        elo.fit(df)
-        tg_features = add_elo_features_tg(tg_features, elo)
-
-        tg_model_path = os.path.join(ASSETS_DIR, 't004_tg_lgb_model.pkl')
-        if os.path.exists(tg_model_path):
-            with open(tg_model_path, 'rb') as f:
-                tg_model = pickle.load(f)
-        else:
-            print(f"  ⚠️ T-004 模型文件不存在")
-            return None
-
-        from tg_features import TG_COLS
-        feature_cols = [c for c in TG_COLS if c in tg_features.columns]
-        X = tg_features[feature_cols].fillna(0).values
-        probs = tg_model.predict(X)
+        # 训练/推理同源：统一走部署模型（内部用 serving 矩阵，未命中中位数兜底）
+        probs = predict_for_matches(df['match_id'].tolist())
 
         TG_CLASSES = ['0球', '1球', '2球', '3球', '4球', '5球', '6+球']
         exp_goals = np.sum(probs * np.arange(len(TG_CLASSES)), axis=1)

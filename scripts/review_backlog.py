@@ -3,7 +3,7 @@
 review_backlog.py — 模块 P1-A：人工审核待办（backlog）流转工具
 
 ===============================================
-背景（模型优化评估报告 v2.0 §P1-A）：
+背景（已归档：原模型优化评估报告 v2.0 §P1-A）：
   知识库内容建设依赖「≥4 置信度人工审核条目积累」，瓶颈在人工审核 backlog
   流转。本工具**只加速流转，不代人审核**：审核动作（同意/部分同意/不同意）仍由
   confidence_review.py（模块 A5）执行，本工具负责把待审场次排队、排序、分桶、
@@ -230,7 +230,7 @@ def cmd_pick(rows: List[Dict[str, Any]], n: int) -> None:
     lines: List[str] = [
         f"# 人工审核批 — {date}",
         "",
-        f"> 生成：`review_backlog.py --pick {n}`（背景：模型优化评估报告 v2.0 P1-A）",
+        f"> 生成：`review_backlog.py --pick {n}`（背景：已归档：原模型优化评估报告 v2.0 P1-A）",
         f"> 待审总数 {len(rows)}，本批取前 {len(ready)} 场可审（最旧优先）。",
         "",
         "| # | match_id | 联赛 | 对阵 | 基线级别 | RPS | 待审天数 |",

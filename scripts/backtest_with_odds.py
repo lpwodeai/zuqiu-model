@@ -2,12 +2,25 @@ import pandas as pd
 import numpy as np
 import json
 import os
+import sqlite3
 
 try:
     import yaml
 except ImportError:
     yaml = None
     print("Warning: pyyaml not installed, will use default parameters")
+
+# 队名归一化（用于 five_leagues.db ↔ odds.db 中文队名匹配）
+try:
+    from team_name_mapping import normalize_team_name
+except ImportError:
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'scripts'))
+    try:
+        from team_name_mapping import normalize_team_name
+    except ImportError:
+        def normalize_team_name(name, fuzzy_threshold=0.8):
+            return name
 
 try:
     import xgboost as xgb
@@ -26,7 +39,7 @@ from sklearn.metrics import accuracy_score, log_loss, brier_score_loss, confusio
 from sklearn.preprocessing import StandardScaler
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.base import BaseEstimator, ClassifierMixin
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 CONFIG = {}
@@ -128,124 +141,281 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR
 OUTPUT_DIR = BASE_DIR / "assets"
 
-CSV_FILES = {
-    'EPL': 'EPL_2025-26.csv',
-    'BUNDESLIGA': 'BUNDESLIGA_2025-26.csv',
-    'LALIGA': 'LALIGA_2025-26.csv',
-    'SERIEA': 'SERIEA_2025-26.csv',
-    'LIGUE1': 'LIGUE1_2025-26.csv'
-}
-
-# 新详细数据源映射（优先使用）
-CSV_FILES_DETAILED = {
-    'SERIEA': 'SERIEA_2025-26_DETAILED.csv',
-}
+# 数据库路径（SSOT：five_leagues.db 统计 + odds.db 赔率）
+FIVE_LEAGUES_DB = BASE_DIR / "data" / "five_leagues.db"
+ODDS_DB = BASE_DIR / "data" / "odds.db"
 
 
-def get_csv_file(league):
-    """获取指定联赛的CSV文件路径（支持新数据源优先）"""
-    data_path = os.path.join(DATA_DIR, 'data')
-    
-    # 检查是否有新详细数据源
-    if league in CSV_FILES_DETAILED:
-        detailed_path = os.path.join(data_path, CSV_FILES_DETAILED[league])
-        if os.path.exists(detailed_path):
-            print(f"  ✅ 使用新详细数据源: {CSV_FILES_DETAILED[league]}")
-            return detailed_path
-    
-    # 使用旧数据源
-    if league in CSV_FILES:
-        old_path = os.path.join(data_path, CSV_FILES[league])
-        if os.path.exists(old_path):
-            return old_path
-    
-    print(f"  ⚠️ 数据源文件不存在: {league}")
-    return None
+def load_match_data_from_db(db_path=None):
+    """从 five_leagues.db 加载比赛数据（SSOT，替代原 CSV 路径）。
 
-def normalize_league_data(df, league):
-    normalized = df.copy()
-    
-    if '日期' in df.columns:
-        normalized['date'] = pd.to_datetime(df['日期'], format='%d/%m/%Y', errors='coerce')
-        normalized['home_team_name'] = df['主队']
-        normalized['away_team_name'] = df['客队']
-        normalized['homeGoals'] = df['主队进球']
-        normalized['awayGoals'] = df['客队进球']
-        normalized['homeShots'] = df['主队射门'] if '主队射门' in df.columns else np.nan
-        normalized['awayShots'] = df['客队射门'] if '客队射门' in df.columns else np.nan
-        normalized['homeShotsOnTarget'] = df['主队射正'] if '主队射正' in df.columns else np.nan
-        normalized['awayShotsOnTarget'] = df['客队射正'] if '客队射正' in df.columns else np.nan
-        normalized['homeCorners'] = df['主队角球'] if '主队角球' in df.columns else np.nan
-        normalized['awayCorners'] = df['客队角球'] if '客队角球' in df.columns else np.nan
-        normalized['homeYellowCards'] = df['主队黄牌'] if '主队黄牌' in df.columns else np.nan
-        normalized['awayYellowCards'] = df['客队黄牌'] if '客队黄牌' in df.columns else np.nan
-        normalized['homeFouls'] = df['主队犯规'] if '主队犯规' in df.columns else np.nan
-        normalized['awayFouls'] = df['客队犯规'] if '客队犯规' in df.columns else np.nan
-        normalized['homePossession'] = df['主队控球率'] if '主队控球率' in df.columns else np.nan
-        
-        normalized['bet365_主胜'] = df['bet365_主胜'] if 'bet365_主胜' in df.columns else np.nan
-        normalized['bet365_平局'] = df['bet365_平局'] if 'bet365_平局' in df.columns else np.nan
-        normalized['bet365_客胜'] = df['bet365_客胜'] if 'bet365_客胜' in df.columns else np.nan
-        normalized['Pinnacle_主胜'] = df['Pinnacle_主胜'] if 'Pinnacle_主胜' in df.columns else np.nan
-        normalized['Pinnacle_平局'] = df['Pinnacle_平局'] if 'Pinnacle_平局' in df.columns else np.nan
-        normalized['Pinnacle_客胜'] = df['Pinnacle_客胜'] if 'Pinnacle_客胜' in df.columns else np.nan
-        normalized['最高_主胜'] = df['最高_主胜'] if '最高_主胜' in df.columns else np.nan
-        normalized['最高_平局'] = df['最高_平局'] if '最高_平局' in df.columns else np.nan
-        normalized['最高_客胜'] = df['最高_客胜'] if '最高_客胜' in df.columns else np.nan
-        normalized['平均_主胜'] = df['平均_主胜'] if '平均_主胜' in df.columns else np.nan
-        normalized['平均_平局'] = df['平均_平局'] if '平均_平局' in df.columns else np.nan
-        normalized['平均_客胜'] = df['平均_客胜'] if '平均_客胜' in df.columns else np.nan
-    else:
-        normalized['date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y', errors='coerce')
-        normalized['home_team_name'] = df['HomeTeam']
-        normalized['away_team_name'] = df['AwayTeam']
-        normalized['homeGoals'] = df['FTHG']
-        normalized['awayGoals'] = df['FTAG']
-        normalized['homeShots'] = df['HS'] if 'HS' in df.columns else np.nan
-        normalized['awayShots'] = df['AS'] if 'AS' in df.columns else np.nan
-        normalized['homeShotsOnTarget'] = df['HST'] if 'HST' in df.columns else np.nan
-        normalized['awayShotsOnTarget'] = df['AST'] if 'AST' in df.columns else np.nan
-        normalized['homeCorners'] = df['HC'] if 'HC' in df.columns else np.nan
-        normalized['awayCorners'] = df['AC'] if 'AC' in df.columns else np.nan
-        normalized['homeYellowCards'] = df['HY'] if 'HY' in df.columns else np.nan
-        normalized['awayYellowCards'] = df['AY'] if 'AY' in df.columns else np.nan
-        normalized['homeFouls'] = df['HF'] if 'HF' in df.columns else np.nan
-        normalized['awayFouls'] = df['AF'] if 'AF' in df.columns else np.nan
-        normalized['homePossession'] = np.nan
-        
-        normalized['bet365_主胜'] = df['B365H'] if 'B365H' in df.columns else np.nan
-        normalized['bet365_平局'] = df['B365D'] if 'B365D' in df.columns else np.nan
-        normalized['bet365_客胜'] = df['B365A'] if 'B365A' in df.columns else np.nan
-        normalized['Pinnacle_主胜'] = df['PSH'] if 'PSH' in df.columns else np.nan
-        normalized['Pinnacle_平局'] = df['PSD'] if 'PSD' in df.columns else np.nan
-        normalized['Pinnacle_客胜'] = df['PSA'] if 'PSA' in df.columns else np.nan
-        normalized['最高_主胜'] = df['MaxH'] if 'MaxH' in df.columns else np.nan
-        normalized['最高_平局'] = df['MaxD'] if 'MaxD' in df.columns else np.nan
-        normalized['最高_客胜'] = df['MaxA'] if 'MaxA' in df.columns else np.nan
-        normalized['平均_主胜'] = df['AvgH'] if 'AvgH' in df.columns else np.nan
-        normalized['平均_平局'] = df['AvgD'] if 'AvgD' in df.columns else np.nan
-        normalized['平均_客胜'] = df['AvgA'] if 'AvgA' in df.columns else np.nan
-    
-    normalized['competition_name'] = league
-    return normalized
+    返回与原 load_csv_data 兼容的 DataFrame：date, home_team_name, away_team_name,
+    homeGoals, awayGoals, 各项统计列, competition_name（中文队名 + 英文联赛名）。
+    赔率相关列（bet365_*/Pinnacle_*/最高_*/平均_*）由 load_close_odds_from_db merge 填充。
+    """
+    db_path = str(db_path) if db_path else str(FIVE_LEAGUES_DB)
+    conn = sqlite3.connect(db_path)
+    try:
+        query = """
+        SELECT
+            m.date,
+            ht.name as home_team_name,
+            at.name as away_team_name,
+            m.homeGoals,
+            m.awayGoals,
+            c.name as competition_name,
+            m.homeShots,
+            m.homeShotsOnTarget,
+            m.awayShots,
+            m.awayShotsOnTarget,
+            m.homeCorners,
+            m.awayCorners,
+            m.homeFouls,
+            m.awayFouls,
+            m.homeYellowCards,
+            m.awayYellowCards,
+            m.homePossession
+        FROM matches m
+        LEFT JOIN teams ht ON m.homeTeamId = ht.id
+        LEFT JOIN teams at ON m.awayTeamId = at.id
+        LEFT JOIN competitions c ON m.competitionId = c.id
+        WHERE m.homeGoals IS NOT NULL AND m.awayGoals IS NOT NULL
+        ORDER BY m.date
+        """
+        df = pd.read_sql(query, conn)
+    finally:
+        conn.close()
 
-def load_csv_data():
-    dfs = []
-    for league, filename in CSV_FILES.items():
-        filepath = os.path.join(DATA_DIR, filename)
-        if os.path.exists(filepath):
-            df = pd.read_csv(filepath, encoding='utf-8')
-            df = normalize_league_data(df, league)
-            dfs.append(df)
-            print(f"Loaded {len(df)} matches from {filename}")
-        else:
-            print(f"Warning: {filepath} not found")
-    
-    if not dfs:
-        raise ValueError("No CSV files loaded")
-    
-    df = pd.concat(dfs, ignore_index=True)
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
+
+    # 初始化赔率列（与原 CSV 兼容），由 load_close_odds_from_db 填充
+    odds_cols = [
+        'bet365_主胜', 'bet365_平局', 'bet365_客胜',
+        'Pinnacle_主胜', 'Pinnacle_平局', 'Pinnacle_客胜',
+        '最高_主胜', '最高_平局', '最高_客胜',
+        '平均_主胜', '平均_平局', '平均_客胜',
+        'bet365_大2.5', 'bet365_小2.5', 'Pinnacle_大2.5', 'Pinnacle_小2.5',
+        'bet365_亚盘主', 'bet365_亚盘客', 'Pinnacle_亚盘主', 'Pinnacle_亚盘客',
+        '亚盘盘口',
+    ]
+    for col in odds_cols:
+        df[col] = np.nan
+
+    print(f"Loaded {len(df)} matches from five_leagues.db")
     return df
+
+
+def load_close_odds_from_db(df, db_path=None):
+    """从 odds.db 加载每场 close 赔率，merge 到 df。
+
+    匹配策略（3 级）：
+      1. 精确：match_id = f"{date}_{home_cn}_{away_cn}" 直接命中
+      2. 归一化：两边队名经 normalize_team_name 归一后再精确查
+      3. LIKE 模糊：match_id LIKE '{date}_%{home}%' AND match_id LIKE '%{away}'
+
+    odds.db 无博彩商区分，统一用 close.win/draw/lose 填充所有赔率列
+    （bet365_主胜 = Pinnacle_主胜 = 最高_主胜 = 平均_主胜 = close.win 等）。
+    handicap 列从 handicap_history close 加载；亚盘赔率用 hcp_win/hcp_draw/hcp_lose。
+    匹配不到的场次保持 NaN（由 build_odds_features 的 fillna 兜底）。
+
+    Returns:
+        df（原地填充赔率列），hit_rate（float 0-1）
+    """
+    db_path = str(db_path) if db_path else str(ODDS_DB)
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+
+        # 1. 预构建 wdl_history / handicap_history close 查找表
+        #    key: match_id → (win, draw, lose, ts)  取 timestamp 最大的一条作为 close
+        cur.execute("SELECT match_id, win_a, draw, win_b, timestamp FROM wdl_history")
+        wdl_last = {}
+        for mid, win_a, draw, win_b, ts in cur.fetchall():
+            if win_a is None or draw is None or win_b is None:
+                continue
+            prev = wdl_last.get(mid)
+            if prev is None or (ts is not None and prev[3] is not None and ts > prev[3]):
+                wdl_last[mid] = (win_a, draw, win_b, ts)
+
+        cur.execute("SELECT match_id, hcp_win, hcp_draw, hcp_lose, timestamp FROM handicap_history")
+        hcp_last = {}
+        for mid, hcp_win, hcp_draw, hcp_lose, ts in cur.fetchall():
+            if hcp_win is None or hcp_lose is None:
+                continue
+            prev = hcp_last.get(mid)
+            if prev is None or (ts is not None and prev[3] is not None and ts > prev[3]):
+                hcp_last[mid] = (hcp_win, hcp_draw, hcp_lose, ts)
+    finally:
+        # LIKE 模糊查询阶段还要用 conn，先不关；循环结束后在下方 finally 中关闭。
+        pass
+
+    hit = 0
+    miss = 0
+    total = len(df)
+    miss_samples = []
+
+    try:
+        for idx, row in df.iterrows():
+            date_val = row['date']
+            if pd.isna(date_val):
+                miss += 1
+                continue
+            date_prefix = str(date_val)[:10]
+            home = row['home_team_name']
+            away = row['away_team_name']
+            if not isinstance(home, str) or not isinstance(away, str):
+                miss += 1
+                continue
+
+            # 级别 1：精确
+            mid = f"{date_prefix}_{home}_{away}"
+            wdl = wdl_last.get(mid)
+            hcp = hcp_last.get(mid)
+            match_strategy = 'exact' if wdl else None
+
+            # 级别 2：归一化两边
+            if not wdl:
+                home_n = normalize_team_name(home) or home
+                away_n = normalize_team_name(away) or away
+                if home_n != home or away_n != away:
+                    mid_n = f"{date_prefix}_{home_n}_{away_n}"
+                    wdl = wdl_last.get(mid_n)
+                    hcp = hcp_last.get(mid_n)
+                    if wdl:
+                        match_strategy = 'normalized'
+                        mid = mid_n
+
+            # 级别 3：LIKE 模糊（match_id LIKE '{date}_%{home}%' AND match_id LIKE '%_{away}'）
+            if not wdl:
+                # 日期容差 ±2 天（应对 five_leagues.db 与 odds.db 时区/数据源日期差异）
+                try:
+                    d0 = datetime.strptime(date_prefix, '%Y-%m-%d')
+                    date_candidates = [date_prefix] + [
+                        (d0 + timedelta(days=off)).strftime('%Y-%m-%d')
+                        for off in [-2, -1, 1, 2]
+                    ]
+                except (ValueError, TypeError):
+                    date_candidates = [date_prefix]
+                name_candidates = [(home, away), (normalize_team_name(home) or home, normalize_team_name(away) or away)]
+                matched = False
+                for dc in date_candidates:
+                    for h, a in name_candidates:
+                        if h is None or a is None:
+                            continue
+                        cur.execute(
+                            "SELECT match_id FROM wdl_history "
+                            "WHERE match_id LIKE ? AND match_id LIKE ? "
+                            "ORDER BY match_id DESC LIMIT 1",
+                            (f"{dc}_%{h}%", f"%_{a}"),
+                        )
+                        r = cur.fetchone()
+                        if r:
+                            mid = r[0]
+                            wdl = wdl_last.get(mid)
+                            hcp = hcp_last.get(mid)
+                            match_strategy = 'like' if dc == date_prefix else 'like+datediff'
+                            matched = True
+                            break
+                    if matched:
+                        break
+
+            if wdl:
+                hit += 1
+                win, draw, lose, _ = wdl
+                # 胜平负单值列：所有博彩商列统一填 close 值
+                df.at[idx, 'bet365_主胜'] = win
+                df.at[idx, 'bet365_平局'] = draw
+                df.at[idx, 'bet365_客胜'] = lose
+                df.at[idx, 'Pinnacle_主胜'] = win
+                df.at[idx, 'Pinnacle_平局'] = draw
+                df.at[idx, 'Pinnacle_客胜'] = lose
+                df.at[idx, '最高_主胜'] = win
+                df.at[idx, '最高_平局'] = draw
+                df.at[idx, '最高_客胜'] = lose
+                df.at[idx, '平均_主胜'] = win
+                df.at[idx, '平均_平局'] = draw
+                df.at[idx, '平均_客胜'] = lose
+
+                if hcp:
+                    hwin, hdraw, hlose, _ = hcp
+                    df.at[idx, 'bet365_亚盘主'] = hwin
+                    df.at[idx, 'bet365_亚盘客'] = hlose
+                    df.at[idx, 'Pinnacle_亚盘主'] = hwin
+                    df.at[idx, 'Pinnacle_亚盘客'] = hlose
+                    # 亚盘盘口：odds.db matches.handicap 为让球数，按需查询；此处从 hcp 行无法直接取盘口，
+                    # 用 matches.handicap 字段（单独查一次）填到 '亚盘盘口'。
+                    # 为效率起见，盘口由下方单独批量查一次。
+
+            else:
+                miss += 1
+                if len(miss_samples) < 10:
+                    miss_samples.append((date_prefix, home, away))
+    finally:
+        conn.close()
+
+    # 单独批量补 '亚盘盘口'：从 odds.db matches.handicap 取（按已 match 到的 match_id）
+    # 也尝试用 wdl_history 中的 match_id 反查 matches.handicap
+    try:
+        conn2 = sqlite3.connect(db_path)
+        cur2 = conn2.cursor()
+        for idx, row in df.iterrows():
+            if not pd.isna(row['亚盘盘口']):
+                continue
+            date_val = row['date']
+            if pd.isna(date_val):
+                continue
+            date_prefix = str(date_val)[:10]
+            home = row['home_team_name']
+            away = row['away_team_name']
+            if not isinstance(home, str) or not isinstance(away, str):
+                continue
+            # 尝试多种 match_id 格式查询 matches.handicap（含日期容差 ±2 天）
+            found = None
+            try:
+                d0 = datetime.strptime(date_prefix, '%Y-%m-%d')
+                date_candidates = [date_prefix] + [
+                    (d0 + timedelta(days=off)).strftime('%Y-%m-%d')
+                    for off in [-2, -1, 1, 2]
+                ]
+            except (ValueError, TypeError):
+                date_candidates = [date_prefix]
+            name_candidates = [(home, away), (normalize_team_name(home) or home, normalize_team_name(away) or away)]
+            # 精确 match_id（含日期容差）
+            for dc in date_candidates:
+                for h, a in name_candidates:
+                    mid = f"{dc}_{h}_{a}"
+                    cur2.execute("SELECT handicap FROM matches WHERE match_id = ?", (mid,))
+                    r = cur2.fetchone()
+                    if r and r[0] is not None:
+                        found = r[0]
+                        break
+                if found is not None:
+                    break
+            # LIKE 模糊匹配 matches 表（含日期容差）
+            if found is None:
+                for dc in date_candidates:
+                    for h, a in name_candidates:
+                        cur2.execute(
+                            "SELECT handicap FROM matches WHERE match_id LIKE ? AND match_id LIKE ? LIMIT 1",
+                            (f"{dc}_%{h}%", f"%_{a}"),
+                        )
+                        r = cur2.fetchone()
+                        if r and r[0] is not None:
+                            found = r[0]
+                            break
+                    if found is not None:
+                        break
+            if found is not None:
+                df.at[idx, '亚盘盘口'] = found
+        conn2.close()
+    except Exception as e:
+        print(f"   ⚠️ 亚盘盘口加载失败: {e}")
+
+    hit_rate = hit / total if total > 0 else 0.0
+    print(f"赔率匹配: {hit}/{total} 命中 ({hit_rate*100:.1f}%), {miss} 场未命中（NaN）")
+    if miss_samples:
+        print(f"   未命中样本(前10): {miss_samples}")
+    return df, hit_rate
 
 def clean_and_transform_data(df):
     df = df.copy()
@@ -270,8 +440,11 @@ def clean_and_transform_data(df):
     return df
 
 def winsorize_series(series, lower_percentile=1, upper_percentile=99):
-    lower = np.percentile(series.dropna(), lower_percentile)
-    upper = np.percentile(series.dropna(), upper_percentile)
+    clean = series.dropna()
+    if len(clean) == 0:
+        return series
+    lower = np.percentile(clean, lower_percentile)
+    upper = np.percentile(clean, upper_percentile)
     return series.clip(lower=lower, upper=upper)
 
 def build_odds_features(df):
@@ -1064,9 +1237,12 @@ def main():
     print("足球比赛预测模型回测训练 (包含赔率数据)")
     print("=" * 60)
     
-    print("\n1. 加载CSV数据...")
-    raw_df = load_csv_data()
+    print("\n1. 加载数据库数据 (five_leagues.db + odds.db)...")
+    raw_df = load_match_data_from_db()
     print(f"   原始数据: {len(raw_df)} 场比赛")
+    print("   加载 close 赔率 (odds.db wdl_history/handicap_history)...")
+    raw_df, odds_hit_rate = load_close_odds_from_db(raw_df)
+    print(f"   赔率匹配命中率: {odds_hit_rate*100:.1f}%")
     
     print("\n2. 清洗和转换数据...")
     df = clean_and_transform_data(raw_df)

@@ -54,8 +54,14 @@ DB_PATH = os.path.join(DATA_DIR, 'odds.db')
 def build_team_elo_snapshot() -> dict:
     """
     基于历史比赛结果计算所有球队的最新 Elo 评分快照。
-    按比赛日期顺序更新，返回 {team_name: elo_rating}。
+
+    C-20260919-018 修复：
+    1. 主客队名先归一化（matches 表英文行/中文行双轨收敛）；
+    2. 按 (match_date, 主, 客) 去重，同一场真实比赛只更新一次，消除双重计数；
+    3. 快照主键保持英文（prediction_core 以 match['home_team'] 英文查询），
+       并为每队写入全部已知英文别名键，不同英文写法都能命中。
     """
+    import re
     conn = sqlite3.connect(DB_PATH)
     query = """
         SELECT match_id, match_date, home_team, away_team, actual_score
@@ -64,8 +70,21 @@ def build_team_elo_snapshot() -> dict:
           AND actual_score != ''
         ORDER BY match_date
     """
-    df = pd.read_sql(query, conn)
+    raw = pd.read_sql(query, conn)
     conn.close()
+
+    from feature_utils import normalize_team_name
+    raw['home_n'] = raw['home_team'].apply(normalize_team_name)
+    raw['away_n'] = raw['away_team'].apply(normalize_team_name)
+    df = raw.drop_duplicates(subset=['match_date', 'home_n', 'away_n'], keep='first').reset_index(drop=True)
+
+    # 记录每支归一化球队在 matches 中出现过的原始英文名（快照别名键用）
+    team_raw_names = {}
+    for _, r in raw.iterrows():
+        if re.search(r'[A-Za-z]', r['home_team']):
+            team_raw_names.setdefault(r['home_n'], set()).add(r['home_team'])
+        if re.search(r'[A-Za-z]', r['away_team']):
+            team_raw_names.setdefault(r['away_n'], set()).add(r['away_team'])
 
     def parse_score(s):
         try:
@@ -80,21 +99,20 @@ def build_team_elo_snapshot() -> dict:
         except:
             return None, None
 
-    elo_ratings = {}  # team_name -> elo
-    team_history = {}  # team_name -> list of (date, elo_after)
+    elo_ratings_cn = {}   # 归一队名 -> elo
+    team_history = {}     # 归一队名 -> list of (date, elo_after)
 
     for _, row in df.iterrows():
         hg, ag = parse_score(row['actual_score'])
         if hg is None:
             continue
-        home = row['home_team']
-        away = row['away_team']
+        home = row['home_n']
+        away = row['away_n']
         date = row['match_date']
 
-        elo_h = elo_ratings.get(home, DEFAULT_ELO)
-        elo_a = elo_ratings.get(away, DEFAULT_ELO)
+        elo_h = elo_ratings_cn.get(home, DEFAULT_ELO)
+        elo_a = elo_ratings_cn.get(away, DEFAULT_ELO)
 
-        # 主队实际得分
         if hg > ag:
             actual_h = 1.0
         elif hg == ag:
@@ -105,23 +123,45 @@ def build_team_elo_snapshot() -> dict:
         exp_h = expected_score(elo_h, elo_a, HOME_ADVANTAGE)
         new_elo_h, new_elo_a = update_elo(elo_h, elo_a, actual_h, K_FACTOR, HOME_ADVANTAGE)
 
-        elo_ratings[home] = new_elo_h
-        elo_ratings[away] = new_elo_a
+        elo_ratings_cn[home] = new_elo_h
+        elo_ratings_cn[away] = new_elo_a
 
         team_history.setdefault(home, []).append((date, new_elo_h))
         team_history.setdefault(away, []).append((date, new_elo_a))
 
-    # 计算每支球队的近5场动量
-    elo_momentum = {}
+    # 近5场动量（归一键）
+    elo_momentum_cn = {}
     for team, hist in team_history.items():
         if len(hist) >= 5:
             recent_5 = [h[1] for h in hist[-5:]]
-            elo_momentum[team] = recent_5[-1] - recent_5[0]
+            elo_momentum_cn[team] = recent_5[-1] - recent_5[0]
         else:
-            elo_momentum[team] = 0.0
+            elo_momentum_cn[team] = 0.0
 
-    print(f"[ELO] 计算了 {len(elo_ratings)} 支球队的最新 Elo 评分")
-    print(f"[ELO] Elo 评分范围: {min(elo_ratings.values()):.1f} ~ {max(elo_ratings.values()):.1f}")
+    # 归一键 -> 英文键集合（matches 原始英文名 + TEAM_ALIASES 英文别名）
+    from team_name_mapping import TEAM_ALIASES
+    def _en_keys(canon):
+        names = set(team_raw_names.get(canon, set()))
+        for std, aliases in TEAM_ALIASES.items():
+            if normalize_team_name(std) == canon:
+                for a in aliases:
+                    if re.search(r'[A-Za-z]', a) and not re.search(r'[\u4e00-\u9fff]', a):
+                        names.add(a)
+        return names
+
+    elo_ratings = {}
+    elo_momentum = {}
+    for canon, elo in elo_ratings_cn.items():
+        keys = _en_keys(canon)
+        if not keys:
+            keys = {canon}  # 无英文别名时保留归一键，避免丢队
+        for k in keys:
+            elo_ratings[k] = elo
+            elo_momentum[k] = elo_momentum_cn.get(canon, 0.0)
+
+    print(f"[ELO] 计算了 {len(elo_ratings_cn)} 支球队的最新 Elo 评分（{len(elo_ratings)} 个英文键）")
+    vals = list(elo_ratings_cn.values())
+    print(f"[ELO] Elo 评分范围: {min(vals):.1f} ~ {max(vals):.1f}")
 
     snapshot = {
         'elo_ratings': elo_ratings,

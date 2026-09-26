@@ -2,7 +2,7 @@
 """
 bayesian_incremental.py — P1-B 阶段2：attack/defense 后验的增量更新（扩展卡尔曼滤波）
 ================================================================================
-背景（评估报告 v2.0 §P1-B + docs/bayesian_incremental_design.md）：
+背景（评估报告 v2.0 §P1-B + docs/archive/bayesian_incremental_design.md（已归档））：
   现状贝叶斯层级模型（bayesian_hierarchical_model.py）每次刷新都「全量重训」——
   对所有历史比赛从头做 MAP 点估计，无「后验携带 + 增量更新」机制。
   本模块实现设计方案的选项 B（首选）：状态空间 + Kalman 滤波，把 attack/defense

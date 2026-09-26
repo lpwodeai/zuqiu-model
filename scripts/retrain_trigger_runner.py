@@ -275,12 +275,21 @@ def run_retrain(config, state, force=False):
 
         elapsed = time.time() - start_time
 
-        if result.returncode == 0:
-            log.info(f"重训成功! 耗时 {elapsed:.1f}s")
-            log.info(f"STDOUT:\n{result.stdout[-500:]}")
+        # C-20260918-042 修复：stdout 解析 + training_*.json fallback 双轨判定
+        # 防止 deploy_t005v3_final.py 退出码非 0 或 stdout 缺关键字时误判为 failed
+        metrics = parse_metrics_from_output(result.stdout) if result.stdout else None
+        if not metrics or all(v is None for v in (metrics or {}).values()):
+            log.warning("stdout 解析无指标，回退读取 logs/training_*.json")
+            metrics = parse_metrics_from_training_log(start_time)
 
-            metrics = parse_metrics_from_output(result.stdout)
-            gate_result = check_performance_gate(config, metrics)
+        # 检查最新 training_*.json 是否出现"训练完成"stage（成功标志）
+        training_log_success = check_training_log_completion(start_time)
+
+        if result.returncode == 0 or training_log_success:
+            log.info(f"重训成功! 耗时 {elapsed:.1f}s (returncode={result.returncode}, training_log_success={training_log_success})")
+            log.info(f"STDOUT:\n{result.stdout[-500:] if result.stdout else '(empty)'}")
+
+            gate_result = check_performance_gate(config, metrics or {})
 
             if gate_result['passed'] or force:
                 log.info(f"性能门禁检查: {'通过' if gate_result['passed'] else '强制通过（force=True）'}")
@@ -302,23 +311,97 @@ def run_retrain(config, state, force=False):
                     'gate': gate_result,
                 }
         else:
-            log.error(f"重训失败! 耗时 {elapsed:.1f}s")
-            log.error(f"STDERR:\n{result.stderr[-500:]}")
+            log.error(f"重训失败! 耗时 {elapsed:.1f}s (returncode={result.returncode}, training_log_success={training_log_success})")
+            log.error(f"STDERR:\n{result.stderr[-500:] if result.stderr else '(empty)'}")
             return {
                 'success': False,
-                'error': result.stderr[-200:],
+                'error': result.stderr[-200:] if result.stderr else 'returncode != 0 and no training_log_success',
                 'elapsed': elapsed,
             }
-
     except subprocess.TimeoutExpired:
         elapsed = time.time() - start_time
         log.error(f"重训超时! 耗时 {elapsed:.1f}s")
         return {'success': False, 'error': '执行超时 (> 600s)', 'elapsed': elapsed}
-
     except Exception as e:
         elapsed = time.time() - start_time
         log.error(f"重训异常: {e}")
         return {'success': False, 'error': str(e), 'elapsed': elapsed}
+
+
+def parse_metrics_from_training_log(start_time):
+    """C-20260918-042 新增：从最新 logs/training_*.json 解析指标
+    回退方案——当 stdout 关键字解析失败时使用
+    """
+    metrics = {
+        'draw_recall': None,
+        'draw_precision': None,
+        'rate_deviation': None,
+        'accuracy': None,
+        'f1_macro': None,
+    }
+    try:
+        import json
+        import glob
+        log_dir = BASE_DIR / 'logs'
+        candidates = sorted(glob.glob(str(log_dir / 'training_*.json')), reverse=True)
+        # 选 start_time 附近创建的文件（容忍 ±600s）
+        for fpath in candidates[:5]:
+            try:
+                mtime = os.path.getmtime(fpath)
+                if abs(mtime - start_time) < 700:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        stages = json.load(f)
+                    for stage in stages:
+                        m = stage.get('metrics', {})
+                        if not isinstance(m, dict) or not m:
+                            continue
+                        # 滚动窗口验证的 metrics
+                        if 'draw_recall' in m:
+                            metrics['draw_recall'] = m.get('draw_recall')
+                        if 'draw_precision' in m:
+                            metrics['draw_precision'] = m.get('draw_precision')
+                        if 'rate_deviation' in m:
+                            metrics['rate_deviation'] = m.get('rate_deviation')
+                        if 'mean_accuracy' in m and metrics['accuracy'] is None:
+                            metrics['accuracy'] = m.get('mean_accuracy')
+                        if 'f1_macro' in m:
+                            metrics['f1_macro'] = m.get('f1_macro')
+                    if any(v is not None for v in metrics.values()):
+                        log.info(f"从 {os.path.basename(fpath)} 解析到指标")
+                        break
+            except Exception as e:
+                log.debug(f"读取 {fpath} 失败: {e}")
+    except Exception as e:
+        log.warning(f"parse_metrics_from_training_log 异常: {e}")
+    return metrics
+
+
+def check_training_log_completion(start_time):
+    """C-20260918-042 新增：检查最新 training_*.json 末尾 stage 是否为'训练完成'
+    返回 True 表示训练实际成功（即使子进程退出码非 0）
+    """
+    try:
+        import json
+        import glob
+        log_dir = BASE_DIR / 'logs'
+        candidates = sorted(glob.glob(str(log_dir / 'training_*.json')), reverse=True)
+        for fpath in candidates[:5]:
+            try:
+                mtime = os.path.getmtime(fpath)
+                if abs(mtime - start_time) < 700:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        stages = json.load(f)
+                    if stages and isinstance(stages, list) and stages:
+                        last = stages[-1]
+                        action = last.get('action', '')
+                        err = last.get('error')
+                        if '训练完成' in action and err is None:
+                            return True
+            except Exception as e:
+                log.debug(f"读取 {fpath} 失败: {e}")
+    except Exception as e:
+        log.warning(f"check_training_log_completion 异常: {e}")
+    return False
 
 
 def parse_metrics_from_output(output):
@@ -416,6 +499,22 @@ def cmd_trigger(config, state):
         state['consecutive_failures'] = state.get('consecutive_failures', 0) + 1
 
     save_state(state)
+
+    # C-20260918-042 修复：成功时同步更新 last_train_time.txt
+    # 解决 retrain_trigger_runner.py 与 auto_train.py 两套状态文件时间戳不同步问题
+    if result['success']:
+        try:
+            # 动态加载避免循环 import
+            import importlib.util
+            auto_train_path = SCRIPTS_DIR / 'auto_train.py'
+            spec = importlib.util.spec_from_file_location('auto_train', auto_train_path)
+            auto_train_mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(auto_train_mod)
+            # 调用 auto_train.update_last_train_time 更新 last_train_time.txt
+            auto_train_mod.update_last_train_time(auto_train_mod.LAST_TRAIN_FILE)
+            log.info(f"已同步更新 last_train_time.txt (auto_train.LAST_TRAIN_FILE)")
+        except Exception as e:
+            log.warning(f"同步更新 last_train_time.txt 失败（不阻断重训结果）: {e}")
 
     if result['success']:
         gate = result.get('gate', {})

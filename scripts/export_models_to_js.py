@@ -23,6 +23,7 @@ from datetime import datetime
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 ASSETS_DIR = os.path.join(PROJECT_DIR, 'assets')
+BACKUP_DIR = os.path.join(PROJECT_DIR, 'backups', 'assets_export_bak')
 
 
 def convert_xgb_sklearn_to_js(model):
@@ -193,12 +194,13 @@ def main():
     # 备份旧文件
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     if args.backup:
+        os.makedirs(BACKUP_DIR, exist_ok=True)
         for fname in ['xgb_model_export.js', 'lgb_model_export.js', 'feature_scaler_params.js']:
             old_path = os.path.join(ASSETS_DIR, fname)
             if os.path.exists(old_path):
-                bak_path = os.path.join(ASSETS_DIR, f'{fname}.bak_{timestamp}')
+                bak_path = os.path.join(BACKUP_DIR, f'{fname}.bak_{timestamp}')
                 shutil.copy2(old_path, bak_path)
-                print(f"   📋 备份: {fname} → {os.path.basename(bak_path)}")
+                print(f"   📋 备份: {fname} → {bak_path}")
 
     # 导出 XGBoost
     print("\n🔄 导出 XGBoost → xgb_model_export.js ...")

@@ -3,7 +3,7 @@
 attribution_engine.py — 模块 A3：赛后归因引擎（8 维度纯规则，P0）
 
 ===============================================
-背景（模型改进实施方案 v1.0 §三/A3）：
+背景（已归档：原模型改进实施方案 v1.0 §三/A3）：
   每场已完赛预测比赛输出带权重归因列表（权重和=100%），定位预测偏差根因。
   纯规则引擎实现（不用 LLM 判断，LLM 仅允许文字润色）。
   ⚠️ 平局归因方向修正：模型平局概率系统性高于市场（draw z=-2.86 显著负，
@@ -36,8 +36,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import sqlite3
 import sys
+import unicodedata
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -46,7 +49,7 @@ ODDS_DB = PROJECT_DIR / "data" / "odds.db"
 TIMING_DB = PROJECT_DIR / "data" / "odds_timing.db"
 
 sys.path.insert(0, str(PROJECT_DIR / "scripts"))
-from team_name_mapping import normalize_team_name  # noqa: E402
+from team_name_mapping import normalize_team_name, TEAM_ALIASES  # noqa: E402
 
 # ==================== 阈值与权重（对齐方案 §A3） ====================
 MISSING_FEATURE_THRESHOLD = 0.20   # 维度1：关键特征缺失率
@@ -142,64 +145,242 @@ def get_model_wdl(conn: sqlite3.Connection, match_id: str) -> Optional[Dict[str,
 
 
 def get_event_id(conn: sqlite3.Connection, match_id: str) -> Optional[str]:
-    """fbref_match_mapping: odds_match_id -> SofaScore event_id。"""
+    """fbref_match_mapping: odds_match_id -> SofaScore event_id。
+
+    精确 odds_match_id 失配时自动 fuzzy 回退（见 find_event_id_fuzzy）：
+    model_predictions 用 UTC 日期+预测侧队名，而 mapping 用北京日期+SofaScore 队名，
+    跨日凌晨场（如 2026-09-16_FC Barcelona_... vs 2026-09-17_FC Barcelona_...）会失配。
+    """
     cur = conn.cursor()
     cur.execute("SELECT fbref_match_id FROM fbref_match_mapping WHERE odds_match_id=?", (match_id,))
     row = cur.fetchone()
-    return str(row[0]) if row and row[0] else None
+    if row and row[0]:
+        return str(row[0])
+    return find_event_id_fuzzy(conn, match_id)
+
+
+# ---- fuzzy 回退：日期±1 + 英文队名 token 匹配 ----
+# 停用词（西/英/意冠词、介词）与俱乐部组织后缀，匹配前剔除
+_TEAM_STOP_TOKENS = {"de", "a", "da", "la", "el", "the", "of", "and", "del"}
+_TEAM_SUFFIX_TOKENS = {
+    "fc", "cf", "afc", "sc", "ac", "ss", "cd", "ud", "us", "rc", "sd", "cp",
+    "club", "calcio", "ssc", "cfc",
+}
+
+
+def _team_tokens(name: str) -> set:
+    """英文队名 -> 去重音/小写/去停用词与后缀的 token 集合。
+
+    例：'Deportivo de A Coruña' -> {'deportivo', 'coruna'}；'Málaga CF' -> {'malaga'}。
+    """
+    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode().lower()
+    return {
+        t for t in re.split(r"[^a-z]+", ascii_name)
+        if t and t not in _TEAM_STOP_TOKENS and t not in _TEAM_SUFFIX_TOKENS
+    }
+
+
+def _team_token_match(t1: set, t2: set) -> bool:
+    """两队名 token 集合是否同指：含共同独特 token，且满足包含或 Jaccard≥0.3。"""
+    if not t1 or not t2:
+        return False
+    inter = t1 & t2
+    if not inter:
+        return False
+    if inter == t1 or inter == t2:
+        return True
+    return len(inter) / len(t1 | t2) >= 0.3
+
+
+def find_event_id_fuzzy(conn: sqlite3.Connection, match_id: str) -> Optional[str]:
+    """精确 odds_match_id 失配时的 event_id 回退查找。
+
+    口径：match_id 形如 ``{YYYY-MM-DD}_{home}_{away}``（队名不含下划线）。
+    在 mapping 表日期 ±1 天窗口内，按主/客队 token 双匹配；
+    命中必须唯一（多义时保守返回 None，避免错误关联）。
+    """
+    try:
+        d = datetime.strptime(match_id[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    rest = match_id[11:]
+    if "_" not in rest:
+        return None
+    home_name, away_name = rest.split("_", 1)
+    home_tok, away_tok = _team_tokens(home_name), _team_tokens(away_name)
+    if not home_tok or not away_tok:
+        return None
+
+    lo = (d - timedelta(days=1)).isoformat()
+    hi = (d + timedelta(days=1)).isoformat()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT DISTINCT fbref_match_id, home_team_cn, away_team_cn "
+        "FROM fbref_match_mapping "
+        "WHERE substr(odds_match_id, 1, 10) BETWEEN ? AND ?",
+        (lo, hi),
+    )
+    hits = [
+        str(r[0]) for r in cur.fetchall()
+        if _team_token_match(home_tok, _team_tokens(r[1] or ""))
+        and _team_token_match(away_tok, _team_tokens(r[2] or ""))
+    ]
+    return hits[0] if len(hits) == 1 else None
 
 
 def get_understat_xg(conn: sqlite3.Connection, basics: Dict[str, Any]) -> Optional[Dict[str, float]]:
-    """维度4：understat xG（league + datetime + 英文队名匹配）。"""
+    """维度4：understat xG（league + datetime + 英文队名匹配）。
+
+    C-20260921-042: 修复中文队名匹配——先将 post_match_review 的中文队名
+    转换为英文，再与 Understat 英文队名匹配。
+    C-20260921-044: 修复时区日期偏移——Understat 存 UTC 日期，post_match_review
+    存北京时间（UTC+8），跨天比赛日期会偏移 1 天。改为 ±1 天范围搜索。
+    """
     if not basics:
         return None
     cur = conn.cursor()
     league = basics.get("league")
-    home = basics.get("home_team")
-    away = basics.get("away_team")
+    home_raw = basics.get("home_team")
+    away_raw = basics.get("away_team")
     date = basics.get("match_date")
-    date_like = f"{date}%"
 
-    # 策略1：精确队名 + league
-    cur.execute(
-        "SELECT home_xg, away_xg, home_goals, away_goals FROM understat_match_team_stats "
-        "WHERE league=? AND home_team=? AND away_team=? AND datetime LIKE ? LIMIT 1",
-        (league, home, away, date_like),
-    )
-    row = cur.fetchone()
-    if row is None:
-        # 策略2：精确队名，忽略 league（值域差异 fallback）
+    # C-20260921-044: ±1 天范围搜索（时区偏移兼容）
+    from datetime import datetime as _dt, timedelta as _td
+    try:
+        d = _dt.strptime(date, "%Y-%m-%d")
+        date_likes = [(d + _td(days=off)).strftime("%Y-%m-%d") + "%" for off in (-1, 0, 1)]
+    except (ValueError, TypeError):
+        date_likes = [f"{date}%"] if date else []
+
+    # C-20260921-042: 中文→英文转换
+    home = _cn_to_en_team(home_raw) or home_raw
+    away = _cn_to_en_team(away_raw) or away_raw
+
+    # 策略1：精确队名 + league（±1天）
+    for dl in date_likes:
         cur.execute(
             "SELECT home_xg, away_xg, home_goals, away_goals FROM understat_match_team_stats "
-            "WHERE home_team=? AND away_team=? AND datetime LIKE ? LIMIT 1",
-            (home, away, date_like),
+            "WHERE league=? AND home_team=? AND away_team=? AND datetime LIKE ? LIMIT 1",
+            (league, home, away, dl),
         )
         row = cur.fetchone()
+        if row:
+            break
+    if row is None:
+        # 策略2：精确队名，忽略 league（±1天）
+        for dl in date_likes:
+            cur.execute(
+                "SELECT home_xg, away_xg, home_goals, away_goals FROM understat_match_team_stats "
+                "WHERE home_team=? AND away_team=? AND datetime LIKE ? LIMIT 1",
+                (home, away, dl),
+            )
+            row = cur.fetchone()
+            if row:
+                break
     if row is None:
         # 策略3：归一化队名匹配（处理 FC Augsburg vs Augsburg、
         # Bayer 04 Leverkusen vs Bayer Leverkusen 等英英变体）
         home_norm = _norm_en_team(home)
         away_norm = _norm_en_team(away)
-        if home_norm and away_norm:
-            cur.execute(
-                "SELECT home_team, away_team, home_xg, away_xg, home_goals, away_goals "
-                "FROM understat_match_team_stats WHERE datetime LIKE ?",
-                (date_like,),
-            )
-            for r in cur.fetchall():
-                us_home_norm = _norm_en_team(r[0])
-                us_away_norm = _norm_en_team(r[1])
-                if (home_norm == us_home_norm and away_norm == us_away_norm):
-                    row = (r[2], r[3], r[4], r[5])
-                    break
-                # 主客互换兜底
-                if (home_norm == us_away_norm and away_norm == us_home_norm):
-                    row = (r[3], r[2], r[5], r[4])  # 主客互换
+        # C-20260921-042: 同时用 normalize_team_name 做双向归一化（处理
+        # RB Leipzig vs RasenBallsport Leipzig、Hamburg vs Hamburger SV 等）
+        home_std = normalize_team_name(home) or normalize_team_name(home_raw)
+        away_std = normalize_team_name(away) or normalize_team_name(away_raw)
+        if (home_norm and away_norm) or (home_std and away_std):
+            for dl in date_likes:
+                cur.execute(
+                    "SELECT home_team, away_team, home_xg, away_xg, home_goals, away_goals "
+                    "FROM understat_match_team_stats WHERE datetime LIKE ?",
+                    (dl,),
+                )
+                for r in cur.fetchall():
+                    # 路径A: _norm_en_team 英文归一化匹配
+                    us_home_norm = _norm_en_team(r[0])
+                    us_away_norm = _norm_en_team(r[1])
+                    if (home_norm and away_norm and
+                        home_norm == us_home_norm and away_norm == us_away_norm):
+                        row = (r[2], r[3], r[4], r[5])
+                        break
+                    if (home_norm and away_norm and
+                        home_norm == us_away_norm and away_norm == us_home_norm):
+                        row = (r[3], r[2], r[5], r[4])
+                        break
+                    # 路径B: normalize_team_name 双向归一化匹配
+                    us_home_std = normalize_team_name(r[0])
+                    us_away_std = normalize_team_name(r[1])
+                    if (home_std and away_std and
+                        home_std == us_home_std and away_std == us_away_std):
+                        row = (r[2], r[3], r[4], r[5])
+                        break
+                    if (home_std and away_std and
+                        home_std == us_away_std and away_std == us_home_std):
+                        row = (r[3], r[2], r[5], r[4])
+                        break
+                if row:
                     break
     if row is None:
-        return None
+        # C-20260922: Understat 无数据时 fallback 到 xgscore.io（try/except 全隔离）
+        return _xgscore_fallback(conn, basics)
     return {"home_xg": float(row[0]), "away_xg": float(row[1]),
             "home_goals": int(row[2]), "away_goals": int(row[3])}
+
+
+def _xgscore_fallback(conn: sqlite3.Connection, basics: Dict[str, Any]) -> Optional[Dict[str, float]]:
+    """C-20260922: Understat 无数据时 fallback 到 xgscore.io 采集比赛级 xG。
+
+    策略：
+      1. 先查 xgscore_match_stats 缓存表（避免复盘时重复请求）
+      2. 缓存未命中则实时抓取 xgscore.io 比赛页
+    try/except 全隔离，失败返回 None（维度4 运气偏差归因跳过，不影响其他维度）。
+    """
+    try:
+        import sys as _sys
+        _col_dir = PROJECT_DIR / "collection"
+        if str(_col_dir) not in _sys.path:
+            _sys.path.insert(0, str(_col_dir))
+        from xgscore_collector import get_cached_xg, fetch_match_xg  # noqa: E402
+        league = basics.get("league")
+        home = basics.get("home_team")
+        away = basics.get("away_team")
+        date = basics.get("match_date")
+        if not (league and home and away and date):
+            return None
+        # 1. 查 xgscore_match_stats 缓存表
+        cached = get_cached_xg(conn, league, home, away, date)
+        if cached:
+            logging.getLogger("attribution").debug(
+                f"xgscore 缓存命中: {home} vs {away} xG {cached['home_xg']}-{cached['away_xg']}")
+            return cached
+        # 2. 实时抓取（不落库，避免复盘时副作用写入）
+        result = fetch_match_xg(league, home, away, date)
+        if result:
+            logging.getLogger("attribution").info(
+                f"xgscore fallback 命中: {home} vs {away} xG {result['home_xg']}-{result['away_xg']}")
+        return result
+    except Exception as e:
+        logging.getLogger("attribution").debug(f"xgscore fallback 异常（已隔离）: {e}")
+        return None
+
+
+def _cn_to_en_team(cn_name: Optional[str]) -> Optional[str]:
+    """C-20260921-042: 中文队名→英文队名（用于 Understat 匹配）。
+
+    优先从 TEAM_ALIASES 查找第一个英文别名；
+    若未命中，用 normalize_team_name 归一后查找；
+    都未命中返回 None（调用方 fallback 到 _norm_en_team 模糊匹配）。
+    """
+    if not cn_name:
+        return None
+    # 检查是否已是英文
+    if cn_name.isascii():
+        return cn_name
+    # 直接从 TEAM_ALIASES 查找
+    std = normalize_team_name(cn_name)
+    if std and std in TEAM_ALIASES:
+        for alias in TEAM_ALIASES[std]:
+            if alias.isascii():
+                return alias
+    return None
 
 
 def _norm_en_team(name: Optional[str]) -> str:
@@ -236,8 +417,8 @@ def _cn_team(conn: sqlite3.Connection, en_name: str) -> str:
     return norm if norm else en_name
 
 
-def _find_cricket_match_id(conn: sqlite3.Connection, match_id: str,
-                           home_en: str, away_en: str) -> Optional[str]:
+def _find_odds_match_id(conn: sqlite3.Connection, match_id: str,
+                        home_en: str, away_en: str) -> Optional[str]:
     """竞彩 wdl_history match_id（中文格式）匹配。
 
     候选1：构造 {date}_{home_cn}_{away_cn}；候选2：遍历当日 DISTINCT match_id 双向归一化比对。
@@ -267,10 +448,10 @@ def _find_cricket_match_id(conn: sqlite3.Connection, match_id: str,
 
 def get_odds_timeline(conn: sqlite3.Connection, match_id: str,
                       basics: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """维度2/8：竞彩 wdl_history 开盘→末条。返回 {cricket_id, open, close, drift_max}。"""
+    """维度2/8：竞彩 wdl_history 开盘→末条。返回 {odds_id, open, close, drift_max}。"""
     if not basics:
         return None
-    cid = _find_cricket_match_id(conn, match_id, basics.get("home_team", ""), basics.get("away_team", ""))
+    cid = _find_odds_match_id(conn, match_id, basics.get("home_team", ""), basics.get("away_team", ""))
     if cid is None:
         return None
     cur = conn.cursor()
@@ -289,7 +470,7 @@ def get_odds_timeline(conn: sqlite3.Connection, match_id: str,
             if d > drift_max:
                 drift_max = d
                 drift_dir = label
-    return {"cricket_id": cid, "open": list(open_o), "close": list(close_o),
+    return {"odds_id": cid, "open": list(open_o), "close": list(close_o),
             "drift_max": round(drift_max, 4), "drift_dir": drift_dir,
             "snapshots": len(rows)}
 
@@ -555,7 +736,7 @@ class AttributionEngine:
                 "type": "赔率异动归因", "weight": BASE_WEIGHTS["赔率异动归因"],
                 "description": f"竞彩赔率赛前漂移最大 {odds_hist['drift_max']:.1%}（{odds_hist['drift_dir']} 方向），"
                                f"市场临场信息未反映在模型特征中",
-                "evidence": {"cricket_match_id": odds_hist["cricket_id"],
+                "evidence": {"odds_match_id": odds_hist["odds_id"],
                              "open": odds_hist["open"], "close": odds_hist["close"],
                              "drift_max": odds_hist["drift_max"], "snapshots": odds_hist["snapshots"]},
             })

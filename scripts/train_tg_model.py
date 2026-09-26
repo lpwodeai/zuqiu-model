@@ -94,23 +94,22 @@ def prepare_data(features: pd.DataFrame):
     # 目标变量
     y_raw = features['actual_total_goals'].copy()
     
+    # 元数据
+    meta = features[['league', 'date', 'home_team', 'away_team']].copy()
+    meta['actual_total_goals'] = y_raw
+    
+    # 过滤无标签样本（必须在 int 转换之前，否则 NaN 报错）
+    valid_mask = y_raw.notna()
+    X = X[valid_mask]
+    y_raw = y_raw[valid_mask]
+    meta = meta[valid_mask]
+    
     # 7类分类目标
     y_multi = y_raw.apply(lambda x: min(int(x), 6))  # 6+球 → 6
     y_multi = y_multi.astype(int)
     
     # 大/小球二分类目标
     y_binary = (y_raw > 2).astype(int)
-    
-    # 元数据
-    meta = features[['league', 'date', 'home_team', 'away_team']].copy()
-    meta['actual_total_goals'] = y_raw
-    
-    # 过滤无标签样本
-    valid_mask = y_raw.notna()
-    X = X[valid_mask]
-    y_multi = y_multi[valid_mask]
-    y_binary = y_binary[valid_mask]
-    meta = meta[valid_mask]
     
     print(f"\n[DATA] 准备数据完成:")
     print(f"    特征维度: {X.shape[1]}")
@@ -667,41 +666,49 @@ def add_historical_goal_features(X, meta):
 
 
 def add_wdl_features(X, features_df):
-    """添加 WDL 隐含概率特征"""
+    """添加 WDL 去水概率特征（3维，FEAT-014 口径：1/odds→归一化去水）。"""
     try:
         import sqlite3
+        from feature_utils import build_match_alignment
         db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'odds.db')
         conn = sqlite3.connect(db_path)
-        
-        # wdl_history表列名: win_a (主胜), draw, win_b (客胜)
-        wdl_df = pd.read_sql("""
-            SELECT h.match_id as history_match_id, m.matches_match_id,
-                   h.win_a, h.draw, h.win_b, h.timestamp
-            FROM wdl_history h
-            INNER JOIN match_id_mapping m ON h.match_id = m.sh_match_id
-            WHERE h.timestamp < '2026-07-01'
-            ORDER BY h.match_id, h.timestamp
-        """, conn)
+
+        # wdl_history 列存的是赔率；对齐走四通道（含 26-27 中文键）
+        alignment = build_match_alignment(conn, "wdl_history")
+        wdl_raw = pd.read_sql(
+            "SELECT match_id, timestamp, win_a, draw, win_b FROM wdl_history", conn
+        )
         conn.close()
-        
-        if len(wdl_df) > 0:
-            wdl_latest = wdl_df.sort_values('timestamp').groupby('history_match_id').last()
-            wdl_latest = wdl_latest.set_index('matches_match_id')
-            
-            for col in ['win_a', 'draw', 'win_b']:
-                wdl_latest[col] = wdl_latest[col].fillna(0)
-            row_sums = wdl_latest[['win_a', 'draw', 'win_b']].sum(axis=1)
-            for col in ['win_a', 'draw', 'win_b']:
-                wdl_latest[col] = wdl_latest[col] / row_sums.replace(0, 1)
-            
-            common_idx = X.index.intersection(wdl_latest.index)
-            if len(common_idx) > 0:
-                for col in ['win_a', 'draw', 'win_b']:
-                    X.loc[common_idx, f'wdl_{col}'] = wdl_latest.loc[common_idx, col].values
-                wdl_feat_cols = ['wdl_win_a', 'wdl_draw', 'wdl_win_b']
-                X[wdl_feat_cols] = X[wdl_feat_cols].fillna(X[wdl_feat_cols].median())
-                print(f"[WDL] 添加 WDL 概率特征: {len(wdl_feat_cols)} 维, 匹配 {len(common_idx)} 场")
-                return X, wdl_feat_cols
+
+        wdl_raw["matches_match_id"] = wdl_raw["match_id"].map(alignment)
+        wdl_raw = wdl_raw.dropna(subset=["matches_match_id"])
+        wdl_latest = (wdl_raw.sort_values('timestamp')
+                      .groupby('matches_match_id').last())
+
+        # 1/赔率 → 去水概率
+        eps = 1e-10
+        odds = (wdl_latest[['win_a', 'draw', 'win_b']]
+                .apply(pd.to_numeric, errors='coerce').fillna(0.0).values)
+        implied = np.where(odds > eps, 1.0 / np.clip(odds, eps, None), 0.0)
+        rows_s = implied.sum(axis=1)
+        probs = np.where(
+            rows_s[:, None] > eps,
+            implied / np.clip(rows_s, eps, None)[:, None],
+            1.0 / 3.0,
+        )
+        wdl_prob = pd.DataFrame(
+            probs, index=wdl_latest.index,
+            columns=['wdl_win_a', 'wdl_draw', 'wdl_win_b']
+        )
+
+        common_idx = X.index.intersection(wdl_prob.index)
+        if len(common_idx) > 0:
+            for col in wdl_prob.columns:
+                X.loc[common_idx, col] = wdl_prob.loc[common_idx, col].values
+            wdl_feat_cols = wdl_prob.columns.tolist()
+            X[wdl_feat_cols] = X[wdl_feat_cols].fillna(X[wdl_feat_cols].median())
+            print(f"[WDL] 添加 WDL 概率特征: {len(wdl_feat_cols)} 维, 匹配 {len(common_idx)} 场")
+            return X, wdl_feat_cols
     except Exception as e:
         print(f"[WDL] 无法添加 WDL 特征: {e}")
         import traceback; traceback.print_exc()
@@ -768,7 +775,9 @@ def add_match_lag_features(X, tg_features_df):
     """添加 Lag 版本比赛级特征（✅ 无数据泄露：仅使用历史数据）"""
     try:
         lag_df = build_match_lag_features_for_tg(tg_features_df)
-        
+
+        # 防御：按索引去重（对齐可能多对一）
+        lag_df = lag_df[~lag_df.index.duplicated(keep='last')]
         lag_cols = [c for c in lag_df.columns]
         common_idx = X.index.intersection(lag_df.index)
         
@@ -837,6 +846,135 @@ def cross_validate_3class(X, y, meta, n_splits=5):
             print(f"    F1 Macro: {np.mean(results[model_name]['f1_macro']):.4f} ± {np.std(results[model_name]['f1_macro']):.4f}")
     
     return results
+
+
+# ============================================================
+# 统一特征矩阵 + 部署 + serving（C-20260920-026，train/serve 同源契约）
+# ============================================================
+
+def build_enhanced_matrix(features: pd.DataFrame):
+    """对 build_tg_features() 结果叠加全部增强（不过滤标签）。
+
+    训练与推理共用同一增强序列与填充顺序：
+    tg 基础20 + Elo10 + 历史进球6 + WDL去水3 + SofaScore23 + Lag比赛级312。
+
+    返回:
+        X: 增强矩阵（index=matches_match_id）
+        meta: ['league','date','home_team','away_team']
+        groups: 各组特征列名 dict
+    """
+    feature_cols = [c for c in features.columns if c.startswith('tg_')]
+    X = features[feature_cols].copy()
+    if X.isnull().any().any():
+        X = X.fillna(X.median())
+
+    meta = features[['league', 'date', 'home_team', 'away_team']].copy()
+
+    X, elo_cols = add_elo_features(X, meta)
+    X, hist_cols = add_historical_goal_features(X, meta)
+    X, wdl_cols = add_wdl_features(X, features)
+    X, sofa_cols = add_sofascore_features(X, features)
+    X, lag_cols = add_match_lag_features(X, features)
+
+    # 兜底：残余 NaN 用全矩阵中位数 → 0（填充顺序训练/推理一致）
+    if X.isnull().any().any():
+        X = X.fillna(X.median()).fillna(0.0)
+
+    groups = {'elo': elo_cols, 'hist': hist_cols, 'wdl': wdl_cols,
+              'sofa': sofa_cols, 'lag': lag_cols}
+    return X, meta, groups
+
+
+_TG_SERVING_CACHE: dict = {}
+
+
+def get_serving_matrix(force_rebuild: bool = False) -> pd.DataFrame:
+    """serving 增强矩阵进程内单例（全口径，含 2026-07 后比赛）。"""
+    if force_rebuild or 'X' not in _TG_SERVING_CACHE:
+        features = build_tg_features(max_valid_timestamp='2099-12-31 23:59:59')
+        X, _, _ = build_enhanced_matrix(features)
+        _TG_SERVING_CACHE['X'] = X
+    return _TG_SERVING_CACHE['X']
+
+
+def deploy_final_model(max_valid_timestamp: str = '2099-12-31 23:59:59'):
+    """全量训练 7 类 LightGBM 并落盘 assets/t004_tg_lgb_model.pkl。
+
+    pkl bundle: model / feature_cols / medians / classes / trained_n / timestamp。
+    medians 为训练矩阵各特征中位数，供 serving 未命中行兜底（保证 train/serve 同口径）。
+    """
+    features = build_tg_features(max_valid_timestamp=max_valid_timestamp)
+    X, _, groups = build_enhanced_matrix(features)
+
+    y_raw = features['actual_total_goals']
+    mask = y_raw.notna()
+    Xtr = X[mask]
+    ytr = y_raw[mask].apply(lambda x: min(int(x), 6)).astype(int)
+
+    feature_cols = Xtr.columns.tolist()
+    medians = Xtr[feature_cols].median()
+
+    model = lgb.LGBMClassifier(
+        objective='multiclass',
+        num_class=7,
+        max_depth=6,
+        learning_rate=0.05,
+        n_estimators=200,
+        num_leaves=31,
+        min_child_samples=20,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        reg_alpha=0.1,
+        reg_lambda=0.1,
+        random_state=42,
+        verbose=-1,
+        force_col_wise=True,
+    )
+    model.fit(Xtr[feature_cols], ytr)
+
+    bundle = {
+        'model': model,
+        'feature_cols': feature_cols,
+        'medians': medians,
+        'classes': [0, 1, 2, 3, 4, 5, 6],
+        'trained_n': int(len(Xtr)),
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    out_path = os.path.join(OUTPUT_DIR, 't004_tg_lgb_model.pkl')
+    import pickle
+    with open(out_path, 'wb') as f:
+        pickle.dump(bundle, f)
+
+    print(f"[DEPLOY] T-004 已部署: {out_path}")
+    print(f"[DEPLOY] 训练样本={len(Xtr)} 特征维度={len(feature_cols)}")
+    return out_path
+
+
+def predict_for_matches(match_ids):
+    """用部署模型对目标 match_ids 输出 7 类概率。
+
+    未命中场次/特征统一用训练矩阵中位数兜底（与训练同口径）；
+    返回 np.ndarray, shape=(len(match_ids), 7)，顺序 0球~6+球。
+    """
+    import pickle
+    pkl_path = os.path.join(OUTPUT_DIR, 't004_tg_lgb_model.pkl')
+    if not os.path.exists(pkl_path):
+        raise FileNotFoundError(f"T-004 模型未部署: {pkl_path}（先运行 train_tg_model.py --deploy）")
+    with open(pkl_path, 'rb') as f:
+        bundle = pickle.load(f)
+
+    fcols = bundle['feature_cols']
+    X = get_serving_matrix()
+
+    for c in fcols:
+        if c not in X.columns:
+            X[c] = float(bundle['medians'][c])
+
+    Xt = X.reindex(list(match_ids))[fcols]
+    meds = bundle['medians'].reindex(fcols)
+    Xt = Xt.fillna(meds).fillna(0.0)
+
+    return bundle['model'].predict_proba(Xt)
 
 
 def main():
@@ -943,4 +1081,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser(description="T-004 总进球模型：默认跑 5 折时序 CV；--deploy 全量训练并落盘生产 pkl")
+    ap.add_argument('--deploy', action='store_true', help='全量训练并部署 assets/t004_tg_lgb_model.pkl')
+    args = ap.parse_args()
+    if args.deploy:
+        deploy_final_model()
+    else:
+        main()

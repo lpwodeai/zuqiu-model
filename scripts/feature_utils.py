@@ -292,7 +292,7 @@ def load_match_data(db_path=None):
     
     return df
 
-def load_match_data_odds(db_path=None):
+def load_match_data_odds(db_path=None, dedup=False):
     """
     从odds.db加载5大联赛完整比赛数据（含所有联赛）
     
@@ -336,6 +336,17 @@ def load_match_data_odds(db_path=None):
     
     df['home_team_name'] = df['home_team_name'].apply(normalize_team_name)
     df['away_team_name'] = df['away_team_name'].apply(normalize_team_name)
+
+    # C-20260919-018: 归一化后去重。matches 表对同一场真实比赛存在英文行+中文行两条
+    # 记录（双采集轨），归一化后收敛为同键。不去重会导致 Elo/球队特征对每场比赛
+    # 双重计数（近期赛果被放大，评分系统性偏移）。保留有 actual_score 的行。
+    if dedup:
+        df['_has_score'] = df['actual_score'].notna() & (df['actual_score'].astype(str).str.len() > 0)
+        df = (df.sort_values(['date', '_has_score'], kind='mergesort')
+                .drop_duplicates(subset=['date', 'home_team_name', 'away_team_name'], keep='last')
+                .drop(columns=['_has_score'])
+                .sort_values('date', kind='mergesort')
+                .reset_index(drop=True))
     
     home_goals = []
     away_goals = []
@@ -1954,7 +1965,7 @@ def _league_zscore(feat: pd.DataFrame, leagues: pd.Series,
 def build_all_features(df, include_odds=True, include_elo=True, include_temporal=True,
                        include_score=True, include_nonlinear=True, include_draw_enhanced=True,
                        slim_odds=True, ts_odds=False, xg_deep=False, ctx_features=False,
-                       consensus_odds=False):
+                       consensus_odds=False, eu_drift=False):
     """
     构建所有特征（基础特征 + 球队特征 + 赔率特征 + D-010衍生特征 + D-012 Elo特征
     + D-013时序赔率特征 + 比分赔率特征 + 非线性变换特征 + 平局增强特征）
@@ -1980,6 +1991,10 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
         consensus_odds: P1-11 多博彩公司赔率一致性开关（默认 False 保证可回退 A/B）。
             True 时接入百家欧指共识概率（3维）+ 竞彩-共识偏离度（3维）+ 总偏离度+
             庄家分歧度+覆盖庄家数+市场抽水（共 10 维）
+        eu_drift: D-014 欧指漂移特征开关（默认 False 保证可回退 A/B）。
+            True 时接入百家欧指 avg_init→avg_live 漂移特征（8维：三方向相对漂移+
+            热门/冷门方向漂移+总幅度+熵变+缺失标志）。与 D-013 竞彩时序漂移互补
+            （D-014 是跨 57 家欧指共识漂移）。
 
     返回:
         X: 特征矩阵
@@ -2114,7 +2129,7 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
             print(f"   警告: 构建平局增强特征失败 - {e}")
             traceback.print_exc()
 
-    # === T-007: SofaScore 球员级特征（44维）===
+    # === T-007: SofaScore 球员级特征（46维/侧 = sofa_ 34 + pa_ 12，×主客共 92 列）===
     # 从 sofascore_team_features 表加载，按 date + 球队名合并
     try:
         db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'odds.db')
@@ -2152,6 +2167,23 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
             non_null_mask = merged[sofa_feature_cols[0]].notna() if sofa_feature_cols else pd.Series([False]*len(merged))
             coverage = non_null_mask.sum() / len(merged) * 100 if len(merged) > 0 else 0
             print(f"   球员特征覆盖率: {coverage:.1f}% ({non_null_mask.sum()}/{len(merged)})")
+
+            # 队名级覆盖诊断（风险②治理）：暴露映射/JOIN 导致的局部特征缺失
+            if sofa_feature_cols:
+                feat_col0 = sofa_feature_cols[0]
+                merged['_sofa_hit'] = merged[feat_col0].notna()
+                home_cov = merged.groupby('home_team_name')['_sofa_hit'].mean()
+                away_cov = merged.groupby('away_team_name')['_sofa_hit'].mean()
+                low_teams = {}
+                for t in set(home_cov.index) | set(away_cov.index):
+                    hv = home_cov.get(t, 0.0)
+                    av = away_cov.get(t, 0.0)
+                    if min(hv, av) < 0.5:
+                        low_teams[t] = (round(float(hv), 3), round(float(av), 3))
+                if low_teams:
+                    print(f"   ⚠️ 球员特征覆盖率异常(<50%)队名 {len(low_teams)} 个: "
+                          f"{dict(sorted(low_teams.items()))}")
+                merged = merged.drop(columns=['_sofa_hit'])
             
             # 将特征列加入 X（使用 pd.concat 一次性添加，避免 DataFrame 碎片化）
             sofa_extra = merged[sofa_feature_cols].fillna(-1.0)
@@ -2215,22 +2247,43 @@ def build_all_features(df, include_odds=True, include_elo=True, include_temporal
             print(f"   警告: 构建赔率一致性特征失败 - {e}")
             traceback.print_exc()
 
+    # === D-014: 欧指漂移特征（8维，avg_init→avg_live 相对漂移）===
+    # 与 D-013 竞彩时序漂移互补：D-014 是 57 家欧指共识初赔→即时赔漂移
+    # train/serve 同源：用相对变化（drift 比例）部分缓解赛前时点差异，缺失走 missing 分支
+    if eu_drift:
+        try:
+            from d014_eu_drift_features import build_d014_features
+            print(f"   构建 D-014 欧指漂移特征 (eu_drift={eu_drift})...")
+            drift_feat = build_d014_features(df)
+            print(f"   [OK] D-014 欧指漂移特征维度: {drift_feat.shape[1]} (shape={drift_feat.shape})")
+            if drift_feat.shape[1] > 0:
+                X = pd.concat([X, drift_feat], axis=1)
+            else:
+                print(f"   [WARN]  D-014欧指漂移特征为0维")
+        except Exception as e:
+            import traceback
+            print(f"   警告: 构建D-014欧指漂移特征失败 - {e}")
+            traceback.print_exc()
+
     y = df['result']
 
     return X, y
 
 
 def build_match_alignment(conn, history_table: str) -> dict:
-    """构建赔率历史表 → matches 表的三通道对齐映射。
+    """构建赔率历史表 → matches 表的四通道对齐映射。
 
     赔率历史表（wdl_history/handicap_history/total_goals_history/score_history）
     的 match_id 主要为中文格式（date_中文主_中文客）。matches 表的 match_id
     在 16/17~22/23 赛季同为中文格式、23/24 起转为英文格式（date_英文主_英文客），
-    单一通道无法全覆盖。本函数按优先级用三条通道解析对齐：
+    单一通道无法全覆盖。本函数按优先级用四条通道解析对齐：
 
       通道0（直接，最高优先）: history.match_id == matches.match_id（覆盖中文赛季，占 ~71%）
       通道1（桥表）: match_id_mapping (sh_match_id → matches_match_id)
-      通道2（兜底）: history 表自带 match_id_en 直接列（补齐英文赛季桥表未覆盖场次）
+      通道2（表内英文列）: history 表自带 match_id_en 直接列（补齐桥表未覆盖场次）
+      通道3（中→英名称，兜底）: 解析中文 match_id 的日期+中文队名，经 TEAM_NAME_MAP
+          中→英转换，在同日 matches 中做"翻译 token 被官方队名 token 覆盖（等值/前缀）"
+          的唯一候选匹配（处理 SV/RC/1. FC/Hamburger SV 等官方前缀后缀差异）
 
     Args:
         conn: sqlite3 连接
@@ -2240,15 +2293,20 @@ def build_match_alignment(conn, history_table: str) -> dict:
         dict: {history_match_id: matches_match_id}，未对齐项不出现
     """
     valid_tables = ("wdl_history", "handicap_history",
-                    "total_goals_history", "score_history")
+                    "total_goals", "total_goals_history", "score_history")
     if history_table not in valid_tables:
         raise ValueError(f"不支持的赔率历史表: {history_table}")
 
-    # ---- 通道0 备选集合：一次性加载 matches.match_id（避免对历史大表做 JOIN）----
+    # ---- 通道0 备选集合：一次性加载 matches（含队名/日期，供通道3复用）----
     matches_ids = set()
-    for (mid,) in conn.execute("SELECT match_id FROM matches").fetchall():
-        if mid is not None:
-            matches_ids.add(mid)
+    matches_rows = []
+    for mid, mdate, hd, aw in conn.execute(
+        "SELECT match_id, match_date, home_team, away_team FROM matches"
+    ).fetchall():
+        if mid is None:
+            continue
+        matches_ids.add(mid)
+        matches_rows.append((mid, mdate, hd, aw))
 
     # ---- 通道1 备选：match_id_mapping 桥表全量加载（小表）----
     bridge = {}
@@ -2266,6 +2324,7 @@ def build_match_alignment(conn, history_table: str) -> dict:
     has_en = any(d[0] == "match_id_en" for d in desc)
 
     mapping = {}
+    all_sh = []
     if has_en:
         rows = conn.execute(
             f"SELECT DISTINCT match_id, match_id_en FROM {history_table}"
@@ -2273,6 +2332,7 @@ def build_match_alignment(conn, history_table: str) -> dict:
         for sh, en in rows:
             if sh is None:
                 continue
+            all_sh.append(sh)
             if sh in matches_ids:
                 mapping[sh] = sh          # 通道0 直接对齐（最高优先）
                 continue
@@ -2289,6 +2349,7 @@ def build_match_alignment(conn, history_table: str) -> dict:
         for (sh,) in rows:
             if sh is None:
                 continue
+            all_sh.append(sh)
             if sh in matches_ids:
                 mapping[sh] = sh
                 continue
@@ -2296,4 +2357,91 @@ def build_match_alignment(conn, history_table: str) -> dict:
             if en1 is not None and en1 in matches_ids:
                 mapping[sh] = en1
 
+    # ---- 通道3：中文队名→英文匹配（C-20260920-025 新增）----
+    import re as _re
+    import unicodedata as _ud
+
+    def _key_en(name):
+        s = _ud.normalize("NFKD", str(name)).encode("ascii", "ignore").decode().lower()
+        s = _re.sub(r"[^a-z0-9 ]+", " ", s)
+        return _re.sub(r"\s+", " ", s).strip()
+
+    def _tokens(name):
+        return [t for t in _key_en(name).split() if t]
+
+    def _edit2(a, b):
+        """编辑距离是否 ≤2（token 级，短串 DP）。"""
+        if abs(len(a) - len(b)) > 2:
+            return False
+        prev = list(range(len(b) + 1))
+        for i, ca in enumerate(a, 1):
+            cur = [i]
+            for j, cb in enumerate(b, 1):
+                cur.append(min(prev[j] + 1, cur[j - 1] + 1,
+                               prev[j - 1] + (ca != cb)))
+            prev = cur
+        return prev[-1] <= 2
+
+    def _tok_match(t, o):
+        return o == t or o.startswith(t) or (len(t) >= 5 and _edit2(t, o))
+
+    def _covered(needle, official):
+        """needle 每个 token 都能在 official token 中找到（等值/前缀/编辑距离≤2）。"""
+        off = list(official)
+        return all(any(_tok_match(t, o) for o in off) for t in needle)
+
+    # 名称资源（函数级导入避免循环依赖）
+    try:
+        from export_team_name_map import build_export_maps
+        cn_to_en, en_to_cn = build_export_maps()
+    except Exception:  # noqa: BLE001
+        cn_to_en, en_to_cn = {}, {}
+
+    def _canon_cn(cn_name):
+        # 中文别名 → 标准中文名（TEAM_NAME_MAP 含中→中别名链）
+        return TEAM_NAME_MAP.get(cn_name, cn_name)
+
+    def _official_canon(off_name):
+        return en_to_cn.get(_key_en(off_name))
+
+    # matches 按日期分组：date -> list[(home_tokens, away_tokens, canon_h, canon_a, match_id)]
+    by_date = {}
+    for mid, mdate, hd, aw in matches_rows:
+        d = str(mdate)[:10] if mdate else None
+        by_date.setdefault(d, []).append(
+            (_tokens(hd), _tokens(aw), _official_canon(hd), _official_canon(aw), mid))
+
+    for sh in all_sh:
+        if sh in mapping:
+            continue
+        parts = sh.split("_", 2)
+        if len(parts) != 3 or len(parts[0]) != 10:
+            continue
+        d, cn_h, cn_a = parts
+        en_h, en_a = cn_to_en.get(cn_h), cn_to_en.get(cn_a)
+        if not en_h and not en_a:
+            continue
+        ch, ca = _canon_cn(cn_h), _canon_cn(cn_a)
+        th, ta = _tokens(en_h) if en_h else [], _tokens(en_a) if en_a else []
+        candidates = []
+        for dd in (d, _shift_date(d, -1), _shift_date(d, 1)):
+            for oh, oa, och, oca, mid in by_date.get(dd, []):
+                by_canon = (och is not None and oca is not None
+                            and och == ch and oca == ca)
+                by_token = bool(th) and bool(ta) and _covered(th, oh) and _covered(ta, oa)
+                if by_canon or by_token:
+                    candidates.append(mid)
+        uniq = set(candidates)
+        if len(uniq) == 1:
+            mapping[sh] = candidates[0]
+
     return mapping
+
+
+def _shift_date(d: str, delta: int) -> str:
+    """YYYY-MM-DD 日期加减天数（仅依赖标准库）。"""
+    try:
+        from datetime import datetime as _dt, timedelta as _td
+        return (_dt.strptime(d, "%Y-%m-%d") + _td(days=delta)).strftime("%Y-%m-%d")
+    except Exception:  # noqa: BLE001
+        return d

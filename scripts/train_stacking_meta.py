@@ -36,14 +36,15 @@ sys.path.insert(0, SCRIPT_DIR)
 BASE_DIR = os.path.dirname(SCRIPT_DIR)
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
-from feature_utils import load_match_data_odds, build_all_features
-from prediction_core import CalcEngine, STACKING_WEIGHTS
+from feature_utils import load_match_data_odds, build_all_features, ODDS_DB_PATH
+from prediction_core import CalcEngine, STACKING_WEIGHTS, LEAGUE_RHO
 from bayesian_hierarchical_model import BayesianHierarchicalModel
 from elo_rating import precompute_elo_ratings, get_team_elo_at_date
 from train_models import train_xgboost, train_lightgbm  # 复用生产级超参
+from db_utils import connect
 
 LEAGUES = ["英超", "西甲", "意甲", "德甲", "法甲"]
-LEAGUE_RHO = {"英超": -0.08, "西甲": -0.12, "意甲": -0.15, "德甲": -0.05, "法甲": -0.10}
+# LEAGUE_RHO 从 prediction_core 导入（train/serve 同源）
 MODELS = ["dixonColes", "elo", "xgboost", "lightgbm", "bayesian"]
 DEFAULT_PROB = {"win": 0.40, "draw": 0.27, "lose": 0.33}  # 基础模型缺失时的均匀先验
 
@@ -72,6 +73,40 @@ def _to_label_order(p):
     return np.array([p["lose"], p["draw"], p["win"]])
 
 
+def _build_odds_data_from_db(conn, match_id):
+    """从 odds.db 读取历史赔率，构建与 serving 同构的 odds_data。
+
+    wdl_history: win_a=主胜, draw=平, win_b=客胜 → {'win','draw','lose'}
+    total_goals_history: goals_0..goals_7_plus → {'0'..'7+'}
+    返回 odds_data 或 None（无赔率）。
+    """
+    rows = conn.execute(
+        "SELECT timestamp, win_a, draw, win_b FROM wdl_history "
+        "WHERE match_id=? ORDER BY timestamp", (match_id,)).fetchall()
+    if not rows:
+        return None
+    records = [{'time': r[0], 'win': float(r[1]), 'draw': float(r[2]), 'lose': float(r[3])}
+               for r in rows]
+    wdl_odds = {'close': records[-1], 'open': records[0], 'records': records}
+
+    tg_rows = conn.execute(
+        "SELECT timestamp, goals_0, goals_1, goals_2, goals_3, "
+        "goals_4, goals_5, goals_6, goals_7_plus "
+        "FROM total_goals_history WHERE match_id=? ORDER BY timestamp",
+        (match_id,)).fetchall()
+    tg_records = []
+    for r in tg_rows:
+        goals = {}
+        for idx, k in enumerate(['0', '1', '2', '3', '4', '5', '6', '7+']):
+            v = r[idx + 1]
+            if v is not None:
+                goals[k] = float(v)
+        if goals:
+            tg_records.append({'pub_time': r[0], 'goals': goals})
+
+    return {'wdl_odds': wdl_odds, 'tg_odds': {'records': tg_records}}
+
+
 def main():
     print("=" * 70)
     print("P1-7 Stacking + LR meta-learner 训练")
@@ -97,6 +132,10 @@ def main():
     oof_preds = {m: [] for m in MODELS}   # 每模型 -> label-order probs (n_val, 3)
     oof_true = []
     oof_fold = []                          # 每条样本所属 fold（用于 meta holdout）
+    oof_dc_fallback = []                  # C-20260920-030: DC 兜底标志（16th meta feature）
+
+    # C-20260920-030: 打开 odds.db 连接，OOF DC 用赔率λ（与 serving 同源）
+    db_conn = connect(db_path=ODDS_DB_PATH)
 
     for fold, (tr_idx, va_idx) in enumerate(tscv.split(X)):
         print(f"\n  --- Fold {fold + 1}/5 ---")
@@ -126,7 +165,8 @@ def main():
             print(f"  [Warn] LightGBM fold 失败，降级为先验: {e}")
             lgb_val = np.tile([0.33, 0.27, 0.40], (len(y_val), 1))
 
-        # --- Dixon-Coles（联赛平均进球 + DC 修正）---
+        # --- Dixon-Coles（C-20260920-030: 与 serving 同源 — 赔率λ + A-002 + 联赛ρ）---
+        # 缺赔率时回退联赛均值λ + 标记 fallback=1（让 meta 区分两分布）
         lg_stats = {L: {"home": g["homeGoals"].mean(), "away": g["awayGoals"].mean()}
                     for L, g in train_df.groupby("competition_name")}
 
@@ -146,17 +186,29 @@ def main():
             else:
                 bayes_models[L] = None
 
-        dc_val, elo_val, bay_val = [], [], []
+        dc_val, dc_fallback_val, elo_val, bay_val = [], [], [], []
         for _, row in val_df.iterrows():
             L = row["competition_name"]
-            # DC
-            if L in lg_stats:
-                rho = LEAGUE_RHO.get(L, -0.10)
-                dc = CalcEngine.calc_win_draw_lose_dixon_coles(
-                    lg_stats[L]["home"], lg_stats[L]["away"], rho=rho)
-            else:
-                dc = DEFAULT_PROB
+            rho = LEAGUE_RHO.get(L, -0.10)
+            # DC — 优先赔率λ（与 serving 同链路），无赔率回退联赛均值
+            is_fallback = True
+            odds_data = _build_odds_data_from_db(db_conn, row.get("match_id", ""))
+            if odds_data and odds_data.get('wdl_odds', {}).get('close'):
+                try:
+                    lh, la = CalcEngine.calc_lambda_from_odds(odds_data)
+                    lh, la, _ = CalcEngine.adjust_lambda_for_mid_score(lh, la, odds_data)
+                    dc = CalcEngine.calc_win_draw_lose_dixon_coles(lh, la, rho=rho)
+                    is_fallback = False
+                except Exception:
+                    pass
+            if is_fallback:
+                if L in lg_stats:
+                    dc = CalcEngine.calc_win_draw_lose_dixon_coles(
+                        lg_stats[L]["home"], lg_stats[L]["away"], rho=rho)
+                else:
+                    dc = DEFAULT_PROB
             dc_val.append(_to_label_order(dc))
+            dc_fallback_val.append(1.0 if is_fallback else 0.0)
             # Elo
             h = row["home_team_name"]; a = row["away_team_name"]; d = row["date"]
             hd = get_team_elo_at_date(team_elo_dfs, h, d)
@@ -181,19 +233,29 @@ def main():
             oof_preds[m].append(preds[m])
         oof_true.append(y_val)
         oof_fold.append(np.full(len(y_val), fold, dtype=int))
+        oof_dc_fallback.append(np.asarray(dc_fallback_val))
+
+    db_conn.close()
 
     # 4. 汇总 OOF
     oof_preds = {m: np.vstack(oof_preds[m]) for m in MODELS}   # label-order (n_total, 3)
     y_all = np.concatenate(oof_true)
     fold_all = np.concatenate(oof_fold)
+    dc_fallback_all = np.concatenate(oof_dc_fallback)
 
     meta_cols = [f"{m}__{c}" for m in MODELS for c in ["win", "draw", "lose"]]
+    meta_cols.append("dc_odds_fallback")
     X_meta = np.hstack([
         np.hstack([oof_preds[m][:, 2][:, None],   # win
                    oof_preds[m][:, 1][:, None],   # draw
                    oof_preds[m][:, 0][:, None]])  # lose
         for m in MODELS
-    ])  # (n_total, 15)，特征序 [win, draw, lose] per model
+    ])  # (n_total, 15)
+    X_meta = np.hstack([X_meta, dc_fallback_all[:, None]])  # (n_total, 16)
+
+    n_odds = int((dc_fallback_all == 0).sum())
+    n_fallback = int((dc_fallback_all == 1).sum())
+    print(f"\n  DC λ 来源: 赔率={n_odds} 场, 兜底={n_fallback} 场")
 
     # 固定权重 Stacking（当前生产配置，用于对比）
     fixed = np.zeros((len(y_all), 3))

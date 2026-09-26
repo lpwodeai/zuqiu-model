@@ -682,6 +682,48 @@ V2_ALL_FEATURES = (
     V2_FEATURE_GROUPS['opponent_lag']
 )
 
+# ========================================
+# 7. 生产推理特征供给（训练/推理特征契约）
+# ========================================
+# C-20260920-025：修复前 serving 端 form/rest/cards/opponent_lag 共 43 维恒为 0，
+# 导致走水检测失效（holdout AUC 0.52）、RPS 恶化 0.009。此供给让推理端严格复用
+# 训练管线 build_all_features_v2 的产物，进程内单例缓存（全量矩阵首次约 1 分钟）。
+
+_V2_SERVING_CACHE: Optional[pd.DataFrame] = None
+
+
+def get_serving_feature_matrix(force_rebuild: bool = False) -> pd.DataFrame:
+    """生产推理专用：返回 61 维 v2 特征矩阵（index=matches.match_id）。
+
+    填充口径与 deploy_t005v3_final.load_data 严格一致：
+      1. build 内部 wdl_draw / opponent_lag 已按列中位数填充；
+      2. 全表 to_numeric → NaN → 全表中位数兜底（在标签过滤之前，与训练同序）。
+    form/rest/cards 的 0 是"无历史"的真实值，不做填充。
+
+    截止口径：训练管线 MAX_VALID_TIMESTAMP 固定在 2026-07-01（防训练数据漂移）；
+    serving 必须包含当前待赛场，构建期间临时提升至 2099，构建后还原。
+    """
+    global _V2_SERVING_CACHE
+    if _V2_SERVING_CACHE is None or force_rebuild:
+        logger.info("==== get_serving_feature_matrix 构建（首次约1分钟）====")
+        import hcp_features as _hf
+        _train_cut = _hf.MAX_VALID_TIMESTAMP
+        _future_cut = "2099-12-31 00:00:00"
+        _hf.MAX_VALID_TIMESTAMP = _future_cut
+        globals()['MAX_VALID_TIMESTAMP'] = _future_cut  # 本模块 build_wdl_draw_features 引用
+        try:
+            feats = build_all_features_v2()
+        finally:
+            _hf.MAX_VALID_TIMESTAMP = _train_cut
+            globals()['MAX_VALID_TIMESTAMP'] = _train_cut
+        X = feats[V2_ALL_FEATURES].copy()
+        X = X.apply(pd.to_numeric, errors='coerce')
+        if X.isnull().any().any():
+            X = X.fillna(X.median())
+        _V2_SERVING_CACHE = X
+        logger.info("==== serving 矩阵就绪 | matches=%d 维=%d ====", len(X), X.shape[1])
+    return _V2_SERVING_CACHE
+
 
 if __name__ == "__main__":
     features = build_all_features_v2()

@@ -124,6 +124,107 @@ def ipf_reweight(grid, p_home, p_draw, p_away, iters=30):
     return {k: v / s for k, v in gh.items()} if s > 0 else gh
 
 
+# ============================================================
+# 在线 serving 层（C-20260920-029 Shadow；冻结口径 C-20260920-028）
+# 复测脚本与生产 Shadow 必须共用本层，禁止另复制一份算法。
+# ============================================================
+# E 项：联赛 ρ（原型未实现切换，接入时补的映射）
+LEAGUE_RHO = {"英超": -0.08, "西甲": -0.12, "意甲": -0.15, "德甲": -0.05, "法甲": -0.10}
+SCORE_ODDS_ALPHA = 0.30
+
+
+def tg_implied_expected(odds_data):
+    """TG 八档（生产 odds_data 结构）去水 → 隐含 E[g]，7+ 按 7 计；无 TG 返回 None。"""
+    recs = (odds_data.get("tg_odds") or {}).get("records") or []
+    if not recs:
+        return None
+    goals = recs[-1].get("goals") or {}
+    if not goals:
+        return None
+    total_inv = sum(1.0 / max(float(v), 1e-10) for v in goals.values())
+    exp = 0.0
+    for k, v in goals.items():
+        key = int(str(k).replace("+", "")) if str(k).replace("+", "").isdigit() else 7
+        exp += key * (1.0 / max(float(v), 1e-10)) / total_inv
+    return exp
+
+
+def score_market_dist(odds_data):
+    """比分赔率最新快照（win/draw/lose_odds）去水分布。"""
+    recs = (odds_data.get("score_odds") or {}).get("records") or []
+    if not recs:
+        return {}
+    so = recs[-1]
+    raw = {}
+    for dkey in ("win_odds", "draw_odds", "lose_odds"):
+        for sc, od in (so.get(dkey) or {}).items():
+            if od and float(od) > 0:
+                raw[sc] = 1.0 / float(od)
+    s = sum(raw.values())
+    return {k: v / s for k, v in raw.items()} if s > 0 else {}
+
+
+def build_league_grid(lh, la, rho):
+    """DC 网格（联赛 ρ；输出 tuple 键）。"""
+    grid = {}
+    for h in range(MAXG + 1):
+        for a in range(MAXG + 1):
+            grid[(h, a)] = _p(h, lh) * _p(a, la) * dc_tau(h, a, lh, la, rho=rho)
+    s = sum(grid.values())
+    if s > 0:
+        grid = {k: v / s for k, v in grid.items()}
+    return grid
+
+
+def predict_score_v5(odds_data, wdl_probs, league, alpha=SCORE_ODDS_ALPHA):
+    """在线 v5：消费生产 odds_data + §一 Stacking WDL，输出与 ScorePredictor 同契约。
+
+    冻结口径：TG 隐含 E[g] 为唯一 total 先验（不做 recency）→ 二分法 λ（绕过 A-002）
+    → 联赛 ρ DC 网格 → 比分赔率 α 融合（保留市场信号、弃用 MC）→ 嵌套 IPF 精确修回边缘。
+
+    必需键哨兵：wdl_probs 缺 win/draw/lose 或 TG 缺失即 ValueError，
+    由调用方 try/except 隔离，禁止静默兜底（C-027 接口契约）。
+
+    返回: top5/most_likely/most_likely_prob/lambdas/rho/tg_total/method/dist(全64键)
+    """
+    if not wdl_probs or not all(k in wdl_probs for k in ("win", "draw", "lose")):
+        raise ValueError("v5 需要 wdl_probs 含 win/draw/lose（接口契约 C-027）")
+    total_raw = tg_implied_expected(odds_data)
+    if total_raw is None:
+        raise ValueError("v5 需要 TG 八档赔率（total 先验）")
+    total = min(4.5, max(1.5, total_raw))
+
+    ph, pd_, pa = (float(wdl_probs["win"]),
+                   float(wdl_probs["draw"]),
+                   float(wdl_probs["lose"]))
+    lh, la = solve_lambda_core(ph, pa, total)
+    rho = LEAGUE_RHO.get((league or "")[:2], -0.15)
+    grid = build_league_grid(lh, la, rho)
+
+    market = score_market_dist(odds_data)
+    fused = {}
+    for key in set(grid) | {parse_score(k) for k in market}:
+        sk = f"{key[0]}:{key[1]}"
+        fused[key] = grid.get(key, 0.0) * (1 - alpha) + market.get(sk, 0.0) * alpha
+    s = sum(fused.values())
+    if s > 0:
+        fused = {k: v / s for k, v in fused.items()}
+
+    final = ipf_reweight(fused, ph, pd_, pa, iters=30)
+    dist = {f"{h}:{a}": pr for (h, a), pr in final.items()}
+    ss = sorted(dist.items(), key=lambda x: x[1], reverse=True)
+    return {
+        "top5": [{"score": sc, "prob": pr} for sc, pr in ss[:5]],
+        "most_likely": ss[0][0] if ss else "N/A",
+        "most_likely_prob": ss[0][1] if ss else 0.0,
+        "lambdas": [lh, la],
+        "rho": rho,
+        "tg_total": total,
+        "method": "T-006 v5 shadow",
+        "dist": dist,
+    }
+
+
 def recency_form(matches):
     """每队(严格 date 之前)滚动进球形态：GF/(GF+GA)、场均进球。字典覆盖用。"""
     ev = {}
@@ -157,6 +258,13 @@ def predict_score_distribution_v5(wdl_probs, total_goals_expected=None, max_goal
     lh, la = solve_lambda_core(ph, pa, total)
     grid = build_score_grid(lh, la)
     grid = ipf_reweight(grid, ph, pd_, pa)
+    # 网格健康哨兵（C-20260924-072）：检测退化网格（对角线/单格概率过载）并回退干净 DC 网格，
+    # 防止异常 wdl_probs（如平局概率被推高到不可信上限）经 IPF 乘性迭代坍缩到单一比分格。
+    # 阈值 0.6 远高于真实值上限（真实平局率≤~0.4、单比分≤~0.2），对合法网格零误伤。
+    _diag = sum(v for (h, a), v in grid.items() if h == a)
+    _max_cell = max(grid.values()) if grid else 0.0
+    if _diag > 0.6 or _max_cell > 0.6:
+        grid = build_score_grid(lh, la)
     # 仅保留 max_goals 内比分即可（>max_goals 概率极低，不影响 WDL 边际保证由内部 MAXG=7 已满足）
     out = {f"{h}:{a}": v for (h, a), v in grid.items() if h <= max_goals and a <= max_goals}
     total_p = sum(out.values())

@@ -339,7 +339,7 @@ def save_score_prediction(conn, match_id, analysis, model_name=SCORE_MODEL_NAME)
     insert = ("INSERT OR IGNORE INTO model_predictions "
               "(match_id, model_name, prediction_type, prediction, probability, confidence, timestamp) "
               "VALUES (?, ?, ?, ?, ?, ?, ?)")
-    now = datetime.now().isoformat()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def _write(ptype, prediction, prob):
         conn.execute(insert, (match_id, model_name, ptype, prediction, prob, prob, now))

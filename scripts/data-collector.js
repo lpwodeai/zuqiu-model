@@ -7,7 +7,6 @@ import axios from 'axios';
 import cheerio from 'cheerio';
 import fs from 'fs';
 import path from 'path';
-import vm from 'vm';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,40 +24,16 @@ class DataCollector {
     this.config = {
       oddsInterval: 300000,      // 赔率采集间隔：5分钟
       matchInterval: 3600000,    // 比赛采集间隔：1小时
-      teamInterval: 86400000,    // 球队数据更新间隔：24小时
       retryAttempts: 3,
       retryDelay: 1000
     };
   }
 
   /**
-   * 安全解析 JS 对象字面量 (替代 eval，解决 C-003/D-003 安全漏洞)
-   */
-  _safeParseJsObject(objStr, label) {
-    try {
-      return JSON.parse(objStr);
-    } catch (_) {
-      try {
-        const sandbox = {};
-        const script = new vm.Script(`this.value = ${objStr};`, {
-          filename: `safe-parse-${label || 'unknown'}.js`
-        });
-        const context = vm.createContext(sandbox, {
-          codeGeneration: { strings: false, wasm: false }
-        });
-        script.runInContext(context, { timeout: 1000 });
-        return sandbox.value;
-      } catch (vmErr) {
-        throw new Error(`安全解析 ${label || 'JS对象'} 失败: ${vmErr.message}`);
-      }
-    }
-  }
-
-  /**
    * 确保数据目录存在
    */
   ensureDirectories() {
-    const dirs = ['odds', 'teams', 'matches', 'cache'];
+    const dirs = ['odds', 'matches', 'cache'];
     dirs.forEach(dir => {
       const fullPath = path.join(this.dataDir, dir);
       if (!fs.existsSync(fullPath)) {
@@ -78,9 +53,6 @@ class DataCollector {
     
     // 比赛数据采集
     this.scheduleTask('matches', this.config.matchInterval, this.collectMatches.bind(this));
-    
-    // 球队数据更新
-    this.scheduleTask('teams', this.config.teamInterval, this.updateTeamData.bind(this));
     
     console.log('✅ 定时采集任务已启动');
   }
@@ -245,39 +217,9 @@ class DataCollector {
   }
 
   /**
-   * 更新球队数据
-   */
-  async updateTeamData() {
-    console.log('⚽ 开始更新球队数据...');
-    
-    try {
-      // 从model-engine.js读取球队数据
-      const modelPath = path.join(__dirname, '../assets/model-engine.js');
-      const content = fs.readFileSync(modelPath, 'utf8');
-      
-      // 解析TEAMS数据 (安全解析: 使用 vm.Script 替代 eval)
-      const teamsMatch = content.match(/var TEAMS = (\{[\s\S]*?\});/);
-      if (teamsMatch) {
-        const teams = this._safeParseJsObject(teamsMatch[1], 'TEAMS');
-        
-        const filePath = path.join(this.dataDir, 'teams', 'all_teams.json');
-        fs.writeFileSync(filePath, JSON.stringify(teams, null, 2));
-        
-        console.log(`✅ 球队数据更新完成: ${Object.keys(teams).length}支球队`);
-        return { count: Object.keys(teams).length };
-      }
-      
-      return { count: 0 };
-    } catch (err) {
-      console.error('❌ 球队数据更新失败:', err.message);
-      throw err;
-    }
-  }
-
-  /**
    * 手动触发采集
    */
-  async manualCollect(types = ['odds', 'matches', 'teams']) {
+  async manualCollect(types = ['odds', 'matches']) {
     const results = {};
     
     for (const type of types) {
@@ -288,9 +230,6 @@ class DataCollector {
             break;
           case 'matches':
             results.matches = await this.collectMatches();
-            break;
-          case 'teams':
-            results.teams = await this.updateTeamData();
             break;
         }
       } catch (err) {
@@ -309,8 +248,7 @@ class DataCollector {
       config: this.config,
       directories: {
         odds: fs.existsSync(path.join(this.dataDir, 'odds')),
-        matches: fs.existsSync(path.join(this.dataDir, 'matches')),
-        teams: fs.existsSync(path.join(this.dataDir, 'teams'))
+        matches: fs.existsSync(path.join(this.dataDir, 'matches'))
       },
       lastCollection: this.getLastCollectionTime()
     };
@@ -368,8 +306,8 @@ const args = process.argv.slice(2);
 if (args.includes('--start')) {
   collector.startScheduledCollection();
 } else if (args.includes('--collect')) {
-  const types = args.filter(a => ['odds', 'matches', 'teams'].includes(a));
-  collector.manualCollect(types.length > 0 ? types : ['odds', 'matches', 'teams'])
+  const types = args.filter(a => ['odds', 'matches'].includes(a));
+  collector.manualCollect(types.length > 0 ? types : ['odds', 'matches'])
     .then(results => console.log('采集结果:', results))
     .catch(err => console.error('采集失败:', err));
 } else if (args.includes('--status')) {
@@ -380,7 +318,7 @@ if (args.includes('--start')) {
 
   node scripts/data-collector.js --start       启动定时采集
   node scripts/data-collector.js --collect     手动采集所有数据
-  node scripts/data-collector.js --collect odds matches teams  指定采集类型
+  node scripts/data-collector.js --collect odds matches  指定采集类型
   node scripts/data-collector.js --status      查看采集状态
 `);
 }

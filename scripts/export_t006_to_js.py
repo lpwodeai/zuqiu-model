@@ -44,6 +44,7 @@ import numpy as np
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 ASSETS_DIR = PROJECT_DIR / 'assets'
+BACKUP_DIR = PROJECT_DIR / 'backups' / 'assets_export_bak'
 DEFAULT_PKL = ASSETS_DIR / 't006_lowgoal_classifier_v1.pkl'
 
 
@@ -266,12 +267,13 @@ def main():
     # 备份旧文件
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     if args.backup:
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
         for fname in ['t006_lowgoal_export.js', 't006_feature_spec.js']:
             old_path = ASSETS_DIR / fname
             if old_path.exists():
-                bak_path = ASSETS_DIR / f'{fname}.bak_{timestamp}'
+                bak_path = BACKUP_DIR / f'{fname}.bak_{timestamp}'
                 shutil.copy2(old_path, bak_path)
-                print(f'  📋 备份: {fname} → {bak_path.name}')
+                print(f'  📋 备份: {fname} → {bak_path}')
 
     # 导出主模型
     print('\n🔄 导出 t006 模型 → t006_lowgoal_export.js ...')

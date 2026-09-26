@@ -40,7 +40,8 @@ PY = sys.executable
 SCRIPTS = {
     "D1_backfill": ROOT / "import_data" / "sofascore_backfill_fields.py",
     "D2_audit":    ROOT / "analysis" / "sofascore_quality_audit.py",
-    "D3_features": ROOT / "features" / "sofascore_pre_match_features.py",
+    # C-20260925-083（风险 H）: D3 默认走增量脚本（仅补缺场次）；全量需手动跑 sofascore_pre_match_features.py。
+    "D3_features": ROOT / "features" / "incremental_sofascore_features.py",
     "E2_train":    SCRIPTS_DIR / "train_models.py",
 }
 

@@ -5,7 +5,7 @@ setup_shadow_scheduler.py — P1-B shadow 每日滚动计划任务配置脚本
 用途：注册 / 更新 / 删除 Windows 计划任务「SoccerModel_P1BShadow」，
       每日 13:00 调用 scripts/run_shadow_incremental.py --roll，
       滚动吸收已完赛比赛 → 更新增量 checkpoint → 追加稳定性轨迹，
-      为 P1-B 生产切换评估持续攒样本（对齐 docs/bayesian_shadow_design.md §二/§八）。
+      为 P1-B 生产切换评估持续攒样本（对齐 docs/archive/bayesian_shadow_design.md（已归档） §二/§八）。
 
 对齐已有约定：
   - P0-E 每日任务 SoccerModel_P0ELiveTrial（每日 12:00，run_daily_p0e.py）

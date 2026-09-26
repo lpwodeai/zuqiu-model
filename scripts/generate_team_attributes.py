@@ -2,54 +2,29 @@ import pandas as pd
 import numpy as np
 import json
 import os
+import sqlite3
 import yaml
 from pathlib import Path
+from team_name_mapping import normalize_team_name
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR
 OUTPUT_DIR = BASE_DIR / "assets"
 CONFIG_PATH = BASE_DIR / "config.yaml"
-
-CSV_FILES = {
-    'EPL': 'EPL_2025-26.csv',
-    'BUNDESLIGA': 'BUNDESLIGA_2025-26.csv',
-    'LALIGA': 'LALIGA_2025-26.csv',
-    'SERIEA': 'SERIEA_2025-26.csv',
-    'LIGUE1': 'LIGUE1_2025-26.csv'
-}
-
-# 新详细数据源映射（优先使用）
-CSV_FILES_DETAILED = {
-    'SERIEA': 'SERIEA_2025-26_DETAILED.csv',
-}
-
-
-def get_csv_file(league):
-    """获取指定联赛的CSV文件路径（支持新数据源优先）"""
-    data_path = os.path.join(DATA_DIR, 'data')
-    
-    # 检查是否有新详细数据源
-    if league in CSV_FILES_DETAILED:
-        detailed_path = os.path.join(data_path, CSV_FILES_DETAILED[league])
-        if os.path.exists(detailed_path):
-            print(f"  ✅ 使用新详细数据源: {CSV_FILES_DETAILED[league]}")
-            return detailed_path
-    
-    # 使用旧数据源
-    if league in CSV_FILES:
-        old_path = os.path.join(data_path, CSV_FILES[league])
-        if os.path.exists(old_path):
-            return old_path
-    
-    print(f"  ⚠️ 数据源文件不存在: {league}")
-    return None
+DB_PATH = BASE_DIR / "data" / "five_leagues.db"
 
 LEAGUE_CODE_MAP = {
     'EPL': 'PL',
     'BUNDESLIGA': 'BL1',
     'LALIGA': 'SA',
     'SERIEA': 'SerieA',
-    'LIGUE1': 'FL1'
+    'LIGUE1': 'FL1',
+    # five_leagues.db 中 competitions.name 的映射（DB 改造后数据源）
+    'Premier League': 'PL',
+    'Bundesliga': 'BL1',
+    'La Liga': 'SA',
+    'Serie A': 'SerieA',
+    'Ligue 1': 'FL1'
 }
 
 TEAM_KEY_MAP_EN = {
@@ -88,6 +63,31 @@ TEAM_KEY_MAP_EN = {
     'Brest': 'fl1_bre', 'Lorient': 'fl1_lor', 'Le Havre': 'fl1_hav',
     'Nice': 'fl1_nic'
 }
+
+# 中文队名 / DB 变体 -> team_key 的反向映射。
+# 1) 先用 normalize_team_name(英文) 把 TEAM_KEY_MAP_EN 反向成 {中文: team_key}；
+# 2) 再补充 DB 中存在但 TEAM_KEY_MAP_EN 未覆盖的队（2025-26 赛季升班马/降级队等）
+#    以及 DB 里未归一化的英/西文变体（Ath Madrid / Vallecano）和中文同义变体（赫塔菲）。
+CN_TO_TEAM_KEY = {}
+for _en_name, _team_key in TEAM_KEY_MAP_EN.items():
+    _cn_name = normalize_team_name(_en_name)
+    if _cn_name:
+        CN_TO_TEAM_KEY[_cn_name] = _team_key
+
+CN_TO_TEAM_KEY.update({
+    # DB 存在但 TEAM_KEY_MAP_EN 未覆盖的球队（中文标准名 -> team_key）
+    '云达不莱梅': 'bl1_wer', '伯恩利': 'pl_bur', '利兹联': 'pl_lee',
+    '卡利亚里': 'seriea_cag', '圣保利': 'bl1_stp', '奥维耶多': 'sa_ovi',
+    '巴黎FC': 'fl1_pfc', '帕尔马': 'seriea_par', '朗斯': 'fl1_len',
+    '桑坦德竞技': 'sa_rac', '欧塞尔': 'fl1_aux', '比萨': 'seriea_pis',
+    '毕尔巴鄂': 'sa_ath', '汉堡': 'bl1_hsv', '海登海姆': 'bl1_hei',
+    '科莫': 'seriea_com', '考文垂': 'pl_cov', '莱万特': 'sa_lev',
+    '萨索洛': 'seriea_sas', '里尔': 'fl1_lil', '阿拉维斯': 'sa_ala',
+    # DB 中未归一化的英/西文变体（normalize_team_name 返回 None，显式映射到既有 team_key）
+    'Ath Madrid': 'sa_atm', 'Vallecano': 'sa_rva',
+    # 中文同义变体（normalize 后可命中，这里兜底）
+    '赫塔菲': 'sa_get',
+})
 
 def load_config():
     if os.path.exists(CONFIG_PATH):
@@ -139,64 +139,44 @@ def weighted_mean(values, weights):
         return values.mean() if len(values) > 0 else 0
     return (values * weights).sum() / weights.sum()
 
-def normalize_league_data(df, league):
-    normalized = df.copy()
-    
-    if '日期' in df.columns:
-        normalized['date'] = pd.to_datetime(df['日期'], format='%d/%m/%Y', errors='coerce')
-        normalized['home_team_name'] = df['主队']
-        normalized['away_team_name'] = df['客队']
-        normalized['homeGoals'] = df['主队进球']
-        normalized['awayGoals'] = df['客队进球']
-        normalized['homeShots'] = df['主队射门'] if '主队射门' in df.columns else np.nan
-        normalized['awayShots'] = df['客队射门'] if '客队射门' in df.columns else np.nan
-        normalized['homeShotsOnTarget'] = df['主队射正'] if '主队射正' in df.columns else np.nan
-        normalized['awayShotsOnTarget'] = df['客队射正'] if '客队射正' in df.columns else np.nan
-        normalized['homeCorners'] = df['主队角球'] if '主队角球' in df.columns else np.nan
-        normalized['awayCorners'] = df['客队角球'] if '客队角球' in df.columns else np.nan
-        normalized['homeYellowCards'] = df['主队黄牌'] if '主队黄牌' in df.columns else np.nan
-        normalized['awayYellowCards'] = df['客队黄牌'] if '客队黄牌' in df.columns else np.nan
-        normalized['homeFouls'] = df['主队犯规'] if '主队犯规' in df.columns else np.nan
-        normalized['awayFouls'] = df['客队犯规'] if '客队犯规' in df.columns else np.nan
-        normalized['homePossession'] = df['主队控球率'] if '主队控球率' in df.columns else np.nan
-    else:
-        normalized['date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y', errors='coerce')
-        normalized['home_team_name'] = df['HomeTeam']
-        normalized['away_team_name'] = df['AwayTeam']
-        normalized['homeGoals'] = df['FTHG']
-        normalized['awayGoals'] = df['FTAG']
-        normalized['homeShots'] = df['HS'] if 'HS' in df.columns else np.nan
-        normalized['awayShots'] = df['AS'] if 'AS' in df.columns else np.nan
-        normalized['homeShotsOnTarget'] = df['HST'] if 'HST' in df.columns else np.nan
-        normalized['awayShotsOnTarget'] = df['AST'] if 'AST' in df.columns else np.nan
-        normalized['homeCorners'] = df['HC'] if 'HC' in df.columns else np.nan
-        normalized['awayCorners'] = df['AC'] if 'AC' in df.columns else np.nan
-        normalized['homeYellowCards'] = df['HY'] if 'HY' in df.columns else np.nan
-        normalized['awayYellowCards'] = df['AY'] if 'AY' in df.columns else np.nan
-        normalized['homeFouls'] = df['HF'] if 'HF' in df.columns else np.nan
-        normalized['awayFouls'] = df['AF'] if 'AF' in df.columns else np.nan
-        normalized['homePossession'] = np.nan
-    
-    normalized['competition_name'] = league
-    return normalized
+def load_match_data_from_db():
+    """从 five_leagues.db 读取比赛数据，返回与原 load_csv_data 兼容的 DataFrame。"""
+    if not os.path.exists(DB_PATH):
+        raise FileNotFoundError(f"Database not found: {DB_PATH}")
 
-def load_csv_data():
-    dfs = []
-    for league, filename in CSV_FILES.items():
-        filepath = os.path.join(DATA_DIR, filename)
-        if os.path.exists(filepath):
-            df = pd.read_csv(filepath, encoding='utf-8')
-            df = normalize_league_data(df, league)
-            dfs.append(df)
-            print(f"Loaded {len(df)} matches from {filename}")
-        else:
-            print(f"Warning: {filepath} not found")
-    
-    if not dfs:
-        raise ValueError("No CSV files loaded")
-    
-    df = pd.concat(dfs, ignore_index=True)
+    conn = sqlite3.connect(DB_PATH)
+    query = """
+    SELECT
+        m.date,
+        ht.name AS home_team_name,
+        at.name AS away_team_name,
+        m.homeGoals,
+        m.awayGoals,
+        m.homeShots,
+        m.awayShots,
+        m.homeShotsOnTarget,
+        m.awayShotsOnTarget,
+        m.homeCorners,
+        m.awayCorners,
+        m.homeFouls,
+        m.awayFouls,
+        m.homeYellowCards,
+        m.awayYellowCards,
+        m.homePossession,
+        c.name AS competition_name
+    FROM matches m
+    LEFT JOIN teams ht ON m.homeTeamId = ht.id
+    LEFT JOIN teams at ON m.awayTeamId = at.id
+    LEFT JOIN competitions c ON m.competitionId = c.id
+    WHERE m.homeGoals IS NOT NULL
+    ORDER BY m.date
+    """
+    df = pd.read_sql(query, conn)
+    conn.close()
+
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
     df = df.dropna(subset=['date', 'home_team_name', 'away_team_name', 'homeGoals', 'awayGoals'])
+    print(f"Loaded {len(df)} matches from five_leagues.db")
     return df
 
 def compute_team_attributes(df):
@@ -267,7 +247,14 @@ def compute_team_attributes(df):
         league = all_matches.iloc[0]['competition_name']
         league_code = LEAGUE_CODE_MAP.get(league, league)
         
-        team_key = TEAM_KEY_MAP_EN.get(team_name, team_name.lower().replace(' ', '_'))
+        # team_name 来自 DB（中文为主）。优先用 CN_TO_TEAM_KEY 解析；
+        # 先 normalize_team_name 处理中文同义变体（如 赫塔菲->赫塔费），
+        # 再 fallback 到 TEAM_KEY_MAP_EN / 小写化。
+        norm_name = normalize_team_name(team_name) or team_name
+        team_key = (CN_TO_TEAM_KEY.get(norm_name)
+                    or CN_TO_TEAM_KEY.get(team_name)
+                    or TEAM_KEY_MAP_EN.get(team_name)
+                    or team_name.lower().replace(' ', '_'))
         
         win_rate = (team_goals > team_opp_goals).mean()
         draw_rate = (team_goals == team_opp_goals).mean()
@@ -332,8 +319,8 @@ def main():
     print("生成数据驱动的球队属性")
     print("=" * 60)
     
-    print("\n1. 加载CSV数据...")
-    df = load_csv_data()
+    print("\n1. 从 five_leagues.db 加载比赛数据...")
+    df = load_match_data_from_db()
     print(f"   有效数据: {len(df)} 场比赛")
     
     print("\n2. 计算球队属性...")

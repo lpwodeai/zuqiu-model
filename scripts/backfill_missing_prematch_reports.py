@@ -41,6 +41,17 @@ def backfill(date: str, league: str, homes: list[str]) -> None:
     models["epl"] = None  # 与日常流程一致：英超独立模型仅参考，默认关闭避免卡顿
     core = PredictionCore(models)
 
+    # C-20260919-019: 与日常流程对齐——注入待赛虚拟行，避免走 fallback 模板污染方向
+    core.wdl_predictor.prime_fixtures([
+        {
+            'home_team': m.get('home_team_en'), 'away_team': m.get('away_team_en'),
+            'home_team_cn': m['home_team_cn'], 'away_team_cn': m['away_team_cn'],
+            'league': m['league'], 'date': m['match_date'],
+            'wdl_match_id': find_sporttery_match_id(conn, m['home_team_cn'], m['away_team_cn'], m['match_date']),
+        }
+        for m in matches
+    ])
+
     for m in matches:
         home_cn, away_cn = m["home_team_cn"], m["away_team_cn"]
         print(f"\n=== {m['match_date']} [{m['league']}] {home_cn} vs {away_cn} ===")

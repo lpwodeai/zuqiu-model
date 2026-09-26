@@ -146,25 +146,26 @@ def load_player_data(db_path=None):
     return players, stats
 
 def build_player_basic_features(players):
-    features = pd.DataFrame(index=players['playerId'])
-    
-    features['player_age'] = players['age'].fillna(25)
-    features['player_market_value'] = players['marketValue'].fillna(FOOTBALL_CONSTANTS['avg_market_value'])
-    features['player_height'] = players['height'].fillna(180)
-    features['player_weight'] = players['weight'].fillna(75)
-    
-    features['player_is_key'] = players['isKeyPlayer'].fillna(0).astype(int)
-    
-    features['player_role_starter'] = (players['lineupRole'] == 'starter').astype(int)
-    features['player_role_backup'] = (players['lineupRole'] == 'backup').astype(int)
-    
-    features['player_status_available'] = (players['playerStatus'] == 'available').astype(int)
-    features['player_status_injured'] = (players['playerStatus'] == 'injured').astype(int)
-    features['player_status_suspended'] = (players['playerStatus'] == 'suspended').astype(int)
-    features['player_status_doubtful'] = (players['playerStatus'] == 'doubtful').astype(int)
-    
+    # 用 players 自身行索引（RangeIndex），赋值用 .values，避免与 playerId(1..1920) 索引错位
+    features = pd.DataFrame(index=players.index)
+
+    features['player_age'] = players['age'].fillna(25).values
+    features['player_market_value'] = players['marketValue'].fillna(FOOTBALL_CONSTANTS['avg_market_value']).values
+    features['player_height'] = players['height'].fillna(180).values
+    features['player_weight'] = players['weight'].fillna(75).values
+
+    features['player_is_key'] = players['isKeyPlayer'].fillna(0).astype(int).values
+
+    features['player_role_starter'] = (players['lineupRole'] == 'starter').astype(int).values
+    features['player_role_backup'] = (players['lineupRole'] == 'backup').astype(int).values
+
+    features['player_status_available'] = (players['playerStatus'] == 'available').astype(int).values
+    features['player_status_injured'] = (players['playerStatus'] == 'injured').astype(int).values
+    features['player_status_suspended'] = (players['playerStatus'] == 'suspended').astype(int).values
+    features['player_status_doubtful'] = (players['playerStatus'] == 'doubtful').astype(int).values
+
     pos_dummies = pd.get_dummies(players['positionGroup'], prefix='player_pos', drop_first=True)
-    features = pd.concat([features, pos_dummies], axis=1)
+    features = pd.concat([features, pos_dummies.reset_index(drop=True)], axis=1)
     
     feature_info = {
         'player_age': {'description': '球员年龄', 'source': 'players.age', 'calculation': '原始值，缺失填充25'},
@@ -187,7 +188,8 @@ def build_player_basic_features(players):
     return features, feature_info
 
 def build_player_efficiency_features(stats):
-    features = pd.DataFrame(index=stats['playerId'])
+    # stats 为 RangeIndex，所有派生 Series 同源对齐（禁止用 playerId 作索引）
+    features = pd.DataFrame(index=stats.index)
     
     minutes_norm = stats['minutes'] / FOOTBALL_CONSTANTS['avg_minutes_per_match']
     minutes_norm = minutes_norm.replace(0, np.nan)
@@ -247,8 +249,8 @@ def build_player_efficiency_features(stats):
     return features, feature_info
 
 def aggregate_team_player_stats(players, stats):
-    stats_df = stats.reset_index().rename(columns={'index': 'playerId'})
-    player_features = pd.merge(players, stats_df, on='playerId', how='left')
+    # stats 已携带真实 playerId 列（build_all_player_features 中以 .values 附带）
+    player_features = pd.merge(players, stats, on='playerId', how='left')
     
     pos_cols = [col for col in player_features.columns if col.startswith('player_pos_')]
     
@@ -288,16 +290,22 @@ def aggregate_team_player_stats(players, stats):
 
 def build_match_player_features(match_df, team_player_stats):
     features = pd.DataFrame(index=match_df.index)
-    
-    home_stats = match_df['home_team_id'].map(team_player_stats.to_dict(orient='index'))
-    away_stats = match_df['away_team_id'].map(team_player_stats.to_dict(orient='index'))
-    
-    home_df = pd.DataFrame(list(home_stats)).fillna(0)
-    away_df = pd.DataFrame(list(away_stats)).fillna(0)
-    
+
+    team_cols = list(team_player_stats.columns)
+    zero_row = {c: 0 for c in team_cols}
+    team_dict = team_player_stats.to_dict(orient='index')
+
+    def _map_teams(team_ids):
+        # 无球员数据的球队（如 id 98/99）→ 零行；显式对齐比赛索引，禁止 list+NaN 构造
+        rows = [team_dict.get(tid, zero_row) for tid in team_ids]
+        return pd.DataFrame.from_records(rows, columns=team_cols, index=match_df.index)
+
+    home_df = _map_teams(match_df['home_team_id'])
+    away_df = _map_teams(match_df['away_team_id'])
+
     home_df.columns = ['home_' + col for col in home_df.columns]
     away_df.columns = ['away_' + col for col in away_df.columns]
-    
+
     match_player_features = pd.concat([home_df, away_df], axis=1)
     
     diff_features = pd.DataFrame(index=match_df.index)
@@ -351,11 +359,24 @@ def build_match_player_features(match_df, team_player_stats):
     features['defense_power_diff'] = features['home_defense_power'] - features['away_defense_power']
     
     features = features.fillna(0)
-    
+
+    # 结构性未知行（球队无球员数据）：winsorize 会把零 clip 到 p1，
+    # 把"未知"伪造成弱队值，故在 clip 后恢复这些行为零
+    home_unknown = np.array([t not in team_dict for t in match_df['home_team_id']])
+    away_unknown = np.array([t not in team_dict for t in match_df['away_team_id']])
+
     for col in features.columns:
         if col.startswith('home_') or col.startswith('away_') or col.endswith('_diff'):
             features[col] = winsorize_series(features[col], lower_percentile=1, upper_percentile=99)
-    
+
+    home_cols = [c for c in features.columns if c.startswith('home_')]
+    away_cols = [c for c in features.columns if c.startswith('away_')]
+    diff_cols = [c for c in features.columns if c.endswith('_diff')]
+    features.loc[home_unknown, home_cols] = 0
+    features.loc[away_unknown, away_cols] = 0
+    # 任一侧未知，差值无意义
+    features.loc[home_unknown | away_unknown, diff_cols] = 0
+
     return features
 
 def build_all_player_features(match_df):
@@ -379,6 +400,9 @@ def build_all_player_features(match_df):
         right_index=True,
         how='outer'
     ).fillna(0)
+
+    # 显式附带真实 playerId（1..1920）供后续聚合，用 .values 防止按索引错位
+    player_features['playerId'] = players['playerId'].values
     
     print(f"\n合并球员特征...")
     print(f"  总球员特征维度: {len(player_features.columns)}")

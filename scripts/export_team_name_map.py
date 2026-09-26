@@ -45,6 +45,16 @@ def build_export_maps():
     # 英→中映射 (反向映射)
     en_to_cn = {}
 
+    # 英文键归一：NFKD 去重音 + 剔标点（与 feature_utils.build_match_alignment
+    # 通道3 的查询口径一致；C-20260920-025）
+    import unicodedata
+    import re as _re
+
+    def _norm_eng(eng):
+        s = unicodedata.normalize("NFKD", eng).encode("ascii", "ignore").decode().lower()
+        s = _re.sub(r"[^a-z0-9 ]+", " ", s)
+        return _re.sub(r"\s+", " ", s).strip()
+
     # 中文别名链: {别名: 标准中文名}
     cn_aliases = {}
 
@@ -57,8 +67,8 @@ def build_export_maps():
             cn_aliases[eng_name] = cn_name
             continue
 
-        # 标准化英文名 (小写)
-        eng_key = eng_name.lower().strip()
+        # 标准化英文名
+        eng_key = _norm_eng(eng_name)
 
         # 中→英
         if cn_name not in cn_to_en:

@@ -1,8 +1,19 @@
 # -*- coding: utf-8 -*-
-"""今日五大联赛14场即将开赛比赛预测（胜平负/让球/比分/总进球）"""
-import sys, os, re, json, sqlite3
+"""今日五大联赛即将开赛比赛预测（胜平负/让球/比分/总进球）
+
+数据源（C-20260918-020/022）:
+  比赛清单: 从 odds500_match 表动态查询（status=1 未开赛 + 日期范围），
+            替代硬编码 TODAY_MATCHES，与 generate_unified_report.py 的 discover_matches 同源
+  赔率数据: 从 odds.db 四张时序表加载（load_odds_from_db，SSOT 替代 TXT 解析）
+
+用法:
+  python predict_today_14.py                    # 默认查今日 + 未来 2 天
+  python predict_today_14.py --days 1           # 仅今日
+  python predict_today_14.py --leagues 英超 西甲  # 指定联赛
+"""
+import sys, argparse, sqlite3
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 BASE = Path(__file__).resolve().parent.parent
 DATA = BASE / "data"
@@ -10,201 +21,65 @@ sys.path.insert(0, str(BASE / "scripts"))
 sys.path.insert(0, str(BASE / "collection"))
 
 from prediction_core import init_models, PredictionCore
+from load_odds_from_db import load_odds_from_db, find_match_id_by_cn
 import logging
 logging.basicConfig(level=logging.WARNING)  # 减少日志噪音
 
-# 今日14场即将开赛比赛（排除已完赛的3场）
-TODAY_MATCHES = [
-    # 英超
-    {"league": "英超", "home_cn": "埃弗顿", "away_cn": "水晶宫", "home_en": "Everton", "away_en": "Crystal Palace",
-     "txt": "英超2026-2027赛季完整时序赔率.txt"},
-    {"league": "英超", "home_cn": "诺丁汉", "away_cn": "利兹联", "home_en": "Nottingham Forest", "away_en": "Leeds United",
-     "txt": "英超2026-2027赛季完整时序赔率.txt"},
-    {"league": "英超", "home_cn": "伊普斯", "away_cn": "桑德兰", "home_en": "Ipswich Town", "away_en": "Sunderland",
-     "txt": "英超2026-2027赛季完整时序赔率.txt"},
-    {"league": "英超", "home_cn": "布伦特", "away_cn": "热刺", "home_en": "Brentford", "away_en": "Tottenham Hotspur",
-     "txt": "英超2026-2027赛季完整时序赔率.txt"},
-    # 西甲
-    {"league": "西甲", "home_cn": "毕尔巴鄂", "away_cn": "塞维利亚", "home_en": "Athletic Club", "away_en": "Sevilla",
-     "txt": "西甲2026-2027赛季完整时序赔率.txt"},
-    {"league": "西甲", "home_cn": "巴伦西亚", "away_cn": "塞尔塔", "home_en": "Valencia", "away_en": "Celta Vigo",
-     "txt": "西甲2026-2027赛季完整时序赔率.txt"},
-    {"league": "西甲", "home_cn": "西班牙人", "away_cn": "皇马", "home_en": "Espanyol", "away_en": "Real Madrid",
-     "txt": "西甲2026-2027赛季完整时序赔率.txt"},
-    # 法甲
-    {"league": "法甲", "home_cn": "朗斯", "away_cn": "欧塞尔", "home_en": "RC Lens", "away_en": "Auxerre",
-     "txt": "法甲2026-2027赛季完整时序赔率.txt"},
-    {"league": "法甲", "home_cn": "尼斯", "away_cn": "洛里昂", "home_en": "Nice", "away_en": "Lorient",
-     "txt": "法甲2026-2027赛季完整时序赔率.txt"},
-    {"league": "法甲", "home_cn": "图卢兹", "away_cn": "里昂", "home_en": "Toulouse", "away_en": "Olympique Lyonnais",
-     "txt": "法甲2026-2027赛季完整时序赔率.txt"},
-    # 意甲
-    {"league": "意甲", "home_cn": "乌迪内斯", "away_cn": "科莫", "home_en": "Udinese", "away_en": "Como",
-     "txt": "意甲2026-2027赛季完整时序赔率.txt"},
-    {"league": "意甲", "home_cn": "国际米兰", "away_cn": "蒙扎", "home_en": "Inter", "away_en": "Monza",
-     "txt": "意甲2026-2027赛季完整时序赔率.txt"},
-    {"league": "意甲", "home_cn": "热那亚", "away_cn": "那不勒斯", "home_en": "Genoa", "away_en": "SSC Napoli",
-     "txt": "意甲2026-2027赛季完整时序赔率.txt"},
-    {"league": "意甲", "home_cn": "帕尔马", "away_cn": "卡利亚里", "home_en": "Parma", "away_en": "Cagliari",
-     "txt": "意甲2026-2027赛季完整时序赔率.txt"},
-]
-
-LEAGUE_PREFIX_TOKENS = ["西甲", "英超", "意甲", "德甲", "法甲",
-    "La Liga", "LaLiga", "Premier League", "Serie A", "Bundesliga", "Ligue 1", "Ligue1"]
+DEFAULT_DB = DATA / "odds.db"
 
 
-def _strip_league_prefix(name):
-    name = name.strip()
-    for kw in LEAGUE_PREFIX_TOKENS:
-        m = re.match(rf"^{re.escape(kw)}\s+", name)
-        if m:
-            name = name[m.end():].strip()
-            break
-    return name
+def discover_today_matches(db_path, days_ahead=2, leagues=None):
+    """从 odds500_match 表动态查询今日 + 未来 N 天未开赛比赛。
 
-
-def parse_team_line(line):
-    line = line.strip()
-    if not line:
-        return None, None
-    body = _strip_league_prefix(line)
-    if "VS" in body.upper():
-        m = re.search(r"\s*VS\s*", body, flags=re.IGNORECASE)
-        if m:
-            return body[:m.start()].strip(), body[m.end():].strip()
-    parts = [p.strip() for p in re.split(r"\s{2,}", body) if p.strip()]
-    if len(parts) >= 2:
-        return _strip_league_prefix(parts[-2]), parts[-1]
-    sp = body.split()
-    if len(sp) >= 2:
-        return sp[-2], sp[-1]
-    return None, None
-
-
-def parse_score_section(block_body):
-    records = []
-    m_start = re.search(r'比分固定奖金', block_body)
-    if not m_start:
-        return records
-    tail = block_body[m_start.end():]
-    m_end = re.search(r'\n总进球固定奖金', tail)
-    section = tail if not m_end else tail[:m_end.start()]
-    parts = re.split(r'发布时间\s*([\d\-]+)\s+([\d:]+)\s*\n', section)
-    for i in range(1, len(parts), 3):
-        pub_date = parts[i].strip()
-        pub_time = parts[i + 1].strip()
-        body = parts[i + 2]
-        rec = {"pub_time": f"{pub_date} {pub_time}", "win_odds": {}, "draw_odds": {}, "lose_odds": {}}
-        lines = [ln for ln in body.split("\n") if ln.strip() != ""]
-        if len(lines) >= 6:
-            for label_key, label_line, value_line in (
-                ("win_odds", lines[0], lines[1]),
-                ("draw_odds", lines[2], lines[3]),
-                ("lose_odds", lines[4], lines[5]),
-            ):
-                labels = [s.strip().replace(" ", "") for s in re.split(r"\t+", label_line.strip()) if s.strip()]
-                values = [s.strip() for s in re.split(r"\t+", value_line.strip()) if s.strip()]
-                if len(labels) == len(values):
-                    for sc, val in zip(labels, values):
-                        try:
-                            rec[label_key][sc] = float(val)
-                        except ValueError:
-                            pass
-        records.append(rec)
-    return records
-
-
-def parse_odds_block(block_body, round_num, match_datetime):
-    odds_data = {
-        "round": round_num, "match_datetime": match_datetime,
-        "wdl_odds": {"records": [], "open": {}, "close": {}},
-        "handicap_odds": {"line": None, "records": [], "open": {}, "close": {}},
-        "score_odds": {"records": []},
-        "tg_odds": {"records": []},
-    }
-    # 胜平负
-    wdl_pattern = r'胜平负固定奖金\s*\n发布时间\s*胜\s*平\s*负\s*\n([\s\S]*?)\n\n'
-    wdl_match = re.search(wdl_pattern, block_body)
-    if wdl_match:
-        for line in wdl_match.group(1).strip().split("\n"):
-            parts = re.split(r"\s+", line.strip())
-            if len(parts) >= 5:
-                try:
-                    odds_data["wdl_odds"]["records"].append({
-                        "time": parts[0] + " " + parts[1],
-                        "win": float(parts[2]), "draw": float(parts[3]), "lose": float(parts[4]),
-                    })
-                except ValueError:
-                    continue
-        if odds_data["wdl_odds"]["records"]:
-            odds_data["wdl_odds"]["open"] = odds_data["wdl_odds"]["records"][0]
-            odds_data["wdl_odds"]["close"] = odds_data["wdl_odds"]["records"][-1]
-    # 让球
-    hdp_pattern = r'让球胜平负固定奖金\s*\n让球([+\-]?\d+)\s*\n发布时间\s*胜\s*平\s*负\s*\n([\s\S]*?)\n\n'
-    hdp_match = re.search(hdp_pattern, block_body)
-    if hdp_match:
-        odds_data["handicap_odds"]["line"] = int(hdp_match.group(1))
-        for line in hdp_match.group(2).strip().split("\n"):
-            parts = re.split(r"\s+", line.strip())
-            if len(parts) >= 5:
-                try:
-                    odds_data["handicap_odds"]["records"].append({
-                        "time": parts[0] + " " + parts[1],
-                        "win": float(parts[2]), "draw": float(parts[3]), "lose": float(parts[4]),
-                    })
-                except ValueError:
-                    continue
-        if odds_data["handicap_odds"]["records"]:
-            odds_data["handicap_odds"]["open"] = odds_data["handicap_odds"]["records"][0]
-            odds_data["handicap_odds"]["close"] = odds_data["handicap_odds"]["records"][-1]
-    # 比分
-    odds_data["score_odds"]["records"] = parse_score_section(block_body)
-    # 总进球
-    tg_pattern = r'总进球固定奖金\s*\n发布时间\s+[\d]+\+?\s+[\d]+\+?\s+[\d]+\+?\s+[\d]+\+?\s+[\d]+\+?\s+[\d]+\+?\s+[\d]+\+?\s+[\d]+\+?\s*\n([\s\S]*?)(?=\n\n\d{2}-\d{2}|\n\n\d{4}/\d{4}|\Z)'
-    tg_match = re.search(tg_pattern, block_body)
-    if tg_match:
-        for line in tg_match.group(1).strip().split("\n"):
-            line = line.strip()
-            if not line or not re.match(r"\d{4}-\d{2}-\d{2}", line):
-                continue
-            parts = re.split(r"\s+", line)
-            if len(parts) >= 10:
-                goals = {}
-                for idx, label in enumerate(["0", "1", "2", "3", "4", "5", "6", "7+"]):
-                    if idx + 2 < len(parts):
-                        try:
-                            goals[label] = float(parts[idx + 2])
-                        except ValueError:
-                            pass
-                if goals:
-                    odds_data["tg_odds"]["records"].append({"pub_time": f"{parts[0]} {parts[1]}", "goals": goals})
-    return odds_data
-
-
-def find_and_parse_odds(txt_path, home_cn, away_cn):
-    content = txt_path.read_text(encoding="utf-8")
-    block_pattern = r'(\d{4}/\d{4} Regular Season 第\d+轮 \d{4}-\d{2}-\d{2} \d{2}:\d{2})\s*\n([\s\S]*?)(?=\d{4}/\d{4} Regular Season|$)'
-    for header, block_body in re.findall(block_pattern, content):
-        m_dt = re.search(r"第(\d+)轮 (\d{4}-\d{2}-\d{2} \d{2}:\d{2})", header)
-        round_num = m_dt.group(1) if m_dt else "1"
-        match_datetime = m_dt.group(2) if m_dt else ""
-        lines = [ln for ln in block_body.split("\n") if ln.strip() != ""]
-        if not lines:
-            continue
-        home, away = parse_team_line(lines[0])
-        if not home or not away:
-            continue
-        if (home_cn in home and away_cn in away) or (home_cn in away and away_cn in home):
-            odds_data = parse_odds_block(block_body, round_num, match_datetime)
-            meta = {"round_num": round_num, "match_datetime": match_datetime, "home": home, "away": away}
-            return meta, odds_data
-    return None, None
+    替代原硬编码 TODAY_MATCHES，与 generate_unified_report.py 的 discover_matches 同源。
+    status=1 表示未开赛（2=已赛, 5=取消）。
+    """
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        today = datetime.now().strftime("%Y-%m-%d")
+        end_date = (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+        sql = """
+            SELECT fid, league, round, match_date, match_time,
+                   home_team_cn, away_team_cn, home_team_en, away_team_en
+            FROM odds500_match
+            WHERE season = '26/27' AND status = 1
+              AND match_date >= ? AND match_date <= ?
+        """
+        args = [today, end_date]
+        if leagues:
+            placeholders = ",".join("?" for _ in leagues)
+            sql += f" AND league IN ({placeholders})"
+            args.extend(leagues)
+        sql += " ORDER BY match_date, match_time, league"
+        rows = conn.execute(sql, args).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            # 队名英文缺失（升班马）时回退中文占位
+            d["home_team_en"] = (d.get("home_team_en") or "").strip() or d["home_team_cn"]
+            d["away_team_en"] = (d.get("away_team_en") or "").strip() or d["away_team_cn"]
+            out.append(d)
+        return out
+    finally:
+        conn.close()
 
 
 def main():
+    parser = argparse.ArgumentParser(description="今日五大联赛即将开赛比赛预测")
+    parser.add_argument("--days", type=int, default=2, help="查询未来 N 天（默认 2）")
+    parser.add_argument("--leagues", nargs="*", default=None, help="限定联赛（如 英超 西甲）")
+    args = parser.parse_args()
+
     print("=" * 70)
-    print("今日五大联赛预测 (14场即将开赛比赛)")
+    print("今日五大联赛预测 (即将开赛比赛)")
     print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    scope = f"今日 + 未来 {args.days} 天"
+    if args.leagues:
+        scope += f"  联赛: {','.join(args.leagues)}"
+    else:
+        scope += "  全联赛"
+    print(scope)
     print("=" * 70)
 
     print("\n加载模型...")
@@ -212,30 +87,58 @@ def main():
     core = PredictionCore(models)
     print("模型加载完成\n")
 
+    # 动态查询比赛清单（替代硬编码 TODAY_MATCHES）
+    matches = discover_today_matches(DEFAULT_DB, days_ahead=args.days, leagues=args.leagues)
+    print(f"从 odds500_match 查到 {len(matches)} 场未开赛比赛\n")
+
+    # C-20260919-019: 与 generate_unified_report 对齐——预测前注入待赛虚拟行，
+    # 否则未赛场走 fallback 模板会残留他场赔率/Elo 造成方向污染
+    core.wdl_predictor.prime_fixtures([
+        {
+            'home_team': m["home_team_en"], 'away_team': m["away_team_en"],
+            'home_team_cn': m["home_team_cn"], 'away_team_cn': m["away_team_cn"],
+            'league': m["league"], 'date': m["match_date"],
+            'wdl_match_id': find_match_id_by_cn(m["home_team_cn"], m["away_team_cn"]),
+        }
+        for m in matches
+    ])
+
     results = []
-    for m in TODAY_MATCHES:
-        txt_path = DATA / m["txt"]
-        meta, odds = find_and_parse_odds(txt_path, m["home_cn"], m["away_cn"])
-        if not meta:
-            print(f"  [WARN] 未找到赔率: {m['home_cn']} vs {m['away_cn']}")
+    for m in matches:
+        home_cn = m["home_team_cn"]
+        away_cn = m["away_team_cn"]
+        home_en = m["home_team_en"]
+        away_en = m["away_team_en"]
+        league = m["league"]
+
+        # SSOT 改造：从 odds.db 反查 match_id 并加载赔率，替代原 TXT 解析
+        # 26-27 赛季时序表 match_id 为中文格式，用中文短名模糊匹配
+        match_id = find_match_id_by_cn(home_cn, away_cn)
+        if not match_id:
+            print(f"  [WARN] odds.db 未找到比赛: {home_cn} vs {away_cn}")
+            continue
+        odds = load_odds_from_db(match_id)
+        if not odds:
+            print(f"  [WARN] 无赔率数据: {home_cn} vs {away_cn} (match_id={match_id})")
             continue
 
         if not odds["wdl_odds"]["records"]:
-            print(f"  [WARN] 缺WDL赔率: {m['league']} {m['home_cn']} vs {m['away_cn']}")
+            print(f"  [WARN] 缺WDL赔率: {league} {home_cn} vs {away_cn}")
 
         match = {
-            "home_team": m["home_en"], "away_team": m["away_en"],
-            "home_team_cn": m["home_cn"], "away_team_cn": m["away_cn"],
-            "league": m["league"],
-            "match_time": meta["match_datetime"],
-            "round": f"第{meta['round_num']}轮",
+            "home_team": home_en, "away_team": away_en,
+            "home_team_cn": home_cn, "away_team_cn": away_cn,
+            "league": league,
+            "match_time": odds["match_datetime"],
+            "round": odds.get("round") or "",
+            "match_id": match_id,
         }
 
         try:
             result = core.predict_unified(match, odds, is_mock=False)
             results.append({"match": match, "result": result, "odds": odds})
         except Exception as e:
-            print(f"  [ERROR] {m['league']} {m['home_cn']} vs {m['away_cn']}: {e}")
+            print(f"  [ERROR] {league} {home_cn} vs {away_cn}: {e}")
             import traceback
             traceback.print_exc()
 
@@ -265,8 +168,17 @@ def main():
         tg = res["tg"]
         print(f"  总进球: {tg['prediction']}  大2.5={tg['over_25_prob']*100:.1f}%  [{tg['method']}]")
 
+    # C-20260919-019: 方向分布哨兵（与 generate_unified_report 同口径）
+    if len(results) >= 8:
+        from collections import Counter
+        dc = Counter(r["result"]["wdl"]["prediction"] for r in results)
+        top_dir, top_n = dc.most_common(1)[0]
+        if top_n / len(results) >= 0.85:
+            print(f"\n🚨 [方向告警] {len(results)} 场中 {top_dir} 占 {top_n} 场 "
+                  f"({top_n/len(results):.0%})，分布极端异常（疑似主客反转），请人工核对！")
+
     print("\n" + "=" * 70)
-    print("预测完成!")
+    print(f"预测完成! 共 {len(results)} 场")
 
 
 if __name__ == "__main__":

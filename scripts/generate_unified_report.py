@@ -37,17 +37,40 @@ try:
 except Exception:  # 特征库/依赖缺失时回退原样，不阻断报告生成
     _normalize_team_name = lambda s: s
 
+# wdl_history 口径归一化（C-20260918-052）：
+# feature_utils.normalize_team_name 是纯精确映射，无法处理
+# 500.com 全名 ↔ wdl_history 短名（如 纽卡斯尔联 ↔ 纽卡斯尔、托特纳姆热刺 ↔ 热刺）的跨表匹配，
+# 导致 find_sporttery_match_id 在 sporttery 写入短名 + 500.com 用全名时 LIKE 失配，
+# 5 场被跳过。改用 team_name_mapping.normalize_team_name 4 级模糊匹配
+# （精确别名→子串→模糊→序列相似度），与 sporttery_live_collector.normalize_team 写入口径对齐。
+from team_name_mapping import normalize_team_name as _normalize_team_wdl
+
+
+def _normalize_team_for_wdl(name):
+    """wdl_history 口径归一化：优先 team_name_mapping 4 级模糊匹配，
+    失败时 fallback 到 feature_utils 精确映射，再 fallback 原名。"""
+    if not name:
+        return name
+    n = _normalize_team_wdl(name)
+    if n:
+        return n
+    n2 = _normalize_team_name(name)
+    return n2 if n2 else name
+
 try:
     import ev_engine as _ev_engine
+    import upset_factor_engine as _upset_engine
 except Exception:  # EV引擎缺失时降级为原有凯利分析，不阻断报告生成
     _ev_engine = None
 
 try:
     from knowledge_base_schema import get_insights as _kb_get_insights
     from knowledge_base_schema import get_correction_rules as _kb_get_correction_rules
+    from knowledge_base_schema import record_kb_hit as _kb_record_hit
 except Exception:  # B1 知识库缺失时降级标注，不阻断报告生成
     _kb_get_insights = None
     _kb_get_correction_rules = None
+    _kb_record_hit = None
 
 try:
     from data_source_conflict_detector import (
@@ -87,6 +110,8 @@ HCP_STR_MAP = {
     "平手": 0.0, "平手/半球": 0.25, "半球": 0.5, "半球/一球": 0.75,
     "一球": 1.0, "一球/球半": 1.25, "球半": 1.5, "球半/两球": 1.75,
     "两球": 2.0, "两球/两球半": 2.25, "两球半": 2.5, "两球半/三球": 2.75, "三球": 3.0,
+    # C-20260919-021: 补全深盘（odds500_match 实测存在，原映射缺失致 parse_hcp_line 返回 None）
+    "三球/三球半": 3.25, "三球半": 3.5, "三球半/四球": 3.75,
 }
 
 
@@ -222,14 +247,27 @@ def discover_matches(conn, start_date, end_date, leagues=None, played_only=False
 
     played_only=False：未开赛(status=1)，供日常赛前预测；
     played_only=True ：已赛(status IN (2,5))，供历史补生成回放（用已入库赔率+特征）。
+
+    C-20260924-065 兜底：500.com 偶发漏回补 status（仍为 1 等非终态），但 matches 表
+    已出实际赛果（actual_score 非空）的场次实际已赛，须纳入 replay 扫描，否则这类
+    「已赛但状态未回补」的历史报告会被漏扫、残留旧渲染文案。纯延期(status=7)且无比分
+    的场次不匹配此兜底（无赛果，属未赛范畴）。
     """
-    status_cond = "status IN (2,5)" if played_only else "status = 1"
+    if played_only:
+        status_cond = (
+            "status IN (2,5) OR EXISTS ("
+            " SELECT 1 FROM matches m WHERE m.match_id = odds500_match.match_id"
+            "  AND m.actual_score IS NOT NULL AND m.actual_score != ''"
+            ")"
+        )
+    else:
+        status_cond = "status = 1"
     sql = """
         SELECT fid, league, season, round, match_date, match_time,
                home_team_cn, away_team_cn, home_team_en, away_team_en,
                win, draw, lost, handicap, pan
         FROM odds500_match
-        WHERE season = '26/27' AND {status_cond}
+        WHERE season = '26/27' AND ({status_cond})
           AND match_date >= ? AND match_date <= ?
     """.format(status_cond=status_cond)
     args = [start_date, end_date]
@@ -358,15 +396,62 @@ def match_has_prediction(conn, m):
 
 
 # ============================================================
+# C-20260922-053: --replay 落库赛前时间锚点
+# ============================================================
+def pick_replay_anchor(match_date, buildlog_generated_at, file_ctime):
+    """纯逻辑：按证据等级选择回放补算的赛前时间锚点。
+
+    证据优先级（只接受 ≤ 比赛日 的时间，晚于比赛日的证据不成立）：
+      1. buildlog  — 旧 build_log.json 的 generated_at（精确到秒，但重渲会覆盖）
+      2. file_ctime— 报告 md 文件创建时间（Windows 覆盖写保留创建时间）
+      3. match_date 00:00:00 — 无任何赛前证据时的保守锚点
+    返回 (anchor_timestamp_str, evidence)。
+    """
+    md_end = f"{match_date} 23:59:59"
+    if buildlog_generated_at and str(buildlog_generated_at) <= md_end \
+            and str(buildlog_generated_at)[:10] <= match_date:
+        return str(buildlog_generated_at), "buildlog"
+    if file_ctime is not None and file_ctime.strftime("%Y-%m-%d") <= match_date:
+        return file_ctime.strftime("%Y-%m-%d %H:%M:%S"), "file_ctime"
+    return f"{match_date} 00:00:00", "match_date"
+
+
+def resolve_replay_anchor(match_date, report_path):
+    """渲染前调用：从既有报告文件解析赛前锚点（render_report 会覆盖 build_log）。
+
+    必须在 render_report() 之前执行，否则 build_log 的 generated_at 已被
+    重渲时间覆盖、md 内容也已重写（文件 ctime 不受影响，仍可作二级证据）。
+    """
+    buildlog_ts = None
+    file_ctime = None
+    try:
+        if report_path and Path(report_path).exists():
+            file_ctime = datetime.fromtimestamp(Path(report_path).stat().st_ctime)
+            log_path = Path(report_path).parent / (Path(report_path).stem + "_build_log.json")
+            if log_path.exists():
+                _bl = json.loads(log_path.read_text(encoding="utf-8"))
+                buildlog_ts = _bl.get("generated_at")
+    except Exception as _e:
+        print(f"  ⚠️ 赛前锚点解析失败，退化比赛日锚点: {type(_e).__name__}: {_e}")
+    return pick_replay_anchor(match_date, buildlog_ts, file_ctime)
+
+
+
+# ============================================================
 # 竞彩网(Sporttery) 时序赔率组装
 # ============================================================
 def find_sporttery_match_id(conn, home_cn, away_cn, match_date):
     """按中文队名 + 日期邻近(±3天) 定位竞彩网时序 match_id。
 
     竞彩场次日期常比实际开赛日期早一天（凌晨场按销售日归属），故做日期容差。
+
+    归一化口径（C-20260918-052）：使用 _normalize_team_for_wdl（team_name_mapping
+    4 级模糊匹配）替代 _normalize_team_name（feature_utils 精确映射）。前者与
+    sporttery_live_collector.normalize_team 写入口径一致，能跨表匹配
+    500.com 全名 ↔ wdl_history 短名（如 纽卡斯尔联 ↔ 纽卡斯尔、托特纳姆热刺 ↔ 热刺）。
     """
-    home_cn = _normalize_team_name(home_cn)
-    away_cn = _normalize_team_name(away_cn)
+    home_cn = _normalize_team_for_wdl(home_cn)
+    away_cn = _normalize_team_for_wdl(away_cn)
     like = f"%_{home_cn}_{away_cn}"
     rows = conn.execute(
         "SELECT DISTINCT match_id FROM wdl_history WHERE match_id LIKE ?", (like,)
@@ -396,9 +481,11 @@ def find_any_sporttery_match_id(conn, home_cn, away_cn, match_date):
     深盘强队（如来让球两球半）竞彩常只开让球/大小球/比分、不开胜平负正盘，
     此时 wdl_history 无记录但 handicap/total_goals/score_history 有记录。
     与 find_sporttery_match_id 一样做 ±3 天日期容差，避免命中历史赛季同名对阵。
+
+    归一化口径同 find_sporttery_match_id（C-20260918-052）：用 _normalize_team_for_wdl。
     """
-    home_cn = _normalize_team_name(home_cn)
-    away_cn = _normalize_team_name(away_cn)
+    home_cn = _normalize_team_for_wdl(home_cn)
+    away_cn = _normalize_team_for_wdl(away_cn)
     like = f"%_{home_cn}_{away_cn}"
     base = datetime.strptime(match_date, "%Y-%m-%d")
     best, best_diff = None, 999
@@ -496,6 +583,67 @@ def build_sporttery_odds(conn, mid, fallback_win, fallback_draw, fallback_lose):
         odds_data["score_odds"]["records"] = list(by_ts.values())
 
     return odds_data
+
+
+def append_shadow_v5(record):
+    """C-20260920-029: 追加 v5 Shadow 预测到 reports/t006_shadow_v5.jsonl（按 match_id 去重覆盖）。
+
+    Shadow 记录在赛前生成、不含实际比分，赛后由独立评测任务按 match_id JOIN
+    matches.actual_score；重跑同场时覆盖旧行，不产生重复。
+    """
+    path = BASE_DIR / "reports" / "t006_shadow_v5.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    kept = []
+    if path.exists():
+        for ln in path.read_text(encoding="utf-8").splitlines():
+            try:
+                if json.loads(ln).get("match_id") != record["match_id"]:
+                    kept.append(ln)
+            except json.JSONDecodeError:
+                continue
+    kept.append(json.dumps(record, ensure_ascii=False))
+    path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+
+
+def append_tg_calib_shadow(record):
+    """C-20260921-036: 追加 TG λ 校准 Shadow 记录到 reports/tg_calib_shadow.jsonl。
+
+    只含 control（生产 factor=1.0）与 shadow（滚动校准因子）双份 TG 分布，
+    不含赛果；赛后由 tg_calibration_shadow_eval.py 按 match_id JOIN
+    post_match_review.actual_tg 做 RPS/Brier/ECE 评测。按 match_id 去重覆盖。
+    """
+    path = BASE_DIR / "reports" / "tg_calib_shadow.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    kept = []
+    if path.exists():
+        for ln in path.read_text(encoding="utf-8").splitlines():
+            try:
+                if json.loads(ln).get("match_id") != record["match_id"]:
+                    kept.append(ln)
+            except json.JSONDecodeError:
+                continue
+    kept.append(json.dumps(record, ensure_ascii=False))
+    path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+
+
+def append_tg_wodds_shadow(record):
+    """C-20260921-040: 追加 TG 融合权重 Shadow 记录到 reports/tg_wodds_shadow.jsonl。
+
+    只含 control（生产 w_odds=0.15）与 shadow（w_odds=0.30）双份 TG 分布，
+    factor=1.0 隔离 λ 校准变量；按 match_id 去重覆盖。
+    """
+    path = BASE_DIR / "reports" / "tg_wodds_shadow.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    kept = []
+    if path.exists():
+        for ln in path.read_text(encoding="utf-8").splitlines():
+            try:
+                if json.loads(ln).get("match_id") != record["match_id"]:
+                    kept.append(ln)
+            except json.JSONDecodeError:
+                continue
+    kept.append(json.dumps(record, ensure_ascii=False))
+    path.write_text("\n".join(kept) + "\n", encoding="utf-8")
 
 
 # ============================================================
@@ -602,7 +750,12 @@ def _sf(row, field, nd=2):
     """
     if row is None:
         return None
-    v = row[field] if field in row.keys() else None
+    if field in row.keys():
+        v = row[field]
+    else:
+        # C-20260923-056 防复发：字段名不在 schema 中可能 typo，记日志而非静默返 None
+        print(f"[WARN] generate_unified_report._sf: 字段 '{field}' 不在 row.keys() 中，可能字段名 typo 或 schema 变更", file=sys.stderr)
+        v = None
     if v is None:
         return None
     try:
@@ -622,6 +775,49 @@ def _sf_pct(row, field, min_ratio=None):
     if min_ratio is not None and v < min_ratio:
         return MISSING
     return f"{v * 100:.1f}%"
+
+
+# C-20260923-058 全库防复发：集中式 sofascore schema 校验
+# 背景：C-056/C-057 仅覆盖 §十七之三 _keys（4 字段）和 _sf 调用链；本层把
+# generate_unified_report.py 里所有硬编码访问 sofascore 字段的地方（_sf/_sf_pct
+# 调用、直接 sofa_row[...] 下标、_sofa_pre[...] 关联）统一纳入 schema 校验。
+# audit_sofascore_schema(row) 返回不在 row.keys() 中的字段名列表；主循环每场
+# 拿到 extra["sofascore"] 后调用一次，缺失即 print [WARN] 到 stderr（非阻断）。
+# 该层为补充层，不替代 §十七之三 _missing_in_schema 与 _sf 的 warning。
+SOFA_AUDIT_FIELDS = frozenset({
+    # §十七之三 数据质量清单 _keys（L1170）
+    "sofa_rat_5g_home", "sofa_rat_5g_away",
+    "sofa_xg_5g_home", "sofa_xg_5g_away",
+    # §十一 近期状态与攻防（L1781-1783）
+    "sofa_pass_sr_5g_home", "sofa_pass_sr_5g_away",
+    # §十二 球员与阵容分析（L1807-1821）
+    "pa_xi_rating_home", "pa_xi_rating_away",
+    "pa_xi_xg_home", "pa_xi_xg_away",
+    "pa_core_xg_share_home", "pa_core_xg_share_away",
+    "pa_availability_home", "pa_availability_away",
+    "pa_missing_impact_home", "pa_missing_impact_away",
+    "pa_fatigue_7d_home", "pa_fatigue_7d_away",
+    "pa_rest_days_home", "pa_rest_days_away",
+    "pa_squad_stability_home", "pa_squad_stability_away",
+    # event_id 关联 fbref_match_mapping（L1098-1099）
+    "event_id",
+})
+
+
+def audit_sofascore_schema(row):
+    """返回 SOFA_AUDIT_FIELDS 中不在 row.keys() 的字段名列表（空列表表示 schema 对齐）。
+
+    C-20260923-058：与 §十七之三 _missing_in_schema 同口径，但覆盖全库所有硬编码
+    访问的 sofascore 字段。row 为 None 时返回空列表（调用方已对 None 做分支）。
+    """
+    if row is None:
+        return []
+    try:
+        row_keys = set(row.keys())
+    except AttributeError:
+        # 非 sqlite3.Row/dict（无 keys()）：保守视为全缺失
+        return sorted(SOFA_AUDIT_FIELDS)
+    return sorted(f for f in SOFA_AUDIT_FIELDS if f not in row_keys)
 
 
 # ============================================================
@@ -893,11 +1089,12 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     score_method = score.get("method", "—")
     lambda_alert = result.get("lambda_alert")  # P1-13: λ 主客差值告警
 
-    # 总进球
+    # 总进球（C-20260921-035：结论=精确进球数 Top1/Top3，不再出大小球结论）
     tg_pred = tg.get("prediction", "—")
     tg_over = tg.get("over_25_prob")
     tg_under = (1 - tg_over) if tg_over is not None else None
     tg_goals = tg.get("goals") or {}
+    tg_top3 = tg.get("top3") or []
     tg_method = tg.get("method", "—")
 
     # 数据完整度：三通道各 1/3；竞彩时序按快照数分档（0 / 1 / ≥2）
@@ -923,9 +1120,9 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     if _CONFLICT_DETECTOR_AVAILABLE and extra["sofascore"] is not None and _has_real_500:
         try:
             sofa_row = extra["sofascore"]
-            # 近 5 场主客评分（若缺失回退全赛季平均）
-            rh = sofa_row["sofa_rat_5g_home"] or sofa_row["sofa_rat_home"]
-            ra = sofa_row["sofa_rat_5g_away"] or sofa_row["sofa_rat_away"]
+            # 近 5 场主客评分（C-20260923-058：删除死回退 sofa_rat_home/away，该字段已下线；缺失时 if rh and ra 不通过，显式跳过冲突检测）
+            rh = sofa_row["sofa_rat_5g_home"]
+            ra = sofa_row["sofa_rat_5g_away"]
             if rh and ra and _ouzhi["avg_live_win"] and _ouzhi["avg_live_draw"] and _ouzhi["avg_live_lose"]:
                 fund_p = _fundamental_home_prob(float(rh), float(ra))
                 mkt_p = _market_home_prob(
@@ -947,6 +1144,34 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
         divergence_std=divergence_std, n_sub=n_sub_models, wdl_snap=wdl_snap,
         extra_penalty=_conflict_penalty)
     conf_score = _conf_breakdown["score"]
+
+    # 官方伤停名单（match_missing_players 赛前采集行，经 event_id 精确关联）。
+    # 提前到质检清单构建之前查询，供 §十二/§十六/§十七之三 三处复用，避免文案自相矛盾。
+    om_home: list = []
+    om_away: list = []
+    _event_id = None
+    _sofa_pre = extra["sofascore"]
+    if _sofa_pre is not None and "event_id" in _sofa_pre.keys():
+        _event_id = _sofa_pre["event_id"]
+    if _event_id and conn is not None:
+        try:
+            _mrow = conn.execute(
+                "SELECT home_team_cn, away_team_cn FROM fbref_match_mapping WHERE fbref_match_id=?",
+                (str(_event_id),)).fetchone()
+            if _mrow:
+                for _team_en, _bucket in ((_mrow["home_team_cn"], om_home),
+                                          (_mrow["away_team_cn"], om_away)):
+                    if not _team_en:
+                        continue
+                    for _r in conn.execute(
+                            "SELECT player_name, reason, expected_end_date FROM match_missing_players "
+                            "WHERE fbref_match_id=? AND team=? AND reason!='转会' ORDER BY player_name",
+                            (str(_event_id), _team_en)).fetchall():
+                        _ret = (_r["expected_end_date"] or "").strip()
+                        _bucket.append(f"{_r['player_name']}({_r['reason']}"
+                                       + (f",复出{_ret[5:]}" if _ret else "") + ")")
+        except Exception:
+            pass  # 伤停展示失败不阻塞报告
 
     # ===== P0-03 遗留: 数据质量清单（逐模块状态，报告可视化）=====
     # 每个模块：name / status (OK/WARN/FAIL) / detail
@@ -998,7 +1223,11 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     if extra["sofascore"] is not None:
         # 关键评分是否齐全
         sofa = extra["sofascore"]
-        _keys = ["sofa_rat_5g_home", "sofa_rat_5g_away", "xg_5g_home", "xg_5g_away"]
+        _keys = ["sofa_rat_5g_home", "sofa_rat_5g_away", "sofa_xg_5g_home", "sofa_xg_5g_away"]
+        # C-20260923-056 防复发：schema 校验，_keys 字段名必须在 row.keys() 中
+        _missing_in_schema = [k for k in _keys if k not in sofa.keys()]
+        if _missing_in_schema:
+            print(f"[WARN] generate_unified_report §十七之三: sofascore 数据质量检查字段名不在 schema 中 {_missing_in_schema}（可能 typo 或表结构变更）", file=sys.stderr)
         _filled = sum(1 for k in _keys if _sf(sofa, k) is not None)
         if _filled >= 3:
             _quality_items.append(("SofaScore 赛前特征", "OK", f"核心字段{_filled}/4"))
@@ -1007,11 +1236,12 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     else:
         _quality_items.append(("SofaScore 赛前特征", "FAIL", "未匹配到"))
 
-    # 5. 球员伤病/预计首发（SofaScore 官方源）
-    if extra["sofascore"] is not None and _sf(extra["sofascore"], "injury_count_home") is not None:
-        _quality_items.append(("SofaScore 球员伤病", "OK", "官方源已接入"))
+    # 5. 球员伤病/预计首发（官方缺阵名单 match_missing_players 赛前采集）
+    if om_home or om_away:
+        _n_om = len(om_home) + len(om_away)
+        _quality_items.append(("SofaScore 球员伤病", "OK", f"官方缺阵名单已接入（{_n_om}人）"))
     else:
-        _quality_items.append(("SofaScore 球员伤病", "WARN", "无伤病数据（非关键，靠历史推算）"))
+        _quality_items.append(("SofaScore 球员伤病", "WARN", "官方伤停未采集（靠历史推算）"))
 
     # 6. 跨数据源一致性
     if _conflict_result is None:
@@ -1063,11 +1293,45 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
             ev_odds = _ev_engine.OddsData(
                 home=float(oc_h), draw=float(oc_d), away=float(oc_a), odds_type="close")
             if ev_probs.validate() and ev_odds.validate():
+                # C-20260923: urs 投注质量过滤器（shadow mode，默认不实际过滤）
+                _urs_val = None
+                try:
+                    _ur = _upset_engine.compute_upset_risk_score(
+                        home_odds=float(oc_h), draw_odds=float(oc_d), away_odds=float(oc_a),
+                        home_team=home_cn, away_team=away_cn, match_date=m["match_date"],
+                    )
+                    _urs_val = _ur.get("upset_risk_score")
+                except Exception:
+                    _urs_val = None
+                # 漂移惩罚：投注方向的 signed drift (close-open)/open
+                # 赔率源一致性：EV 用竞彩 wdl_close，漂移也用竞彩 wdl_open→close（同市场同口径）
+                # 无竞彩时 drift_signed=None（不判定，不惩罚）
+                _drift_signed = None
+                # 先算 EV 分析（不带 drift），拿到 best_direction 后再算 drift
                 ev_analysis = _ev_engine.analyze_match(
                     probs=ev_probs, odds=ev_odds,
                     ev_threshold=ev_thr, kelly_strategy=ev_kelly_strat, kelly_cap=ev_kelly_cap,
                     match_id=m.get("fid"), league=league,
-                    home_team=home_cn, away_team=away_cn)
+                    home_team=home_cn, away_team=away_cn,
+                    urs=_urs_val)
+                # 有了 best_direction，算投注方向的 signed drift
+                if ev_analysis.best_direction is not None and wdl_open.get("win") and wdl_close.get("win"):
+                    _dir_map = {"home": ("win",), "draw": ("draw",), "away": ("lose",)}
+                    _dir_key = _dir_map.get(ev_analysis.best_direction)
+                    if _dir_key:
+                        _ok = _dir_key[0]
+                        _open_o = wdl_open.get(_ok)
+                        _close_o = wdl_close.get(_ok)
+                        if _open_o and _close_o and _open_o > 1:
+                            _drift_signed = (_close_o - _open_o) / _open_o
+                # 重新分析（带 drift_signed，shadow 记录用）
+                if _drift_signed is not None:
+                    ev_analysis = _ev_engine.analyze_match(
+                        probs=ev_probs, odds=ev_odds,
+                        ev_threshold=ev_thr, kelly_strategy=ev_kelly_strat, kelly_cap=ev_kelly_cap,
+                        match_id=m.get("fid"), league=league,
+                        home_team=home_cn, away_team=away_cn,
+                        urs=_urs_val, drift_signed=_drift_signed)
         except Exception:
             ev_analysis = None
     result["ev_analysis"] = ev_analysis
@@ -1114,7 +1378,10 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("| **胜平负** | **{}** | {} | {} |".format(wdl_pred, pct(max(hp or 0, dp or 0, ap or 0)), "{}/100".format(conf_score)))
     A("| **让球胜平负** ({}) | **{}** | {} | — |".format(hcp_line_disp, hcp_pred,
           pct(max(hcp_upper or 0, hcp_draw or 0, hcp_lower or 0))))
-    A("| **总进球** (2.5球) | **{}** | {} | — |".format(tg_pred, pct(max(tg_over or 0, tg_under or 0))))
+    if tg_top3:
+        A("| **总进球 Top1** | **{}** | {} | — |".format(tg_top3[0]["label"], pct(tg_top3[0]["prob"])))
+    else:
+        A("| **总进球 Top1** | **{}** | — | — |".format(tg_pred))
     if top_scores:
         A("| **最可能比分** | **{}** | {} | — |".format(top_scores[0]["score"], pct(top_scores[0]["prob"])))
     A("")
@@ -1157,15 +1424,28 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("└─────────────────────────────────────────────────────────────┘")
     A("```")
     A("")
+    # C-20260919-022: 推荐方向与概率方向相反时直接解释，避免被误读为"模型预测反转"
+    if rec_type not in ("NO_VALUE", "AVOID") and rec_dir != wdl_pred and rec_mp is not None:
+        A("> ℹ️ **推荐方向（{}）≠ 概率预测方向（{}）**：概率层回答「谁最可能赢」——{} 概率最高（{}）；".format(
+            rec_dir, wdl_pred, wdl_pred, pct(max(hp or 0, dp or 0, ap or 0))))
+        A("> EV 层回答「押谁的赔率划算」——{} 虽只给 {} 概率，但赔率 {}，概率×赔率={:.2f}>1，单位注金期望为正。这是**高赔率冷门的小仓位价值提示，不是模型改判 {} 会赢**；该冷门实际仍大概率不发生，建议仓位仅 {}%。".format(
+            rec_dir, pct(rec_mp), fnum(rec_odds), rec_mp * (rec_odds or 0), rec_dir, fnum(suggested_stake * 100, 1)))
+        A("")
     if rec_type in ("NO_VALUE", "AVOID"):
         A("> 本场在 EV 阈值（2%）下无足够价值空间（edge 不足或低于抽水），建议观望。")
         A("")
     A("### 一句话总结")
     A("")
-    summary = "模型{}（概率{}），市场{}，{}。".format(
-        wdl_pred, pct(max(hp or 0, dp or 0, ap or 0)),
-        "一致" if (rec_edge is None or abs(rec_edge) < 0.02) else
-        ("低估" if (rec_edge or 0) > 0 else "过热"),
+    # C-20260923-064: 「低估/过热」的判定对象是推荐方向 rec_dir 的 edge（EV 层），而非概率方向 wdl_pred；
+    # 旧措辞主语混用会生成「模型主胜，市场低估」，被误读为市场低估主胜，与 §6.1 主胜 OVERPRICED 直接矛盾
+    if rec_edge is None or abs(rec_edge) < 0.02:
+        _mkt_word = "与模型定价方向一致"
+    elif (rec_edge or 0) > 0:
+        _mkt_word = "低估{}方向（价值空间 {:+.1f}%）".format(rec_dir, (rec_edge or 0) * 100)
+    else:
+        _mkt_word = "对{}方向过热（价值空间 {:+.1f}%）".format(rec_dir, (rec_edge or 0) * 100)
+    summary = "模型主看{}（概率{}），市场{}，{}。".format(
+        wdl_pred, pct(max(hp or 0, dp or 0, ap or 0)), _mkt_word,
         "存在价值空间" if (rec_edge or 0) >= 0.02 else "无明显价值，建议观望")
     A("> " + summary)
     A("")
@@ -1194,6 +1474,10 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("> 分歧度等级: **{}**（std={:.4f}，可用子模型 {}/{}）".format(
         divergence_level, divergence_std, _sub_total or n_sub_models, len(SUB_MODEL_LABELS)))
     A("> 阈值: std<0.05 低分歧 / 0.05–0.10 中分歧 / ≥0.10 高分歧；高分歧意味着子模型对结果判断差异显著，建议结合 EV 与抽水分析谨慎决策。")
+    # C-20260919-022: XGB 缺失在报告内直接告警，杜绝"静默 —"（prediction_core 哨兵同步报错）
+    _xgb_sp = sub_models.get("xgboost")
+    if not _xgb_sp or not all(isinstance(_xgb_sp.get(k), (int, float)) for k in ("win", "draw", "lose")):
+        A("> 🚨 **XGBoost 子模型本场未产出**（上表显示 —）：模型文件/scaler/特征提取或推理环节异常，已自动降级为 {} 模型融合；请查日志中『WDL模型·哨兵』定位原因后重生成。".format(_sub_total))
     A("")
     A("---")
     A("")
@@ -1231,12 +1515,12 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("")
 
     # ================= 五、比分 =================
-    A("## 四、比分预测 Top10 ({})".format(score_method))
+    A("## 四、比分预测 Top5 ({})".format(score_method))
     A("")
     A("| 排名 | 比分 | 概率 | 累计概率 | 胜平负 |")
     A("|:----:|------|:----:|:--------:|:------:|")
     cum = 0.0
-    for i, s in enumerate(top_scores[:10] if len(top_scores) > 5 else top_scores, 1):
+    for i, s in enumerate(top_scores[:5], 1):
         cum += s["prob"]
         try:
             h, a = map(int, s["score"].split(":"))
@@ -1268,14 +1552,33 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
         A("| 总进球 | 0球 | 1球 | 2球 | 3球 | 4球 | 5球 | 6球 | 7+球 |")
         A("|:------:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:----:|")
         vals = []
-        cum_tg = 0.0
         for k in ["0", "1", "2", "3", "4", "5", "6", "7+"]:
             v = tg_goals.get(k) or tg_goals.get(str(k)) or 0.0
             vals.append(pct(v))
         A("| 概率 | {} |".format(" | ".join(vals)))
     A("")
-    A("**大小球(2.5)**: 大球 {} | 小球 {} | 预测: **{}** | 方法: {}".format(
-        pct(tg_over), pct(tg_under), tg_pred, tg_method))
+    # C-20260921-035：结论=精确进球数 Top3（原大小球结论已移除）
+    if tg_top3:
+        A("**进球数 Top3 预测**")
+        A("")
+        A("| 排名 | 进球数 | 概率 | 累计概率 |")
+        A("|:----:|:------:|:----:|:--------:|")
+        cum_p = 0.0
+        for i, item in enumerate(tg_top3, 1):
+            cum_p += float(item.get("prob") or 0.0)
+            A("| {} | **{}** | {} | {} |".format(i, item["label"], pct(item["prob"]), pct(cum_p)))
+        A("")
+        _lh = tg.get("lambda_home"); _la = tg.get("lambda_away")
+        if _lh is not None and _la is not None:
+            A("> 分析：总进球期望（λ主+λ客）= {:.2f} 球为概率均值，分布峰值（众数）为 **{}**；"
+              "Top3 合计 {} 覆盖近半数可能，其余 5 档概率分散，单场仍以 {} 为首选。".format(
+                  _lh + _la, tg_top3[0]["label"], pct(cum_p), tg_top3[0]["label"]))
+        else:
+            A("> 分析：Top3 合计 {}；该场为纯赔率隐含口径（λ 缺失）。".format(pct(cum_p)))
+        A("")
+        A("**方法**: {}（大小球底层概率仍入库：大球 {}，不作结论）".format(tg_method, pct(tg_over)))
+    else:
+        A("**进球数预测**: 数据不足（无总进球赔率记录）")
     A("")
     A("---")
     A("")
@@ -1328,6 +1631,31 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
         A("└─────────────────────────────────────────────────────────────┘")
         A("```")
         A("")
+        # C-20260919-022: EV 决策方向与概率预测方向相反时，报告内自动解释（两套口径不互相覆盖）
+        _EV_DIR_CN = {"home": "主胜", "draw": "平局", "away": "客胜"}
+        if ev_analysis.overall_decision != "AVOID":
+            _ev_dir_cn = _EV_DIR_CN.get(ev_analysis.best_direction, ev_analysis.best_direction)
+            if _ev_dir_cn != wdl_pred:
+                _ev_d = {"home": ev_analysis.home_analysis, "draw": ev_analysis.draw_analysis,
+                         "away": ev_analysis.away_analysis}[ev_analysis.best_direction]
+                A("> ℹ️ **EV 推荐方向（{}）与概率预测方向（{}）相反，这并非模型改判**：".format(_ev_dir_cn, wdl_pred))
+                A("> 概率层：{} 概率最高（{}），模型认为它最可能发生；".format(
+                    wdl_pred, pct(max(hp or 0, dp or 0, ap or 0))))
+                A("> EV 层：{} 仅 {:.1f}% 概率，但赔率 {:.2f}，概率×赔率={:.2f}>1，长期看每元期望回报 {:+.2f}%。".format(
+                    _ev_dir_cn, _ev_d.p_model * 100, _ev_d.odds,
+                    _ev_d.p_model * _ev_d.odds, ev_analysis.best_ev * 100))
+                A("> 即「赢面仍在{}，但 {} 的高赔率相对于其小概率被低估」——属小概率高赔率事件的**小仓位（{:.1f}%）价值提示**，请按仓位纪律看待，不可当成胜负预测。".format(
+                    wdl_pred, _ev_dir_cn, ev_analysis.recommended_stake_pct * 100))
+                A("")
+            # C-20260923-064: §一 推荐卡（按价值空间 edge 最大选向）与本卡（按期望值 EV 最大选向）
+            # 方向可能不同——两卡各自解释过「≠概率方向」，但相互之间未解释，同报告两个「推荐方向」易被误读为矛盾
+            if rec_dir not in (None, "—", _ev_dir_cn) and (rec_edge or 0) >= ev_thr:
+                A("> ℹ️ **§一 推荐卡（{}）与本卡（{}）方向不同，两者均为 EV 层价值提示、非概率改判**：".format(
+                    rec_dir, _ev_dir_cn))
+                A("> §一 按「价值空间 edge 最大」选向（{}，edge {:+.1f}%）；本卡按「期望值 EV 最大」选向（{}，EV {:+.1f}%）——".format(
+                    rec_dir, (rec_edge or 0) * 100, _ev_dir_cn, ev_analysis.best_ev * 100))
+                A("> EV 含赔率杠杆（模型概率×赔率-1），高赔率小概率方向的 EV 可远高于低赔率高 edge 方向；两列口径见 §6.1（价值空间=edge 列，EV=期望值列），仓位以本卡（EV 最大方向）为准。")
+                A("")
         A("### 6.3 抽水分析")
         A("")
         A("- 竞彩返还率: {} | 抽水率: {} | 三向隐含概率和: {}".format(
@@ -1535,10 +1863,17 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("## 十二、球员与阵容分析")
     A("")
     if sof:
-        A("> 预测首发/伤病缺阵为代理指标（由 player_availability_features 基于历史出场连续性推算，非官方伤病新闻）。")
+        if om_home or om_away:
+            A("> 预测首发为历史连续性推算；**官方伤停**来自 SofaScore 赛前采集（prematch_sofascore_lineups，临场重采自动转官方确认），"
+              "已用于校正下方可用性/缺阵影响等特征。")
+        else:
+            A("> 预测首发/伤病缺阵为代理指标（由 player_availability_features 基于历史出场连续性推算，非官方伤病新闻）。"
+              "官方伤停未采集：运行 collection/prematch_sofascore_lineups.py 后重算特征即可补齐。")
         A("")
         A("| 维度 | 主队 | 客队 |")
         A("|------|:----:|:----:|")
+        A("| 官方伤停 | {} | {} |".format(
+            "、".join(om_home) if om_home else "无记录", "、".join(om_away) if om_away else "无记录"))
         A("| 预计首发评分 | {} | {} |".format(
             fnum(_sf(sof, "pa_xi_rating_home")), fnum(_sf(sof, "pa_xi_rating_away"))))
         A("| 预计首发 xG | {} | {} |".format(
@@ -1607,7 +1942,9 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("")
     A("## 十五、技术统计对比")
     A("")
-    A("(未开赛比赛无单场技术统计；赛后由 500.com odds500_stat 回补)")
+    # C-20260923-063: 本报告为赛前信息快照，技术统计属赛后数据（时间语义隔离）
+    # 统一占位指向复盘报告；odds500_stat 12 组指标的真正渲染在 generate_post_match_report.py
+    A("(技术统计属赛后数据，本赛前报告不展示；完整对比见赛后复盘报告)")
     A("")
     A("---")
     A("")
@@ -1626,7 +1963,10 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     if lambda_alert and lambda_alert.get("triggered"):
         risk_labels.append("λ 进球期望差值过大：{}".format(
             lambda_alert.get("message") or "λ主客差>1.2，赛后需复核λ计算链路"))
-    risk_labels.append("球员预计首发、伤病全部为历史连续性推算，无官方赛前发布会确认，存在突发轮换翻车风险。")
+    if om_home or om_away:
+        risk_labels.append("预测首发仍为 SofaScore 模拟（临场约 1 小时才官方确认），存在突发轮换/赛前临时调整翻车风险。")
+    else:
+        risk_labels.append("球员预计首发、伤病全部为历史连续性推算，无官方赛前发布会确认，存在突发轮换翻车风险。")
     if divergence_std >= 0.10:
         risk_labels.append("多子模型输出高分歧（std={:.3f}），降低本场置信度。".format(divergence_std))
     _disp_live_win = num(_ouzhi.get("disp_live_win")) if _ouzhi else None
@@ -1679,6 +2019,9 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
                 kb_rows.append("| {} | {} | {} | {} |".format(
                     it.get("confidence"), it.get("content"), src_n,
                     (it.get("note") or "—").replace("|", "｜")))
+                if _kb_record_hit is not None:
+                    _kb_record_hit("feature_insights", it.get("_league"), it.get("id"),
+                                   1, None, src_n, "报告L2读取(仅展示)")
         except Exception:
             kb_rows = None  # 读取异常 → 降级标注，不影响报告
     if kb_rows is None:
@@ -1692,6 +2035,8 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
             A(r)
         A("")
     else:
+        if _kb_record_hit is not None:
+            _kb_record_hit("feature_insights", league, None, 0, None, 0, "报告L2未命中")
         A("> {} 联赛暂无已审核（≥4 级）经验条目，知识库处于早期积累阶段（随 A5 人工审核推进自动增长）。".format(league))
         A("")
     A("> **L1 统计先验**已在模型侧直接应用（联赛 ρ 校准，如 ρ=-0.30 低比分修正）；**L3 样本权重**将在重训时按复盘偏差加权（见 B3）。")
@@ -1952,9 +2297,59 @@ def build_match_dict(m, hcp_line):
         "away_team_cn": m["away_team_cn"],
         "league": m["league"],
         "round": f"第{m['round']}轮",
+        "match_date": m["match_date"],
         "match_time": f"{m['match_date']} {m['match_time']}",
         "handicap_line": hcp_line,
     }
+
+
+def write_daily_summary(day_rows, md=None):
+    """按比赛日写 docs/prematch_reports/<yyyymmdd>/_summary.md。
+
+    C-20260919-022 从 run() 提取：回放批量重生成整天报告后可直接调用刷新汇总。
+    """
+    md = md or day_rows[0]["match_date"]
+    out_dir = BASE_DIR / "docs" / "prematch_reports" / md.replace("-", "")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    sum_path = out_dir / "_summary.md"
+    sum_lines = [f"# 赛前预测汇总 — {md}", ""]
+    sum_lines.append(f"> 生成时间: {datetime.now(CN_TZ).strftime('%Y-%m-%d %H:%M:%S')} | 共 {len(day_rows)} 场")
+    sum_lines.append("")
+    sum_lines.append("| # | 联赛 | 对阵 | WDL预测 | 概率(主/平/客) | 最可能比分 | 推荐 | 报告 |")
+    sum_lines.append("|:--:|------|------|:--------:|:--------------:|:----------:|------|------|")
+    for i, r in enumerate(day_rows, 1):
+        w = r["wdl"]
+        rec_dir = "主胜" if w.get("home_prob", 0) == max(w.get("home_prob", 0), w.get("draw_prob", 0), w.get("away_prob", 0)) else ("平局" if w.get("draw_prob", 0) == max(w.get("home_prob", 0), w.get("draw_prob", 0), w.get("away_prob", 0)) else "客胜")
+        sum_lines.append("| {} | {} | {} vs {} | **{}** | {}/{}/{} | {} | {} | [链接]({}) |".format(
+            i, r["league"], r["home"], r["away"], w.get("prediction", "—"),
+            fnum((w.get("home_prob") or 0) * 100, 1), fnum((w.get("draw_prob") or 0) * 100, 1),
+            fnum((w.get("away_prob") or 0) * 100, 1), r["score"].get("most_likely", "—"),
+            rec_dir, r["_file"]))
+    sum_lines.append("")
+
+    # 数据完整性告警：WDL 快照<2 或完整度<80% 的场次单独列出
+    alerts = [r for r in day_rows if r.get("_wdl_snapshots", 0) < 2 or r.get("_completeness", 100) < 80]
+    if alerts:
+        sum_lines.append("## ⚠️ 数据完整性告警")
+        sum_lines.append("")
+        sum_lines.append("| 联赛 | 对阵 | WDL快照 | 完整度 | 说明 |")
+        sum_lines.append("|------|------|:-------:|:------:|------|")
+        for r in alerts:
+            snap = r.get("_wdl_snapshots", 0)
+            if r.get("_wdl_not_offered"):
+                why = "竞彩未开售胜平负盘（非缺失）"
+            elif snap == 0:
+                why = "无竞彩WDL时序"
+            else:
+                why = "仅1条快照缺漂移"
+            sum_lines.append("| {} | {} vs {} | {} | {}% | {} |".format(
+                r["league"], r["home"], r["away"], snap, r.get("_completeness", 100), why))
+        sum_lines.append("")
+    sum_lines.append("---")
+    sum_lines.append("")
+    sum_lines.append(f"> 本汇总由 generate_unified_report.py {REPORT_VERSION} 自动生成。")
+    sum_path.write_text("\n".join(sum_lines), encoding="utf-8")
+    print(f"\n✅ 汇总: {sum_path} ({len(day_rows)} 场)")
 
 
 def run(args):
@@ -1998,13 +2393,27 @@ def run(args):
         models['epl'] = None
     core = PredictionCore(models)
 
+    # C-20260919-018: 批量预测前注入待赛场（虚拟行），使 LGB/XGB 使用本场真实特征
+    # 而非 fallback 模板行；wdl_match_id 用于赔率特征按竞彩键对齐
+    core.wdl_predictor.prime_fixtures([
+        {
+            'home_team': m.get('home_team_en'), 'away_team': m.get('away_team_en'),
+            'home_team_cn': m['home_team_cn'], 'away_team_cn': m['away_team_cn'],
+            'league': m['league'], 'date': m['match_date'],
+            'wdl_match_id': find_sporttery_match_id(conn, m['home_team_cn'], m['away_team_cn'], m['match_date']),
+        }
+        for m in matches
+    ])
+
     rows = []
+    _xgb_missing = []  # C-20260919-022: 记录本批 XGB 未产出的场次，结束时哨兵汇总
     for m in matches:
         home_cn, away_cn = m["home_team_cn"], m["away_team_cn"]
         print(f"\n=== {m['match_date']} {m['match_time']} [{m['league']}] {home_cn} vs {away_cn} ===")
 
         # 回放模式：已有预测(model_predictions)则跳过，仅回写缺预测场次
-        if args.replay and match_has_prediction(conn, m):
+        # C-20260923-059: --force 绕过此检查以强制重生成报告（验证/修复用，建议配合 --no-write 避免污染 DB）
+        if args.replay and not args.force and match_has_prediction(conn, m):
             print(f"  ⏭️ 已有预测，跳过: {home_cn} vs {away_cn}")
             continue
 
@@ -2037,6 +2446,11 @@ def run(args):
         # 3. 500.com / SofaScore
         extra = {"500": data500, "sofascore": load_sofascore_data(conn, m["match_date"], home_cn)}
 
+        # C-20260923-058 全库防复发：集中式 sofascore schema 校验（补充层，非阻断）
+        _sofa_missing = audit_sofascore_schema(extra["sofascore"])
+        if _sofa_missing:
+            print(f"[WARN] generate_unified_report audit_sofascore_schema: 字段 {_sofa_missing} 不在 row.keys() 中（可能 typo 或 schema 变更）", file=sys.stderr)
+
         # 4. 预测
         match = build_match_dict(m, hcp_line)
         try:
@@ -2054,11 +2468,66 @@ def run(args):
         out_dir.mkdir(parents=True, exist_ok=True)
         fname = f"{m['league']}_{m['match_date']}_{home_cn}_vs_{away_cn}.md".replace("/", "-")
         report_path = out_dir / fname
+        # C-20260922-053: 必须在 render_report 覆盖文件前解析赛前时间锚点
+        replay_anchor, anchor_ev = (None, None)
+        if args.replay:
+            replay_anchor, anchor_ev = resolve_replay_anchor(m["match_date"], report_path)
         completeness = render_report(m, odds_data, result, extra, report_path, conn)
         print(f"  ✅ 报告: {report_path.name} (完整度 {completeness}%)")
+        if args.replay:
+            print(f"  ♻️ 回放落库锚点: {replay_anchor} (证据={anchor_ev})")
+
+        # C-20260920-029: v5 Shadow 记录（仅 JSONL，不落库/不展示；键与 model_predictions 同口径）
+        _shadow_v5 = result.get("_shadow_v5")
+        if _shadow_v5:
+            append_shadow_v5({
+                "match_id": f"{m['match_date']}_{m['home_team_en']}_{m['away_team_en']}",
+                "gen_time": datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+                "match_date": m["match_date"],
+                "league": m["league"],
+                "home": home_cn, "away": away_cn,
+                "v4_top5": [{"score": s.get("score"), "prob": round(float(s.get("prob") or 0), 4)}
+                            for s in (result["score"].get("top5") or [])],
+                "v4_most_likely": result["score"].get("most_likely"),
+                "v5": _shadow_v5,
+            })
+
+        # C-20260921-036: TG λ 校准 Shadow 记录（仅 JSONL；factor=1.0 的 fallback 场也记录，
+        # 便于监控激活率；生产 result['tg'] / model_predictions 值不变）
+        _shadow_tg = result.get("_shadow_tg_calib")
+        if _shadow_tg and not _shadow_tg.get("error"):
+            append_tg_calib_shadow({
+                "match_id": f"{m['match_date']}_{m['home_team_en']}_{m['away_team_en']}",
+                "gen_time": datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+                "match_date": m["match_date"],
+                "league": m["league"],
+                "home": home_cn, "away": away_cn,
+                "lambda_home": result["score"].get("lambda_home"),
+                "lambda_away": result["score"].get("lambda_away"),
+                "tg_calib": _shadow_tg,
+            })
+
+        # C-20260921-040: TG 融合权重 Shadow 记录（仅 JSONL；w_odds=0.30 vs 生产 0.15）
+        _shadow_wodds = result.get("_shadow_tg_wodds")
+        if _shadow_wodds and not _shadow_wodds.get("error"):
+            append_tg_wodds_shadow({
+                "match_id": f"{m['match_date']}_{m['home_team_en']}_{m['away_team_en']}",
+                "gen_time": datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+                "match_date": m["match_date"],
+                "league": m["league"],
+                "home": home_cn, "away": away_cn,
+                "lambda_home": result["score"].get("lambda_home"),
+                "lambda_away": result["score"].get("lambda_away"),
+                "tg_wodds": _shadow_wodds,
+            })
 
         # 6. 汇总行 + 回写数据
         wdl = result["wdl"]; hcp = result["hcp"]; score = result["score"]; tg = result["tg"]
+
+        # C-20260919-022: XGB 缺失登记（报告内已有告警，这里供批次结束时统一哨兵）
+        _xp = (wdl.get("sub_models") or {}).get("xgboost")
+        if not _xp or not all(isinstance(_xp.get(k), (int, float)) for k in ("win", "draw", "lose")):
+            _xgb_missing.append(f"{home_cn} vs {away_cn}")
 
         # EV 决策摘要（供落库回测）
         ev = result.get("ev_analysis")
@@ -2115,12 +2584,21 @@ def run(args):
             "hcp": {"line": hcp_line, "home_win_prob": hcp.get("home_win_prob"),
                     "draw_prob": hcp.get("draw_prob"), "away_win_prob": hcp.get("away_win_prob")},
             "score": {"lambda_home": score.get("lambda_home"), "lambda_away": score.get("lambda_away"),
-                      "most_likely": score.get("most_likely")},
-            "tg": {"over_25_prob": tg.get("over_25_prob")},
+                      "most_likely": score.get("most_likely"),
+                      # C-20260921-034: 真实发布 Top5 随落库（复盘只读不重推）
+                      "top5": [{"score": s.get("score"), "prob": s.get("prob")}
+                               for s in (score.get("top5") or [])][:5]},
+            "tg": {"over_25_prob": tg.get("over_25_prob"),
+                   # C-20260921-035: 真实发布精确进球 Top3 随落库
+                   "top3": [{"goals": x.get("goals"), "label": x.get("label"), "prob": x.get("prob")}
+                            for x in (tg.get("top3") or [])][:3]},
             "ev": ev_summary,
             "_input_snapshot_json": input_snapshot,
             "_feature_version": FEATURE_VERSION,
             "_config_version": CONFIG_VERSION,
+            # C-20260922-053: 回放补算的赛前时间锚点（普通模式恒 False/None）
+            "_is_replay": bool(args.replay),
+            "_pred_timestamp": replay_anchor,
             "_file": fname,
             "_wdl_snapshots": wdl_snapshots,
             "_wdl_not_offered": wdl_not_offered,
@@ -2128,56 +2606,35 @@ def run(args):
             "lambda_alert": result.get("lambda_alert"),  # P1-13: λ 主客差值告警
         })
 
+    # 6b. C-20260919-019: 方向分布哨兵——防止主客系统性反转再次悄无声息
+    # （历史异常：32场29主、20场17客；正常窗口单侧占比一般 <85%）
+    if len(rows) >= 8:
+        from collections import Counter
+        _dir_count = Counter(r["wdl"]["prediction"] for r in rows)
+        _top_dir, _top_n = _dir_count.most_common(1)[0]
+        if _top_n / len(rows) >= 0.85:
+            print(f"\n🚨 [方向告警] {len(rows)} 场中 {_top_dir} 占 {_top_n} 场 "
+                  f"({_top_n/len(rows):.0%})，分布极端异常（疑似主客反转/特征污染），"
+                  f"请人工核对子模型日志后再采信本批报告！")
+
+    # C-20260919-022: XGB 缺失批次哨兵——任一报告 XGB 为 — 即醒目汇总，杜绝再次遗漏
+    if _xgb_missing:
+        print(f"\n🚨 [XGB 哨兵] 本批 {len(_xgb_missing)}/{len(rows)} 场 XGBoost 未产出（报告显示 —）：")
+        for _nm in _xgb_missing:
+            print(f"   - {_nm}")
+        print("   请检查 XGB 模型加载/scaler/特征提取日志（WDL模型·哨兵），修复后重新生成本批报告！")
+
     # 7. 汇总报告（按比赛日 match_date 分组）
-    # 回放模式只补单场报告，不重写 _summary.md（避免用"仅回放子集"覆盖已有汇总）
+    # 回放模式只补单场报告，不重写 _summary.md（避免覆盖"仅回放子集"覆盖已有汇总）
     if args.replay:
         print("\n[回放模式] 跳过 _summary.md 汇总重写（避免覆盖已有汇总）")
     rows_by_date = {}
     for r in rows:
         rows_by_date.setdefault(r["match_date"], []).append(r)
 
-    for md, day_rows in ([] if args.replay else rows_by_date.items()):
-        out_dir = BASE_DIR / "docs" / "prematch_reports" / md.replace("-", "")
-        out_dir.mkdir(parents=True, exist_ok=True)
-        sum_path = out_dir / "_summary.md"
-        sum_lines = [f"# 赛前预测汇总 — {md}", ""]
-        sum_lines.append(f"> 生成时间: {datetime.now(CN_TZ).strftime('%Y-%m-%d %H:%M:%S')} | 共 {len(day_rows)} 场")
-        sum_lines.append("")
-        sum_lines.append("| # | 联赛 | 对阵 | WDL预测 | 概率(主/平/客) | 最可能比分 | 推荐 | 报告 |")
-        sum_lines.append("|:--:|------|------|:--------:|:--------------:|:----------:|------|------|")
-        for i, r in enumerate(day_rows, 1):
-            w = r["wdl"]
-            rec_dir = "主胜" if w.get("home_prob", 0) == max(w.get("home_prob", 0), w.get("draw_prob", 0), w.get("away_prob", 0)) else ("平局" if w.get("draw_prob", 0) == max(w.get("home_prob", 0), w.get("draw_prob", 0), w.get("away_prob", 0)) else "客胜")
-            sum_lines.append("| {} | {} | {} vs {} | **{}** | {}/{}/{} | {} | {} | [链接]({}) |".format(
-                i, r["league"], r["home"], r["away"], w.get("prediction", "—"),
-                fnum((w.get("home_prob") or 0) * 100, 1), fnum((w.get("draw_prob") or 0) * 100, 1),
-                fnum((w.get("away_prob") or 0) * 100, 1), r["score"].get("most_likely", "—"),
-                rec_dir, r["_file"]))
-        sum_lines.append("")
-
-        # 数据完整性告警：WDL 快照<2 或完整度<80% 的场次单独列出
-        alerts = [r for r in day_rows if r.get("_wdl_snapshots", 0) < 2 or r.get("_completeness", 100) < 80]
-        if alerts:
-            sum_lines.append("## ⚠️ 数据完整性告警")
-            sum_lines.append("")
-            sum_lines.append("| 联赛 | 对阵 | WDL快照 | 完整度 | 说明 |")
-            sum_lines.append("|------|------|:-------:|:------:|------|")
-            for r in alerts:
-                snap = r.get("_wdl_snapshots", 0)
-                if r.get("_wdl_not_offered"):
-                    why = "竞彩未开售胜平负盘（非缺失）"
-                elif snap == 0:
-                    why = "无竞彩WDL时序"
-                else:
-                    why = "仅1条快照缺漂移"
-                sum_lines.append("| {} | {} vs {} | {} | {}% | {} |".format(
-                    r["league"], r["home"], r["away"], snap, r.get("_completeness", 100), why))
-            sum_lines.append("")
-        sum_lines.append("---")
-        sum_lines.append("")
-        sum_lines.append(f"> 本汇总由 generate_unified_report.py {REPORT_VERSION} 自动生成。")
-        sum_path.write_text("\n".join(sum_lines), encoding="utf-8")
-        print(f"\n✅ 汇总: {sum_path} ({len(day_rows)} 场)")
+    if not args.replay:
+        for md, day_rows in rows_by_date.items():
+            write_daily_summary(day_rows, md)
 
     # 8. 回写 model_predictions
     if rows and not args.no_write:
@@ -2201,5 +2658,6 @@ if __name__ == "__main__":
     parser.add_argument("--no-write", action="store_true", help="不回写 model_predictions")
     parser.add_argument("--with-epl", action="store_true", help="启用英超独立参考模型（极慢，默认关闭）")
     parser.add_argument("--replay", action="store_true", help="回放模式：枚举已赛(status 2/5)场次，用已入库赔率+特征补生成赛前报告")
+    parser.add_argument("--force", action="store_true", help="强制重生成报告（绕过 replay 的「已有预测跳过」检查，配合 --no-write 可只刷新报告 md 不污染 model_predictions）")
     args = parser.parse_args()
     run(args)

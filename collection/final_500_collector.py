@@ -39,7 +39,8 @@ import time
 import sqlite3
 import argparse
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 import requests
 try:
@@ -61,6 +62,12 @@ try:
     from feature_utils import normalize_team_name as _normalize_team_name
 except Exception:  # 依赖缺失时回退原样，不阻断采集
     _normalize_team_name = lambda s: s
+
+# SofaScore 口径队名归一（写入侧反查 fbref_match_mapping 时的队名比对用）
+try:
+    from team_name_mapping import normalize_team_name as _canon_team
+except Exception:  # 依赖缺失时退回小写比较，不阻断采集
+    _canon_team = lambda s: (s or "").strip().lower()
 
 # 500.com 站点
 SCHED_URL = "https://liansai.500.com/index.php?c=score&a=getmatch"
@@ -127,8 +134,10 @@ SEASONS = {
 
 LEAGUES = ["英超", "西甲", "意甲", "德甲", "法甲"]
 
-# 历史升降班马补充映射（16/17~22/23 出现，assets/team_name_map.json 未覆盖；
-# 英文名对齐 Understat 表实际拼写，用于 match_id 一致性）
+# 历史升降班马补充映射（16/17 起各季出现，assets/team_name_map.json 未覆盖）。
+# 26/27 起英文名统一对齐 SofaScore 全名口径（DATA-015 / 风险 S，替代旧 Understat 短名），
+# 使 match_id 与 matches / fbref_match_mapping 同构；collect_match 还会反查
+# fbref_match_mapping 取得权威 mid（含权威日期）。
 _EXTRA_CN_TO_EN = {
     "沃特福德": "Watford",
     "诺维奇": "Norwich",
@@ -138,13 +147,13 @@ _EXTRA_CN_TO_EN = {
     "基尔高士丁": "Holstein Kiel",
     "柏林赫塔": "Hertha Berlin",
     "比勒费尔德": "Arminia Bielefeld",
-    "沙尔克04": "Schalke 04",
+    "沙尔克04": "FC Schalke 04",
     "菲尔特": "Greuther Fuerth",
     "克莱蒙特": "Clermont Foot",
     "波尔多": "Bordeaux",
     "特鲁瓦": "Troyes",
     "阿雅克肖": "Ajaccio",
-    "赫尔城": "Hull",
+    "赫尔城": "Hull City",
     "米德尔斯堡": "Middlesbrough",
     "斯托克城": "Stoke",
     "斯旺西": "Swansea",
@@ -169,12 +178,17 @@ _EXTRA_CN_TO_EN = {
     "汉诺威96": "Hannover",
     "纽伦堡": "Nuernberg",
     "杜塞尔多夫": "Duesseldorf",
-    "帕德博恩": "Paderborn",
+    "帕德博恩": "SC Paderborn 07",
     "埃瓦尔": "Eibar",
-    "马拉加": "Malaga",
-    "拉科鲁尼亚": "La Coruna",
+    "马拉加": "Málaga CF",
+    "拉科鲁尼亚": "Deportivo de A Coruña",
     "希洪竞技": "Gijon",
     "韦斯卡": "Huesca",
+    # 26/27 升班马（风险 S / C-093）
+    "勒芒": "Le Mans",
+    "考文垂": "Coventry City",
+    "桑坦德竞技": "Real Racing Club",
+    "埃沃斯堡": "SV 07 Elversberg",
 }
 
 
@@ -214,7 +228,9 @@ class Client:
 
     def __init__(self, delay=0.5, cookies=None):
         if curl_requests is not None:
-            self.session = curl_requests.Session(impersonate="chrome")
+            # C-20260922-054: Cookie 与用户 Edge 153 UA 绑定（project_memory 硬约束），
+            # 必须 impersonate="edge" 才能通过腾讯云 EdgeOne 人机验证；chrome 指纹会被拦截。
+            self.session = curl_requests.Session(impersonate="edge")
         else:
             self.session = requests.Session()
         self.session.headers.update({
@@ -323,9 +339,83 @@ def fetch_season_matches(client, stid, rounds):
 # ----------------------------------------------------------------------
 # 页面解析
 # ----------------------------------------------------------------------
+_NORM_UNMAPPED_WARNED = set()
+
+
 def _norm_team(cn):
     cn = (cn or "").strip()
-    return CN_TO_EN.get(cn, cn)
+    en = CN_TO_EN.get(cn, cn)
+    # 风险 S：映射缺失且结果仍含中文时告警，杜绝中文 match_id 静默产生
+    if (en == cn and any("一" <= ch <= "鿿" for ch in cn)
+            and cn not in _NORM_UNMAPPED_WARNED):
+        _NORM_UNMAPPED_WARNED.add(cn)
+        print(f"[警告] CN_TO_EN 缺失中文队名，match_id 将含中文，请补映射: {cn}")
+    return en
+
+
+# ----------------------------------------------------------------------
+# SofaScore 权威 match_id 反查（风险 S：写入侧对齐 fbref_match_mapping）
+# ----------------------------------------------------------------------
+_FM_CACHE = None
+
+
+def _fm_index(conn):
+    """懒加载 fbref_match_mapping 全部事件，按比赛日索引（进程内一次）。"""
+    global _FM_CACHE
+    if _FM_CACHE is None:
+        idx = defaultdict(list)
+        try:
+            for mid, h, a, d in conn.execute(
+                    "SELECT odds_match_id, home_team_cn, away_team_cn, match_date "
+                    "FROM fbref_match_mapping"):
+                idx[d].append((mid, _canon_team(h), _canon_team(a)))
+        except Exception:
+            pass
+        _FM_CACHE = idx
+    return _FM_CACHE
+
+
+def resolve_sofa_mid(conn, date, home_en, away_en, window=2):
+    """±window 天窗口内按队名唯一反查 SofaScore 权威 mid。
+
+    命中 -> mid（日期/全名全部采用注册口径，消除 500 赛程的日期漂移与短名）；
+    无连接 / 索引空 / 零或多个候选 -> None（调用方退回映射拼接）。
+    """
+    if conn is None:
+        return None
+    idx = _fm_index(conn)
+    if not idx:
+        return None
+    want_h, want_a = _canon_team(home_en), _canon_team(away_en)
+    if not want_h or not want_a:
+        return None
+    try:
+        d0 = datetime.strptime(date, "%Y-%m-%d")
+    except Exception:
+        return None
+    hits = []
+    for off in range(-window, window + 1):
+        d = (d0 + timedelta(days=off)).strftime("%Y-%m-%d")
+        for mid, ch, ca in idx.get(d, []):
+            if ch and ca and (ch in want_h or want_h in ch) \
+                    and (ca in want_a or want_a in ca):
+                hits.append(mid)
+    uniq = set(hits)
+    return hits[0] if len(uniq) == 1 else None
+
+
+def build_match_id(conn, item):
+    """赛程 item -> (match_id, date, home_en, away_en)：先映射再反查权威事件。"""
+    hraw = (item.get("hname") or "").strip()
+    graw = (item.get("gname") or "").strip()
+    home_en, away_en = _norm_team(hraw), _norm_team(graw)
+    stime = (item.get("stime") or " ").strip()
+    date = stime.partition(" ")[0]
+    resolved = resolve_sofa_mid(conn, date, home_en, away_en)
+    if resolved:
+        date, home_en, away_en = resolved.split("_", 2)
+        return resolved, date, home_en, away_en
+    return f"{date}_{home_en}_{away_en}", date, home_en, away_en
 
 
 def _td_text(tr, idx):
@@ -743,11 +833,9 @@ def collect_match(client, conn, item, season, league, pages):
 
     home_cn = _normalize_team_name((item.get("hname") or "").strip())
     away_cn = _normalize_team_name((item.get("gname") or "").strip())
-    home_en = _norm_team((item.get("hname") or "").strip())
-    away_en = _norm_team((item.get("gname") or "").strip())
+    match_id, date, home_en, away_en = build_match_id(conn, item)
     stime = (item.get("stime") or " ").strip()
-    date, _, time_ = stime.partition(" ")
-    match_id = f"{date}_{home_en}_{away_en}"
+    _, _, time_ = stime.partition(" ")
 
     match = {
         "fid": fid, "match_id": match_id,
@@ -973,9 +1061,7 @@ def main():
                 if args.skip_existing:
                     _home_cn = (item.get("hname") or "").strip()
                     _away_cn = (item.get("gname") or "").strip()
-                    _stime = (item.get("stime") or " ").strip()
-                    _date = _stime.partition(" ")[0]
-                    _mid = f"{_date}_{_norm_team(_home_cn)}_{_norm_team(_away_cn)}"
+                    _mid = build_match_id(conn, item)[0]
                     _finished = (item.get("status") == 5)
                     if is_already_collected(conn, item["fid"], _mid, _finished, pages):
                         print(f"  [{item['fid']}] {_home_cn} vs {_away_cn} skip（已采集）")

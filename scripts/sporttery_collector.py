@@ -132,33 +132,65 @@ def save_to_odds_db(match_data: dict, season: str, league_abbr: str) -> bool:
     wdl_map = {"主胜": "胜", "客胜": "负", "平局": "平"}
     actual_wdl = wdl_map.get(match_data.get("actual_wdl", ""), "")
 
-    # 计算 actual_handicap
+    # 计算 actual_handicap（仅完赛时有意义）
     actual_handicap = compute_actual_handicap(
         match_data.get("handicap", 0),
         match_data.get("actual_score", "")
-    )
+    ) if match_data.get("actual_score") else ""
 
     match_type = build_match_type(league_abbr, season)
+    handicap_val = match_data.get("handicap", 0)
 
     try:
-        # 1. matches 表
-        cursor.execute("""
-            INSERT OR REPLACE INTO matches 
-            (match_id, home_team, away_team, match_date, match_type, 
-             handicap, handicap_source, actual_wdl, actual_handicap, actual_score, actual_total_goals, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, 'sporttery', ?, ?, ?, ?, datetime('now'))
-        """, (
-            odds_match_id,
-            home_team,
-            away_team,
-            match_data.get("match_date", ""),
-            match_type,
-            match_data.get("handicap", 0),
-            actual_wdl,
-            actual_handicap,
-            match_data.get("actual_score", ""),
-            match_data.get("actual_total_goals"),
-        ))
+        # 1. matches 表（C-20260921-043: 智能UPSERT，避免赛前空值覆盖已有赛果）
+        cursor.execute("SELECT match_id FROM matches WHERE match_id=?", (odds_match_id,))
+        exists = cursor.fetchone()
+
+        if exists:
+            # UPDATE：只更新非空字段
+            sets = []
+            vals = []
+            if handicap_val is not None:
+                sets.append("handicap=?")
+                vals.append(handicap_val)
+                sets.append("handicap_source='sporttery'")
+            if actual_wdl:
+                sets.append("actual_wdl=?")
+                vals.append(actual_wdl)
+            if actual_handicap:
+                sets.append("actual_handicap=?")
+                vals.append(actual_handicap)
+            if match_data.get("actual_score"):
+                sets.append("actual_score=?")
+                vals.append(match_data["actual_score"])
+            if match_data.get("actual_total_goals") is not None:
+                sets.append("actual_total_goals=?")
+                vals.append(match_data["actual_total_goals"])
+            sets.append("updated_at=datetime('now')")
+            vals.append(odds_match_id)
+            cursor.execute(
+                f"UPDATE matches SET {', '.join(sets)} WHERE match_id=?",
+                vals,
+            )
+        else:
+            # INSERT 新行
+            cursor.execute("""
+                INSERT OR REPLACE INTO matches 
+                (match_id, home_team, away_team, match_date, match_type, 
+                 handicap, handicap_source, actual_wdl, actual_handicap, actual_score, actual_total_goals, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'sporttery', ?, ?, ?, ?, datetime('now'))
+            """, (
+                odds_match_id,
+                home_team,
+                away_team,
+                match_data.get("match_date", ""),
+                match_type,
+                handicap_val,
+                actual_wdl,
+                actual_handicap,
+                match_data.get("actual_score", ""),
+                match_data.get("actual_total_goals"),
+            ))
 
         # 2. wdl_history
         for wdl in match_data.get("wdl_timing", []):
@@ -207,33 +239,44 @@ def save_to_odds_db(match_data: dict, season: str, league_abbr: str) -> bool:
 # ============================================================
 
 def parse_match_list_response(data: dict) -> list:
-    """解析比赛列表API响应"""
+    """解析比赛列表API响应
+
+    C-20260921-043: 修复盘口数据丢失——不再跳过未完赛场次。
+    赛前(matchResultStatus != "2"): 存盘口 goalLine，actual_* 为空。
+    赛后(matchResultStatus == "2"): 补全 actual_wdl/score/total_goals。
+    """
     matches = []
     results = data.get("value", {}).get("matchResult", [])
 
     for m in results:
-        if m.get("matchResultStatus") != "2":
-            continue
-
         sporttery_id = str(m.get("matchId", ""))
         if not sporttery_id:
             continue
 
-        full_score = m.get("sectionsNo999", "?:?")
-        try:
-            parts = full_score.split(":")
-            total_goals = int(parts[0]) + int(parts[1])
-        except:
-            total_goals = None
+        is_finished = m.get("matchResultStatus") == "2"
 
+        # 盘口值：赛前赛后都有，始终解析
         try:
             handicap = float(m.get("goalLine", "0").replace("+", ""))
-        except:
+        except (ValueError, TypeError):
             handicap = 0.0
 
-        win_flag = m.get("winFlag", "")
-        wdl_map = {"H": "主胜", "A": "客胜", "D": "平局"}
-        actual_wdl = wdl_map.get(win_flag, "")
+        # 赛果：仅完赛后才有
+        if is_finished:
+            full_score = m.get("sectionsNo999", "?:?")
+            try:
+                parts = full_score.split(":")
+                total_goals = int(parts[0]) + int(parts[1])
+            except (ValueError, IndexError):
+                total_goals = None
+
+            win_flag = m.get("winFlag", "")
+            wdl_map = {"H": "主胜", "A": "客胜", "D": "平局"}
+            actual_wdl = wdl_map.get(win_flag, "")
+        else:
+            full_score = ""
+            total_goals = None
+            actual_wdl = ""
 
         matches.append({
             "sporttery_match_id": sporttery_id,

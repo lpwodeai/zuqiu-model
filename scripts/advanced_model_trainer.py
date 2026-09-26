@@ -41,12 +41,7 @@ try:
 except ImportError:
     LGB_AVAILABLE = False
 
-# D1: MLflow 实验追踪（可选依赖；未安装时静默跳过，绝不因追踪失败影响训练流程）
-try:
-    import mlflow
-    MLFLOW_AVAILABLE = True
-except ImportError:
-    MLFLOW_AVAILABLE = False
+# C-20260926-094 方案 B：MLflow 集成已停用；可复现快照由 mlflow_repro.save_repro_snapshot 落盘 assets。
 
 warnings.filterwarnings('ignore')
 
@@ -1103,44 +1098,17 @@ class AdvancedModelTrainer:
             'score_evaluation': score_eval,
         })
 
-        # === D1: MLflow 实验追踪（可选）===
-        # mlflow 未安装或记录失败时静默跳过，绝不因追踪失败中断训练流程。
-        if MLFLOW_AVAILABLE:
-            try:
-                run_name = f"train_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                with mlflow.start_run(run_name=run_name):
-                    # ---- 参数记录（关键超参数，取自 self.config）----
-                    mlflow.log_param('experiment', 'D1_MLflow_Tracking')
-                    # P1-E: 可复现快照绑定（git commit / 数据源版本 / 特征集版本 hash）
-                    from pathlib import Path
-                    from mlflow_repro import log_repro_snapshot
-                    log_repro_snapshot(Path(__file__).resolve().parent.parent, list(X.columns))
-                    mlflow.log_param('n_samples', int(len(X)))
-                    mlflow.log_param('feature_dim', int(X.shape[1]))
-                    mlflow.log_param('n_classes', int(len(np.unique(y))))
-                    mlflow.log_param('validation_split', float(self.config['validation_split']))
-                    mlflow.log_param('cv_folds', int(self.config.get('cv_folds', 5)))
-                    for _model_key in ('xgboost', 'lightgbm'):
-                        for _k, _v in self.config.get(_model_key, {}).items():
-                            if isinstance(_v, (int, float, str, bool)):
-                                mlflow.log_param(f'{_model_key}_{_k}', _v)
-                    # ---- 指标记录（accuracy / log_loss / RPS）----
-                    if xgb_metrics:
-                        mlflow.log_metric('xgb_val_accuracy', float(xgb_metrics.get('val_accuracy', 0)))
-                        mlflow.log_metric('xgb_val_log_loss', float(xgb_metrics.get('val_log_loss', 0)))
-                    if lgb_metrics:
-                        mlflow.log_metric('lgb_val_accuracy', float(lgb_metrics.get('val_accuracy', 0)))
-                        mlflow.log_metric('lgb_val_log_loss', float(lgb_metrics.get('val_log_loss', 0)))
-                    mlflow.log_metric('ensemble_val_accuracy', float(final_acc))
-                    psr = (score_eval or {}).get('proper_scoring_rules', {})
-                    if psr:
-                        mlflow.log_metric('ensemble_rps', float(psr.get('rps', 0)))
-                        mlflow.log_metric('ensemble_log_loss', float(psr.get('log_loss', 0)))
-                        mlflow.log_metric('ensemble_brier_score', float(psr.get('brier_score', 0)))
-                    print(f"   [MLflow] 实验追踪完成: run={run_name}")
-            except Exception as e:
-                logger.warning(f"[MLflow] 实验追踪失败（不影响训练）: {e}")
-        
+        # === P1-E: 可复现快照（C-20260926-094 方案 B：去 MLflow，直接落盘 assets 单一权威路径）===
+        try:
+            from pathlib import Path
+            from datetime import datetime as _dt
+            from mlflow_repro import save_repro_snapshot
+            save_repro_snapshot(Path(__file__).resolve().parent.parent, list(X.columns),
+                                artifact_dir=os.path.join(Path(__file__).resolve().parent.parent, 'assets'),
+                                artifact_suffix=_dt.now().strftime('%Y%m%d_%H%M%S'))
+        except Exception as e:
+            logger.warning(f"[repro] 快照落盘失败（不影响训练）: {e}")
+
         return result
 
     @staticmethod

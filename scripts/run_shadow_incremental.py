@@ -2,7 +2,7 @@
 """
 run_shadow_incremental.py — P1-B shadow 并行（离线滚动 + 稳定判据）
 ====================================================================
-背景（docs/bayesian_shadow_design.md，C-20260911-016）：
+背景（docs/archive/bayesian_shadow_design.md（已归档），C-20260911-016）：
   P1-B 阶段2 的 shadow 并行 = 在 Python 离线侧，用「每日滚动任务」把
   全量重训模型（control＝生产现状，冻结）与增量 EKF（treatment＝实验）双跑，
   逐场「先预测→落库→后更新」，观察连续后验稳定性，为生产切换提供依据。
@@ -76,7 +76,7 @@ LEAGUE_TAU = {
 }
 DEFAULT_TAU = 0.01
 
-# 生产切换评估相关口径（对齐 docs/bayesian_shadow_design.md §七/§八）
+# 生产切换评估相关口径（对齐 docs/archive/bayesian_shadow_design.md（已归档） §七/§八）
 MIN_GATE_N = 60        # shadow 显著性最小样本（对齐 bayesian_incremental_ab.MIN_GATE_N=60）
 STABLE_ROUNDS_K = 3    # 连续稳定轮数（每轮＝一次每日 --roll），达到即触发「生产切换评估」
 MEAN_JUMP_WARN = 1.0   # 均值无阶跃「预警」阈值（宽松，暂只预警非硬门禁；观察数轮后收紧）

@@ -3,20 +3,21 @@
 generate_post_match_report.py — 模块 A4：自动复盘报告生成器（P0）
 
 ===============================================
-背景（模型改进实施方案 v1.0 §三/A4 + AI复盘闭环落地指南 §2.2）：
+背景（已归档：原模型改进实施方案 v1.0 §三/A4 + AI复盘闭环落地指南 §2.2）：
   每场已完赛预测比赛自动生成 8 章节 markdown 复盘报告，人工只看结论。
   复用 generate_unified_report.py 报告框架（章节结构 + markdown 表格 + 中文队名归一）。
 
 数据链路（对齐 A1/A2/A3）：
   - 赛果/归因/质量分 单一来源 = post_match_review（A1 schema，A2/A3 写入）
-  - 预测数据 = model_predictions（WDL/Lambda/TG/HC 行）
-  - 比分 Top1/Top5 由 Lambda_home/Lambda_away 经 Poisson+DC 推导
+  - 预测数据 = model_predictions（WDL/Lambda/TG/HC/Score 行）
+  - 比分 Top1/Top5 直接读 Score_top1/Score_top5 发布行；缺失标「无发布记录」
+    （C-20260921-034：禁止由 λ 现场重推，保证复盘口径=发布口径）
   - 归因缺失时自动调用 AttributionEngine.run() 补算
   - 关键事件时间线：--collect 时实时采集 SofaScore incidents（可降级为提示）
 
 报告 8 章节（对齐指南 §2.2）：
   一、比赛结果 + 关键事件时间线
-  二、预测 vs 实际对比（WDL/比分Top1/Top5/让球/大小球）
+  二、预测 vs 实际对比（WDL/比分Top1/Top5/让球/进球数Top1/Top3）
   三、预测质量评分（单场 RPS/LogLoss/概率排名/校准偏差）
   四、AI 自动归因分析（权重排序 + 证据）
   五、数据质量检查（data_quality_score + 覆盖率）
@@ -31,7 +32,7 @@ generate_post_match_report.py — 模块 A4：自动复盘报告生成器（P0�
 用法：
   python scripts/generate_post_match_report.py --date 2026-09-06
   python scripts/generate_post_match_report.py --match-id "2026-08-22_Arsenal_Coventry City"
-  python scripts/generate_post_match_report.py --date 2026-09-06 --collect   # 采集赛后明细补全时间线
+  python scripts/generate_post_match_report.py --date 2026-09-06 --no-collect  # 跳过赛后明细采集
   python scripts/generate_post_match_report.py --date 2026-09-06 --write     # 回填 pred_*/质量分
   python scripts/generate_post_match_report.py --date 2026-09-06 --dry-run   # 只扫不写
 """
@@ -42,9 +43,10 @@ import argparse
 import json
 import logging
 import math
+import re
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -68,11 +70,6 @@ from attribution_engine import (  # noqa: E402
 
 REPORT_VERSION = "v1.0"
 ATTRIBUTION_VERSION = "attribution_engine v1.0"
-CN_TZ = timezone.utc  # 仅用于 UTC 时间戳
-
-# 比分推导参数（对齐 prediction_core poisson_score_predict 默认）
-MAX_GOALS = 7
-RHO = -0.30
 
 WDL_CN = {"WDL_home": "主胜", "WDL_draw": "平局", "WDL_away": "客胜"}
 ACTUAL_WDL_NORM = {"主胜": "主胜", "平局": "平局", "客胜": "客胜",
@@ -83,8 +80,78 @@ ACTUAL_WDL_NORM = {"主胜": "主胜", "平局": "平局", "客胜": "客胜",
 def _get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(ODDS_DB))
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
+
+
+def _resolve_actual_hcp(conn: sqlite3.Connection, review: sqlite3.Row) -> Optional[str]:
+    """C-20260921-042: 让球实际结果 fallback——当 post_match_review.actual_hcp 为 NULL 时，
+    从 matches 表的 handicap 盘口 + actual_score 比分自动推算。
+
+    口径对齐 run_post_match_pipeline.hcp_from_handicap()：
+      handicap 以主队为基准（负=主队让球），调整后主队得分 = home + handicap
+      > 客队 → 上盘赢；== → 走水；< → 下盘赢
+    也兼容 matches.actual_handicap 已是赛果文本的情况。
+    """
+    if review["actual_hcp"]:
+        return review["actual_hcp"]
+
+    score = review["actual_score"]
+    if not score or ":" not in str(score):
+        return None
+    parts = str(score).split(":")
+    if len(parts) != 2:
+        return None
+    try:
+        home_goals, away_goals = int(parts[0]), int(parts[1])
+    except ValueError:
+        return None
+
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT handicap, actual_handicap FROM matches WHERE match_id=?",
+        (review["match_id"],),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+
+    # 优先用 actual_handicap（sporttery_collector 已计算的赛果文本）
+    actual_hcp_text = row[1] if row[1] else None
+    if actual_hcp_text:
+        # actual_handicap 可能是 "(-1)胜" 格式，映射到 上盘赢/走水/下盘赢
+        ah = str(actual_hcp_text)
+        if "胜" in ah and "负" not in ah:
+            return "上盘赢"
+        if "负" in ah and "胜" not in ah:
+            return "下盘赢"
+        if "平" in ah or "走" in ah:
+            return "走水"
+
+    # 从 handicap 盘口值 + 比分 计算
+    hcp_line = row[0]
+    if hcp_line is None:
+        return None
+    try:
+        hcp_val = float(hcp_line)
+    except (ValueError, TypeError):
+        # 中文串如 "受让半球" 无法直接解析
+        return None
+
+    adjusted = home_goals + hcp_val
+    if adjusted > away_goals:
+        result = "上盘赢"
+    elif adjusted == away_goals:
+        result = "走水"
+    else:
+        result = "下盘赢"
+
+    # 回写 DB（幂等 UPDATE）
+    cur.execute(
+        "UPDATE post_match_review SET actual_hcp=? WHERE match_id=?",
+        (result, review["match_id"]),
+    )
+    conn.commit()
+    return result
 
 
 def pct(x: Any, nd: int = 1) -> str:
@@ -114,39 +181,12 @@ def _load_json(value: Optional[str]) -> Any:
         return None
 
 
-def _poisson_pmf(lmbda: float, k: int) -> float:
-    if lmbda <= 0:
-        return 1.0 if k == 0 else 0.0
-    return math.exp(-lmbda) * lmbda ** k / math.factorial(k)
-
-
-def _dc_tau(h: int, a: int, lh: float, la: float, rho: float = RHO) -> float:
-    """Dixon-Coles 低比分修正。"""
-    if h > 1 or a > 1:
-        return 1.0
-    tau = 1.0 - rho
-    if h == 0 and a == 0:
-        tau = 1.0 - lh * la * rho
-    elif h == 1 and a == 0:
-        tau = 1.0 + lh * rho
-    elif h == 0 and a == 1:
-        tau = 1.0 + la * rho
-    return max(0.1, min(3.0, tau))
-
-
-def poisson_score_probs(lambda_home: float, lambda_away: float) -> Dict[str, float]:
-    """Lambda -> 比分概率矩阵（对齐 prediction_core.poisson_score_predict）。"""
-    probs: Dict[str, float] = {}
-    for h in range(MAX_GOALS + 1):
-        ph = _poisson_pmf(lambda_home, h)
-        for a in range(MAX_GOALS + 1):
-            pa = _poisson_pmf(lambda_away, a)
-            probs[f"{h}:{a}"] = ph * pa * _dc_tau(h, a, lambda_home, lambda_away)
-    total = sum(probs.values())
-    if total > 0:
-        for k in probs:
-            probs[k] /= total
-    return probs
+def _tg_label_to_goals(label: Optional[str]) -> Optional[int]:
+    """C-20260921-035：进球数 label → 整数（"4球"→4，"7+球"→7）；解析失败返回 None。"""
+    if not label:
+        return None
+    m = re.match(r"\s*(\d+)\s*\+?球?", str(label))
+    return int(m.group(1)) if m else None
 
 
 def single_rps(probs: List[float], actual_idx: int) -> float:
@@ -226,22 +266,42 @@ def load_predictions(conn: sqlite3.Connection, match_id: str) -> Dict[str, Any]:
         pred["pred_wdl"] = WDL_CN[max(wdl, key=wdl.get)]
         pred["pred_wdl_prob"] = max(wdl.values())
 
-    # 比分（Lambda 推导）
-    lh = pred.get("Lambda_home", {}).get("probability")
-    la = pred.get("Lambda_away", {}).get("probability")
-    if lh is not None and la is not None:
-        score_probs = poisson_score_probs(lh, la)
-        top = sorted(score_probs.items(), key=lambda kv: kv[1], reverse=True)
-        pred["pred_score_top1"] = top[0][0]
-        pred["pred_score_top5"] = [s for s, _ in top[:5]]
-        pred["score_probs"] = score_probs
+    # 比分（只读真实发布行；C-20260921-034：禁止由 λ 现场重推，保证复盘=发布口径）
+    t1_row = pred.get("Score_top1")
+    t5_row = pred.get("Score_top5")
+    t5_items = _load_json(t5_row["prediction"]) if t5_row else None
+    if t1_row and t1_row.get("prediction"):
+        pred["pred_score_top1"] = t1_row["prediction"]
+    if isinstance(t5_items, list) and t5_items:
+        pred["pred_score_top5"] = [x.get("score") for x in t5_items]
+        pred["score_probs"] = {
+            x.get("score"): x.get("prob")
+            for x in t5_items
+            if x.get("score") is not None and x.get("prob") is not None
+        }
+    # Score_* 两发布行均缺失时：不造预测，报告端标「无发布记录」，命中统计按 None 剔除
 
-    # 大小球
+    # 总进球（C-20260921-035：只读 TG_top1/TG_top3 真实发布行，禁止现场重推；
+    # 旧 TG_over/under 底层概率仅作数据保留，不再生成大/小球结论）
+    tg1_row = pred.get("TG_top1")
+    tg3_row = pred.get("TG_top3")
+    tg3_items = _load_json(tg3_row["prediction"]) if tg3_row else None
+    if tg1_row and tg1_row.get("prediction"):
+        pred["pred_tg_top1"] = tg1_row["prediction"]          # label，如 "4球"
+        pred["pred_tg_top1_goals"] = _tg_label_to_goals(tg1_row["prediction"])
+    if isinstance(tg3_items, list) and tg3_items:
+        pred["pred_tg_top3"] = [x.get("label") for x in tg3_items if x.get("label")]
+        pred["pred_tg_top3_goals"] = [x.get("goals") for x in tg3_items if x.get("goals") is not None]
+        pred["tg_top3_probs"] = {
+            x.get("label"): x.get("prob")
+            for x in tg3_items
+            if x.get("label") is not None and x.get("prob") is not None
+        }
+    # 两发布行均缺失时：不造预测，报告端标「无发布记录」，命中统计按 None 剔除
     po = pred.get("TG_over_2_5", {}).get("probability")
     pu = pred.get("TG_under_2_5", {}).get("probability")
     if po is not None and pu is not None:
-        pred["pred_tg"] = "大球" if po >= pu else "小球"
-        pred["tg_probs"] = {"大球": po, "小球": pu}
+        pred["tg_ou_probs"] = {"大球": po, "小球": pu}
 
     # 让球
     hc = {pt: pred[pt]["probability"] for pt in ("HC_upper", "HC_draw", "HC_lower") if pt in pred}
@@ -253,7 +313,8 @@ def load_predictions(conn: sqlite3.Connection, match_id: str) -> Dict[str, Any]:
 
 
 def compute_review_fields(conn: sqlite3.Connection, review: sqlite3.Row, pred: Dict[str, Any]) -> Dict[str, Any]:
-    """计算 wdl_correct / score_top1_hit / score_top5_cover / hcp_correct / tg_correct
+    """计算 wdl_correct / score_top1_hit / score_top5_cover / hcp_correct
+    / tg_top1_hit / tg_top3_cover（C-20260921-035）
     + 质量分（RPS/LogLoss/概率排名/校准偏差）。"""
     actual_wdl = ACTUAL_WDL_NORM.get(review["actual_wdl"]) if review["actual_wdl"] else None
     fields: Dict[str, Any] = {}
@@ -269,18 +330,27 @@ def compute_review_fields(conn: sqlite3.Connection, review: sqlite3.Row, pred: D
     fields["score_top1_hit"] = (1 if (top1 and actual_score and top1 == actual_score) else 0) if (top1 and actual_score) else None
     fields["score_top5_cover"] = (1 if (actual_score and actual_score in top5) else 0) if (top5 and actual_score) else None
 
-    # 让球
+    # 让球（C-20260921-042: actual_hcp 为 NULL 时自动从 matches 表推算）
     pred_hcp = pred.get("pred_hcp")
-    actual_hcp = review["actual_hcp"] if review["actual_hcp"] else None
+    actual_hcp = _resolve_actual_hcp(conn, review) if not review["actual_hcp"] else review["actual_hcp"]
+    fields["actual_hcp_resolved"] = actual_hcp  # 供报告渲染使用
     fields["hcp_correct"] = (1 if (pred_hcp and actual_hcp and pred_hcp == actual_hcp) else 0) if (pred_hcp and actual_hcp) else None
 
-    # 大小球
-    pred_tg = pred.get("pred_tg")
+    # 总进球精确档位（C-20260921-035：Top1 命中 / Top3 覆盖；口径同 Score 模式）
     actual_tg = review["actual_tg"]
-    actual_tg_label = None
+    tg1_goals = pred.get("pred_tg_top1_goals")
+    tg3_goals = pred.get("pred_tg_top3_goals") or []
     if actual_tg is not None:
-        actual_tg_label = "大球" if int(actual_tg) > 2 else "小球"
-    fields["tg_correct"] = (1 if (pred_tg and actual_tg_label and pred_tg == actual_tg_label) else 0) if (pred_tg and actual_tg_label) else None
+        actual_tg = int(actual_tg)
+        fields["tg_top1_hit"] = (
+            1 if (tg1_goals is not None and tg1_goals == actual_tg) else 0
+        ) if tg1_goals is not None else None
+        fields["tg_top3_cover"] = (
+            1 if actual_tg in tg3_goals else 0
+        ) if tg3_goals else None
+    else:
+        fields["tg_top1_hit"] = None
+        fields["tg_top3_cover"] = None
 
     # 质量分
     wdl_probs = pred.get("wdl_probs")
@@ -383,7 +453,6 @@ def compute_data_quality(conn: sqlite3.Connection, review: sqlite3.Row, pred: Di
 # ==================== 章节渲染 ====================
 def _header(review: sqlite3.Row, fields: Dict[str, Any], confidence: Optional[int]) -> str:
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    human = "☑ 已审核" if review["human_reviewed"] else "☐ 未审核"
     half = review["actual_half_score"] or "—"
     return (
         f"# 赛后复盘报告 — {review['home_team']} vs {review['away_team']}\n\n"
@@ -393,11 +462,11 @@ def _header(review: sqlite3.Row, fields: Dict[str, Any], confidence: Optional[in
         f"> 对阵: {review['home_team']} (主) vs {review['away_team']} (客)\n"
         f"> 实际比分: {review['actual_score'] or '—'}（半场 {half}）\n"
         f"> 可信度: {f'{confidence}级' if confidence else '—'}\n"
-        f"> 人工审核: {human}\n"
     )
 
 
-def _section1_result(review: sqlite3.Row, post_data: Optional[Dict[str, Any]]) -> str:
+def _section1_result(review: sqlite3.Row, post_data: Optional[Dict[str, Any]],
+                     stat500: Optional[sqlite3.Row] = None) -> str:
     tg = review["actual_tg"] if review["actual_tg"] is not None else "—"
     hcp = review["actual_hcp"] or "—"
     wdl = review["actual_wdl"] or "—"
@@ -412,13 +481,34 @@ def _section1_result(review: sqlite3.Row, post_data: Optional[Dict[str, Any]]) -
         f"| 总进球 | {tg}球 |\n"
     )
 
+    # 单场技术统计对比（C-20260923-063: odds500_stat 12 组指标，按 match_id 直查）
+    s += "\n### 单场技术统计对比（500.com）\n\n"
+    if stat500 is not None:
+        s += "| 指标 | 主队 | 客队 |\n|------|:----:|:----:|\n"
+        _has_any = False
+        for label, key in (
+            ("进攻", "attack"), ("危险进攻", "danger"), ("射门", "shots"),
+            ("射正", "shots_on"), ("任意球", "fk"), ("角球", "corners"),
+            ("越位", "offsides"), ("犯规", "fouls"), ("黄牌", "yellow"),
+            ("红牌", "red"), ("控球率", "possession"),
+        ):
+            h, a = stat500["home_" + key], stat500["away_" + key]
+            if (h is None or h == "") and (a is None or a == ""):
+                continue
+            _has_any = True
+            s += f"| {label} | {h if h not in (None, '') else '—'} | {a if a not in (None, '') else '—'} |\n"
+        if not _has_any:
+            s += "> odds500_stat 记录存在但 12 组指标全空（采集不完整）\n"
+    else:
+        s += "> ⚠️ 500.com 赛后技术统计未回补（跑 500.com 赛后采集流程后重生成复盘报告可见）\n"
+
     # 关键事件时间线
     s += "\n### 关键事件时间线\n\n"
     inc = (post_data or {}).get("incidents") or {}
     goals = inc.get("goals") or []
     cards = inc.get("cards") or []
     if not goals and not cards:
-        s += "> ⚠️ 未采集赛后明细（`--collect` 可补全进球/红牌时间线）\n"
+        s += "> ⚠️ 赛后明细未采集到（SofaScore 无数据或 event_id 缺失）\n"
         return s
     s += "| 时间 | 事件 | 影响 |\n|------|------|------|\n"
     events: List[tuple] = []
@@ -457,11 +547,14 @@ def _section2_vs_actual(review: sqlite3.Row, pred: Dict[str, Any], fields: Dict[
     top1_prob = ""
     if pred.get("score_probs") and top1:
         top1_prob = f"({pct(pred['score_probs'].get(top1, 0))})"
-    s += f"| 比分 Top1 | {top1 or '—'}{top1_prob} | {review['actual_score'] or '—'} | {_mark(fields.get('score_top1_hit'))} | — |\n"
+    top1_display = f"{top1}{top1_prob}" if top1 else "无发布记录"
+    s += f"| 比分 Top1 | {top1_display} | {review['actual_score'] or '—'} | " \
+         f"{_mark(fields.get('score_top1_hit'))} | {'发布比分未入库，未参与复盘' if not top1 else '—'} |\n"
 
     top5 = pred.get("pred_score_top5") or []
-    top5_str = "、".join(top5) if top5 else "—"
-    s += f"| 比分 Top5 覆盖 | {top5_str} | {review['actual_score'] or '—'} | {_mark(fields.get('score_top5_cover'))} | — |\n"
+    top5_str = "、".join(top5) if top5 else "无发布记录"
+    s += f"| 比分 Top5 覆盖 | {top5_str} | {review['actual_score'] or '—'} | " \
+         f"{_mark(fields.get('score_top5_cover'))} | {'发布比分未入库，未参与复盘' if not top5 else '—'} |\n"
 
     pred_hcp = pred.get("pred_hcp")
     act_hcp = review["actual_hcp"] or "—"
@@ -470,13 +563,30 @@ def _section2_vs_actual(review: sqlite3.Row, pred: Dict[str, Any], fields: Dict[
         hcp_dev = f"模型{pred_hcp}，实际{act_hcp}"
     s += f"| 让球 | {pred_hcp or '—'} | {act_hcp} | {_mark(fields.get('hcp_correct'))} | {hcp_dev} |\n"
 
-    pred_tg = pred.get("pred_tg")
+    # C-20260921-035：总进球改精确档位 Top1 / Top3 覆盖（旧大小球结论停用）
+    tg1 = pred.get("pred_tg_top1")
+    tg1_prob = ""
+    if pred.get("tg_top3_probs") and tg1:
+        tg1_prob = f"({pct(pred['tg_top3_probs'].get(tg1, 0))})"
+    tg1_display = f"{tg1}{tg1_prob}" if tg1 else "无发布记录"
     act_tg = review["actual_tg"]
-    act_tg_str = f"{'大球' if act_tg is not None and int(act_tg) > 2 else '小球'}({act_tg}球)" if act_tg is not None else "—"
-    tg_dev = ""
-    if pred_tg and act_tg is not None and pred_tg != ("大球" if int(act_tg) > 2 else "小球"):
-        tg_dev = f"模型{pred_tg}，实际{'大球' if int(act_tg) > 2 else '小球'}"
-    s += f"| 大小球 | {pred_tg or '—'} | {act_tg_str} | {_mark(fields.get('tg_correct'))} | {tg_dev} |\n"
+    act_tg_str = f"{act_tg}球" if act_tg is not None else "—"
+    tg1_dev = "—" if not tg1 or act_tg is None else (
+        "—" if pred.get("pred_tg_top1_goals") == int(act_tg)
+        else f"模型预测{tg1}，实际{act_tg}球"
+    )
+    s += f"| 进球数 Top1 | {tg1_display} | {act_tg_str} | " \
+         f"{_mark(fields.get('tg_top1_hit'))} | {'发布进球数未入库，未参与复盘' if not tg1 else tg1_dev} |\n"
+
+    tg3 = pred.get("pred_tg_top3") or []
+    tg3_str = "、".join(tg3) if tg3 else "无发布记录"
+    tg3_goals = pred.get("pred_tg_top3_goals") or []
+    tg3_dev = "—" if not tg3 or act_tg is None else (
+        "—" if int(act_tg) in tg3_goals
+        else f"实际{act_tg}球不在Top3"
+    )
+    s += f"| 进球数 Top3 覆盖 | {tg3_str} | {act_tg_str} | " \
+         f"{_mark(fields.get('tg_top3_cover'))} | {'发布进球数未入库，未参与复盘' if not tg3 else tg3_dev} |\n"
 
     # 预测质量评分
     s += "\n### 预测质量评分\n\n"
@@ -503,30 +613,75 @@ def _section2_vs_actual(review: sqlite3.Row, pred: Dict[str, Any], fields: Dict[
     return s
 
 
-def _section3_attribution(review: sqlite3.Row, attribution: Optional[Dict[str, Any]]) -> str:
+def _lambda_chain_review(conn: sqlite3.Connection, review: sqlite3.Row,
+                         pred: Dict[str, Any]) -> str:
+    """C-20260923-063: λ 告警的赛后复核（赛前报告 §四 风险提示的闭环）。
+
+    触发条件：赛前 Lambda_alert=1（λ主客差>1.2）。复核方法：模型 λ主/λ客
+    对比赛后真实 xG（Understat，缺失时 xgscore.io fallback），|λ-xG|≤0.5
+    视为链路合理，>0.5 指明高估/低估方向。
+    """
+    la = pred.get("Lambda_alert", {}).get("prediction")
+    # Lambda_alert 发布行为文本消息（如「λ差值告警: λ主客差=4.511 > 1.2 ...」），
+    # 非布尔标志；发布行存在且消息非空即视为触发
+    alerted = la is not None and str(la).strip() != ""
+    if not alerted:
+        return ""
+    lh = pred.get("Lambda_home", {}).get("prediction")
+    la_ = pred.get("Lambda_away", {}).get("prediction")
+    if lh is None or la_ is None:
+        return "\n### λ 链路赛后复核\n\n> ⚠️ 触发了 λ 告警但 Lambda_home/away 无发布记录，无法复核\n"
+    try:
+        lh, la_ = float(lh), float(la_)
+    except (TypeError, ValueError):
+        return "\n### λ 链路赛后复核\n\n> ⚠️ Lambda 发布值非法，无法复核\n"
+    basics = get_match_basics(conn, review["match_id"])
+    xg = get_understat_xg(conn, basics) if basics else None
+    s = "\n### λ 链路赛后复核\n\n"
+    if not xg:
+        s += "> ⚠️ 赛后真实 xG 不可得（Understat 缺失且 xgscore fallback 未命中），无法定量复核\n"
+        return s
+    dh, da = abs(lh - xg["home_xg"]), abs(la_ - xg["away_xg"])
+    verdict_h = "✅ 链路合理" if dh <= 0.5 else f"⚠️ {'高估' if lh > xg['home_xg'] else '低估'}（偏差 {dh:.2f}）"
+    verdict_a = "✅ 链路合理" if da <= 0.5 else f"⚠️ {'高估' if la_ > xg['away_xg'] else '低估'}（偏差 {da:.2f}）"
+    s += "| 侧 | 模型 λ | 赛后实际 xG | 偏差 \\|λ-xG\\| | 判定 |\n|------|:----:|:----:|:----:|------|\n"
+    s += f"| 主队 | {lh:.2f} | {xg['home_xg']:.2f} | {dh:.2f} | {verdict_h} |\n"
+    s += f"| 客队 | {la_:.2f} | {xg['away_xg']:.2f} | {da:.2f} | {verdict_a} |\n"
+    if dh <= 0.5 and da <= 0.5:
+        s += "\n> 结论：λ 链路对两队进球期望的刻画与实际 xG 偏差可控（≤0.5），告警属「期望失衡但方向正确」型，无需修链路。\n"
+    else:
+        s += "\n> 结论：存在偏差侧，建议核查赔率隐含→λ 缩放链路（见赛前报告 §四 风险提示），并归档至 B4 修正规则候选。\n"
+    return s
+
+
+def _section3_attribution(review: sqlite3.Row, attribution: Optional[Dict[str, Any]],
+                          conn: Optional[sqlite3.Connection] = None,
+                          pred: Optional[Dict[str, Any]] = None) -> str:
     s = "\n---\n\n## 三、AI 自动归因分析\n"
     if not attribution or not attribution.get("attributions"):
         s += "\n> ⚠️ 无归因数据（先运行 A3 attribution_engine --collect --write 或本脚本自动补算）\n"
-        return s
-    attrs = sorted(attribution["attributions"], key=lambda a: a["weight"], reverse=True)
-    s += "\n### 归因权重排序\n\n"
-    s += "| 排名 | 归因类型 | 权重 | 核心说明 |\n|:----:|---------|:----:|---------|\n"
-    for i, a in enumerate(attrs, 1):
-        s += f"| {i} | {a['type']} | {a['weight']:.1f}% | {a.get('description','')} |\n"
-    s += "\n### 详细归因分析\n"
-    for i, a in enumerate(attrs, 1):
-        s += f"\n#### {i}. {a['type']}（权重 {a['weight']:.1f}%）\n\n"
-        s += f"**描述**：{a.get('description','')}\n\n"
-        ev = a.get("evidence") or {}
-        if ev:
-            s += "**证据**：\n"
-            for k, v in ev.items():
-                try:
-                    v_str = json.dumps(v, ensure_ascii=False, default=str)
-                except (TypeError, ValueError):
-                    v_str = str(v)
-                s += f"- {k}: {v_str}\n"
-        s += "\n"
+    else:
+        attrs = sorted(attribution["attributions"], key=lambda a: a["weight"], reverse=True)
+        s += "\n### 归因权重排序\n\n"
+        s += "| 排名 | 归因类型 | 权重 | 核心说明 |\n|:----:|---------|:----:|---------|\n"
+        for i, a in enumerate(attrs, 1):
+            s += f"| {i} | {a['type']} | {a['weight']:.1f}% | {a.get('description','')} |\n"
+        s += "\n### 详细归因分析\n"
+        for i, a in enumerate(attrs, 1):
+            s += f"\n#### {i}. {a['type']}（权重 {a['weight']:.1f}%）\n\n"
+            s += f"**描述**：{a.get('description','')}\n\n"
+            ev = a.get("evidence") or {}
+            if ev:
+                s += "**证据**：\n"
+                for k, v in ev.items():
+                    try:
+                        v_str = json.dumps(v, ensure_ascii=False, default=str)
+                    except (TypeError, ValueError):
+                        v_str = str(v)
+                    s += f"- {k}: {v_str}\n"
+            s += "\n"
+    if conn is not None and pred:
+        s += _lambda_chain_review(conn, review, pred)
     return s
 
 
@@ -617,37 +772,134 @@ def _section6_factors(review: sqlite3.Row, attribution: Optional[Dict[str, Any]]
     return s
 
 
-def _section7_sign(review: sqlite3.Row, confidence: Optional[int]) -> str:
+def _section7_sign(review: sqlite3.Row, confidence: Optional[int],
+                   fields: Optional[Dict[str, Any]] = None,
+                   dq: Optional[Dict[str, Any]] = None) -> str:
+    """C-20260921-042: 自动审核替代人工签字——基于数据驱动规则自动判定。
+    C-20260922-049: 三态判定重构——区分数据不足 / 冷门误判 / 真异常。
+
+    判定规则（C-049 三态）：
+      ✅ 通过：RPS≤0.1984 且 LogLoss≤1.056 且 数据质量≥0.8 且 校准偏差≤15%
+      ⏸️ 数据不足：数据质量<0.5（对齐 A6 门禁，不纳入统计，非模型问题）
+      ❌ 异常：DQ≥0.5 且 (RPS≥0.50 或 LogLoss≥2.0)，极端误判需排查
+      ⚠️ 待改进：DQ≥0.5 且 RPS/LogLoss 偏高但未达极端（含冷门误判，单场随机性大）
+    """
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    human = "☑ 已审核" if review["human_reviewed"] else "☐ 未审核"
-    s = "\n---\n\n## 七、审核签字\n\n"
+    s = "\n---\n\n## 七、自动审核\n\n"
     s += "| 项目 | 内容 |\n|------|------|\n"
-    s += f"| AI 复盘生成时间 | {now} |\n"
+    s += f"| 复盘生成时间 | {now} |\n"
     s += f"| 归因引擎版本 | {ATTRIBUTION_VERSION} |\n"
-    s += f"| 可信度评级 | {confidence if confidence else '—'} 级（待人工审核后升级为 4 级） |\n"
-    s += f"| 人工审核状态 | {human} |\n"
-    s += "\n### 人工审核确认\n\n"
-    s += "- ☐ 同意归因分析（权重排序和详细说明）\n"
-    s += "- ☐ 同意改进建议（短期/中期/长期）\n"
-    s += "- ☐ 同意因子库更新建议\n"
-    s += "\n---\n\n*报告由 generate_post_match_report.py 自动生成*\n"
+    s += f"| 可信度评级 | {confidence if confidence else '—'} 级 |\n"
+
+    # 收集审核指标
+    checks: List[tuple] = []  # (指标名, 数值, 基准, 通过?)
+    rps = fields.get("single_rps") if fields else None
+    ll = fields.get("single_logloss") if fields else None
+    calib = fields.get("calibration_gap") if fields else None
+    dq_score = dq.get("score") if dq else None
+
+    rps_pass = rps is not None and rps <= 0.1984
+    checks.append(("单场 RPS", fnum(rps), "≤0.1984", rps_pass))
+
+    ll_pass = ll is not None and ll <= 1.056
+    checks.append(("单场 LogLoss", fnum(ll), "≤1.056", ll_pass))
+
+    if dq_score is not None:
+        dq_pass = dq_score >= 0.8
+        checks.append(("数据质量分", f"{dq_score:.2f}", "≥0.80", dq_pass))
+    else:
+        checks.append(("数据质量分", "—", "≥0.80", False))
+
+    if calib and "gap" in calib:
+        calib_pass = calib["gap"] <= 0.15
+        checks.append(("校准偏差", pct(calib["gap"]), "≤15%", calib_pass))
+    else:
+        checks.append(("校准偏差", "—", "≤15%", True))
+
+    # 方向命中
+    wdl_correct = fields.get("wdl_correct") if fields else None
+    if wdl_correct is not None:
+        checks.append(("方向预测", "✅命中" if wdl_correct == 1 else "❌未命中", "—", wdl_correct == 1))
+
+    # C-20260922-049: 三态判定——区分数据不足 / 冷门误判 / 真异常
+    # 数据不足：DQ<0.5，对齐 A6 门禁，不纳入统计，不算模型问题
+    # 真异常：DQ≥0.5 且 (RPS≥0.50 或 LogLoss≥2.0)，极端误判需排查
+    # 冷门误判：DQ≥0.5 且 RPS/LogLoss 偏高但未达极端，单场随机性大
+    data_insufficient = dq_score is not None and dq_score < 0.5
+    model_severe = (
+        not data_insufficient
+        and (
+            (rps is not None and rps >= 0.50)
+            or (ll is not None and ll >= 2.0)
+        )
+    )
+    all_pass = all(c[3] for c in checks if c[0] != "方向预测")
+    any_fail = any(not c[3] for c in checks if c[0] != "方向预测")
+
+    if data_insufficient:
+        verdict = "⏸️ 数据不足"
+        verdict_note = (
+            f"数据完整性不足（DQ={dq_score:.2f}<0.5），本场不纳入性能统计"
+            f"（对齐 A6 门禁），请补采数据后复评，非模型问题"
+        )
+    elif model_severe:
+        verdict = "❌ 异常"
+        severe_items = []
+        if rps is not None and rps >= 0.50:
+            severe_items.append(f"RPS={rps:.3f}≥0.50")
+        if ll is not None and ll >= 2.0:
+            severe_items.append(f"LogLoss={ll:.3f}≥2.0")
+        verdict_note = (
+            f"极端误判（{'、'.join(severe_items)}），数据完整但模型方向严重错误，需排查"
+        )
+    elif all_pass:
+        verdict = "✅ 通过"
+        verdict_note = "所有核心指标达标"
+    elif any_fail:
+        verdict = "⚠️ 待改进"
+        fails = [c[0] for c in checks if not c[3] and c[0] != "方向预测"]
+        verdict_note = (
+            f"未达标项: {', '.join(fails)}（含冷门误判，单场随机性大）"
+        )
+    else:
+        verdict = "⚠️ 待改进"
+        verdict_note = "部分指标缺失，建议补充数据后复评"
+
+    s += f"| 自动审核结论 | **{verdict}** |\n"
+    s += f"| 审核依据 | {verdict_note} |\n"
+
+    s += "\n### 审核指标明细\n\n"
+    s += "| 指标 | 数值 | 基准 | 判定 |\n|------|:----:|:----:|:----:|\n"
+    for name, val, baseline, passed in checks:
+        flag = "✅" if passed else "❌"
+        s += f"| {name} | {val} | {baseline} | {flag} |\n"
+
+    s += f"\n> 审核规则（C-049 三态）：RPS≤0.1984、LogLoss≤1.056、数据质量≥0.80、校准偏差≤15% "
+    s += f"全部达标→✅通过；DQ<0.5→⏸️数据不足（不纳入统计）；"
+    s += f"DQ≥0.5 且 RPS≥0.50 或 LogLoss≥2.0→❌异常（极端误判）；"
+    s += f"其余未达标项→⚠️待改进（含冷门误判，单场随机性大）。"
+    s += f"方向命中不参与通过/失败判定。\n"
+
+    s += "\n---\n\n*报告由 generate_post_match_report.py 自动生成（C-20260921-042 自动审核）*\n"
     return s
 
 
 def build_report(review: sqlite3.Row, pred: Dict[str, Any], fields: Dict[str, Any],
                  attribution: Optional[Dict[str, Any]],
                  dq: Dict[str, Any],
-                 post_data: Optional[Dict[str, Any]] = None) -> str:
+                 post_data: Optional[Dict[str, Any]] = None,
+                 conn: Optional[sqlite3.Connection] = None,
+                 stat500: Optional[sqlite3.Row] = None) -> str:
     confidence = attribution.get("confidence_level") if attribution else None
     parts = [
         _header(review, fields, confidence),
-        _section1_result(review, post_data),
+        _section1_result(review, post_data, stat500),
         _section2_vs_actual(review, pred, fields),
-        _section3_attribution(review, attribution),
+        _section3_attribution(review, attribution, conn=conn, pred=pred),
         _section4_quality(review, dq),
         _section5_lessons(review, attribution, fields),
         _section6_factors(review, attribution, confidence),
-        _section7_sign(review, confidence),
+        _section7_sign(review, confidence, fields=fields, dq=dq),
     ]
     return "\n".join(parts) + "\n"
 
@@ -675,7 +927,8 @@ def build_summary(reviews: List[Dict[str, Any]], output_dir: Path) -> str:
     ok_t1 = sum(1 for r in reviews if r["fields"].get("score_top1_hit") == 1)
     ok_t5 = sum(1 for r in reviews if r["fields"].get("score_top5_cover") == 1)
     ok_hcp = sum(1 for r in reviews if r["fields"].get("hcp_correct") == 1)
-    ok_tg = sum(1 for r in reviews if r["fields"].get("tg_correct") == 1)
+    ok_tg1 = sum(1 for r in reviews if r["fields"].get("tg_top1_hit") == 1)
+    ok_tg3 = sum(1 for r in reviews if r["fields"].get("tg_top3_cover") == 1)
     alert_rows = [r for r in reviews if r.get("dq", {}).get("alert")]
 
     rps_vals = [r["fields"]["single_rps"] for r in reviews
@@ -705,7 +958,8 @@ def build_summary(reviews: List[Dict[str, Any]], output_dir: Path) -> str:
     s += _row("比分 Top1", ok_t1, sum(1 for r in reviews if r["fields"].get("score_top1_hit") is not None))
     s += _row("比分 Top5 覆盖", ok_t5, sum(1 for r in reviews if r["fields"].get("score_top5_cover") is not None))
     s += _row("让球", ok_hcp, sum(1 for r in reviews if r["fields"].get("hcp_correct") is not None))
-    s += _row("大小球", ok_tg, sum(1 for r in reviews if r["fields"].get("tg_correct") is not None))
+    s += _row("进球数 Top1", ok_tg1, sum(1 for r in reviews if r["fields"].get("tg_top1_hit") is not None))
+    s += _row("进球数 Top3 覆盖", ok_tg3, sum(1 for r in reviews if r["fields"].get("tg_top3_cover") is not None))
 
     if rps_vals:
         s += f"\n**平均单场 RPS**：{sum(rps_vals)/len(rps_vals):.4f}（n={len(rps_vals)}）\n"
@@ -793,6 +1047,11 @@ def run_report(match_date: Optional[str], match_id: Optional[str],
             attribution = ensure_attribution(conn, row, post_data=post_data)
             dq = compute_data_quality(conn, row, pred, post_data=post_data)
 
+            # C-20260921-042: 用 resolved actual_hcp 构造 mutable review dict
+            review_dict = dict(row)
+            if not review_dict.get("actual_hcp") and fields.get("actual_hcp_resolved"):
+                review_dict["actual_hcp"] = fields["actual_hcp_resolved"]
+
             if dry_run:
                 logger.info(f"[{mid}] [dry-run] 将写入: 方向={'✅' if fields.get('wdl_correct')==1 else '❌'} "
                             f"RPS={fnum(fields.get('single_rps'))}")
@@ -801,9 +1060,13 @@ def run_report(match_date: Optional[str], match_id: Optional[str],
 
             # 汇总字段补全（写回用）
             if fields.get("single_rps") is not None or fields.get("wdl_correct") is not None:
-                _fill_review_fields(conn, mid, fields)
+                _fill_review_fields(conn, mid, fields, pred)
 
-            report = build_report(row, pred, fields, attribution, dq, post_data=post_data)
+            report = build_report(review_dict, pred, fields, attribution, dq, post_data=post_data,
+                                  conn=conn,
+                                  stat500=conn.execute(
+                                      "SELECT * FROM odds500_stat WHERE match_id=?", (mid,)
+                                  ).fetchone())
             safe_home = _safe_name(canonical_team_name(mid, row["home_team"], is_home=True))
             safe_away = _safe_name(canonical_team_name(mid, row["away_team"], is_home=False))
             fname = f"{row['league'] or '未知'}_{safe_home}_vs_{safe_away}_复盘.md"
@@ -823,10 +1086,18 @@ def run_report(match_date: Optional[str], match_id: Optional[str],
         conn.close()
 
 
-def _fill_review_fields(conn: sqlite3.Connection, match_id: str, fields: Dict[str, Any]) -> None:
-    """回填 pred_*/质量分到 post_match_review（幂等 UPDATE）。"""
+def _fill_review_fields(conn: sqlite3.Connection, match_id: str, fields: Dict[str, Any],
+                        pred: Optional[Dict[str, Any]] = None) -> None:
+    """回填 pred_*/质量分到 post_match_review（幂等 UPDATE）。
+
+    C-20260921-034：pred 非空时同步修正 pred_score_top1/pred_score_top5
+    （旧实现把 λ 重推的伪预测写入了这两列）。
+    C-20260921-035：总进球改 pred_tg_top1/pred_tg_top3 + tg_top1_hit/tg_top3_cover
+    （旧 pred_tg/tg_correct 大小球口径停用）。
+    """
     sets, params = [], []
-    for col in ("wdl_correct", "score_top1_hit", "score_top5_cover", "hcp_correct", "tg_correct"):
+    for col in ("wdl_correct", "score_top1_hit", "score_top5_cover", "hcp_correct",
+                "tg_top1_hit", "tg_top3_cover"):
         if fields.get(col) is not None:
             sets.append(f"{col}=?")
             params.append(int(fields[col]))
@@ -838,6 +1109,22 @@ def _fill_review_fields(conn: sqlite3.Connection, match_id: str, fields: Dict[st
     if fields.get("prob_rank") is not None:
         sets.append("prob_rank=?")
         params.append(int(fields["prob_rank"]))
+    if pred is not None:
+        if pred.get("pred_score_top1"):
+            sets.append("pred_score_top1=?")
+            params.append(pred["pred_score_top1"])
+        t5 = pred.get("pred_score_top5")
+        if t5:
+            sets.append("pred_score_top5=?")
+            params.append(json.dumps(t5, ensure_ascii=False))
+        # C-20260921-035：总进球精确档位（只写真实发布行对应的预测）
+        if pred.get("pred_tg_top1"):
+            sets.append("pred_tg_top1=?")
+            params.append(pred["pred_tg_top1"])
+        tg3 = pred.get("pred_tg_top3")
+        if tg3:
+            sets.append("pred_tg_top3=?")
+            params.append(json.dumps(tg3, ensure_ascii=False))
     if not sets:
         return
     params.append(match_id)
@@ -880,8 +1167,8 @@ def main() -> None:
                         help="批量生成当日复盘报告（扫 post_match_review.match_date）")
     parser.add_argument("--match-id", type=str, default=None, metavar="MATCH_ID",
                         help="单场生成（优先级高于 --date）")
-    parser.add_argument("--collect", action="store_true",
-                        help="实时采集 SofaScore 赛后明细（补全关键事件时间线）")
+    parser.add_argument("--no-collect", action="store_true",
+                        help="跳过采集 SofaScore 赛后明细（默认自动采集）")
     parser.add_argument("--write", action="store_true",
                         help="回填 pred_*/质量分到 post_match_review（默认回填，兼容参数）")
     parser.add_argument("--dry-run", action="store_true", help="只扫不写文件")
@@ -897,7 +1184,9 @@ def main() -> None:
         logger.addHandler(h)
     logger.setLevel(logging.INFO)
 
-    stats = run_report(args.date, args.match_id, args.collect, args.write, args.dry_run, logger)
+    # C-20260921-042: --collect 改为默认行为（用 --no-collect 跳过）
+    do_collect = not args.no_collect
+    stats = run_report(args.date, args.match_id, do_collect, args.write, args.dry_run, logger)
     print("=" * 70)
     print(f"复盘报告生成汇总")
     print(f"  目标场次      : {stats['total']}")

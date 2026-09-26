@@ -96,6 +96,7 @@ def init_odds_database():
           feature_version TEXT,
           config_version TEXT,
           model_version TEXT,
+          is_replay INTEGER NOT NULL DEFAULT 0,
           FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,
           UNIQUE(match_id, model_name, prediction_type)
         );

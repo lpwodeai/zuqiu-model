@@ -42,6 +42,7 @@ warnings.filterwarnings('ignore')
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
+sys.path.insert(0, PROJECT_DIR)  # C-20260924-077: 使 features/ 包可导入
 sys.path.insert(0, os.path.join(PROJECT_DIR, 'collection'))
 
 ASSETS_DIR = os.path.join(PROJECT_DIR, "assets")
@@ -68,7 +69,46 @@ def log_model(name, stage, msg, level='info'):
 # ============================================================
 # WDL 模型参数
 WDL_TEMPERATURE = 0.800
-WDL_DRAW_THRESHOLD_FACTOR = 0.0  # 西甲 argmax
+
+
+# C-20260926-094: 平局决策阈值因子单一来源 = config.yaml（与 Node prediction-service.js 同源，
+# 消除 Python 硬编码 0.0 与报告推荐因子脱节的「虚假保证」）。
+# 语义: mode=argmax 不做阈值调整（纯 argmax）；league_specific 按联赛因子；
+#       factor<=0 或 =1.0 等价 argmax；0<factor<1 反压平局；factor>1 上浮平局。
+def _load_draw_threshold_config() -> dict:
+    try:
+        import yaml
+        cfg_path = os.path.join(PROJECT_DIR, 'config.yaml')
+        if os.path.exists(cfg_path):
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                return yaml.safe_load(f) or {}
+    except Exception:
+        pass
+    return {}
+
+
+_DRAW_THRESHOLD_CFG = _load_draw_threshold_config()
+DRAW_THRESHOLD_MODE = _DRAW_THRESHOLD_CFG.get('draw_threshold_mode', 'argmax')
+DRAW_THRESHOLD_FACTOR_DEFAULT = float(_DRAW_THRESHOLD_CFG.get('draw_threshold_factor', 1.0) or 1.0)
+DRAW_THRESHOLD_FACTOR_LEAGUE = _DRAW_THRESHOLD_CFG.get('draw_threshold_factor_league') or {}
+# config.yaml 联赛代码 ← 中文联赛名（predict 内 match['league'] 为中文）
+LEAGUE_CN_TO_CODE = {'法甲': 'FL1', '英超': 'PL', '德甲': 'BL1', '意甲': 'IT', '西甲': 'LaLiga'}
+
+
+def get_draw_threshold_factor(league_cn: str = ''):
+    """返回本场生效的平局阈值因子；argmax 模式返回 None（不做阈值调整）。
+
+    factor 语义: <=0 或 =1.0 等价 argmax；0<f<1 反压平局；f>1 上浮平局。
+    config 中某联赛显式配 0.0 时返回 0.0（调用方因子乘法自然失效→argmax），与 Node 语义一致。
+    """
+    if DRAW_THRESHOLD_MODE != 'league_specific':
+        return None
+    code = LEAGUE_CN_TO_CODE.get(league_cn, '')
+    raw = DRAW_THRESHOLD_FACTOR_LEAGUE.get(code, DRAW_THRESHOLD_FACTOR_DEFAULT)
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return 1.0
 
 # T-005 v3 模型参数
 T005V3_TEMPERATURE = 1.000
@@ -81,10 +121,105 @@ T005V3_ELO_PATH = os.path.join(ASSETS_DIR, 't005v2_final_elo_ratings.json')
 # T-006 v4 比分预测配置
 T006_RHO = -0.30
 T006_RHO_HIGH = -0.10
+# C-20260920-030: DC 联赛ρ查表（与 train_stacking_meta.py 同源，train/serve 一致）
+LEAGUE_RHO = {"英超": -0.08, "西甲": -0.12, "意甲": -0.15, "德甲": -0.05, "法甲": -0.10}
 T006_POISSON_WEIGHT = 0.85
 T006_MC_WEIGHT = 0.15
 T006_SCORE_ODDS_ALPHA = 0.30
 T006_MC_SIMULATIONS = 500
+# C-20260920-029: v5 Shadow 双算开关（默认开；环境变量 TRAE_T006_SHADOW=0 关闭）
+T006_SHADOW_V5 = os.environ.get('TRAE_T006_SHADOW', '1') != '0'
+
+
+def _tg_calib_shadow_enabled() -> bool:
+    """C-20260921-036: TG λ 校准 Shadow 开关。
+
+    优先级：环境变量 TRAE_TG_CALIB_SHADOW(1/0) > config.yaml tg_calibration.shadow_enabled
+    默认 True：只做双算写 reports/tg_calib_shadow.jsonl，不改生产输出、不落库。
+    """
+    env = os.environ.get('TRAE_TG_CALIB_SHADOW', '').strip().lower()
+    if env in ('1', 'true', 'yes', 'on'):
+        return True
+    if env in ('0', 'false', 'no', 'off'):
+        return False
+    try:
+        import yaml
+        cfg_path = os.path.join(PROJECT_DIR, 'config.yaml')
+        if os.path.exists(cfg_path):
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                cfg = yaml.safe_load(f) or {}
+            return bool((cfg.get('tg_calibration') or {}).get('shadow_enabled', True))
+    except Exception:
+        pass
+    return True
+
+
+TG_CALIB_SHADOW = _tg_calib_shadow_enabled()
+
+
+def _tg_w_odds_config() -> tuple:
+    """C-20260921-040: TG 融合权重配置。
+
+    Returns:
+        (w_odds_prod, w_odds_shadow): 生产权重（恒 0.15）、Shadow 权重（config 可调，默认 0.30）
+    """
+    try:
+        import yaml
+        cfg_path = os.path.join(PROJECT_DIR, 'config.yaml')
+        if os.path.exists(cfg_path):
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                cfg = yaml.safe_load(f) or {}
+            tg_cfg = cfg.get('tg_calibration') or {}
+            return (
+                float(tg_cfg.get('w_odds', 0.15)),
+                float(tg_cfg.get('shadow_w_odds', 0.30)),
+            )
+    except Exception:
+        pass
+    return 0.15, 0.30
+
+
+TG_W_ODDS_PROD, TG_W_ODDS_SHADOW = _tg_w_odds_config()
+
+
+def _mc_score_injury_config() -> tuple:
+    """C-20260925-081（风险 G 去重）: Score λ 伤病因子分流配置。
+
+    伤病信息已由 pa_*（含官方缺阵名单）进入 WDL，T-006 v4 又以 wdl_probs
+    对比分网格做重要性重加权（边际强制=WDL），Score λ 再乘伤病因子属于
+    双通道重复计数。故生产默认 Score λ 只乘天气（独有信号），TG λ 保留
+    全量因子（TG 无 WDL/pa_* 通道）。
+
+    Returns:
+        (adjust_enabled, shadow_enabled)
+        adjust_enabled: Score λ 是否乘伤病/核心因子，默认 False（去重口径）
+        shadow_enabled: 是否用全量伤病 λ 影子双算 Score 做对照，默认 True
+    优先级：环境变量 TRAE_MC_SCORE_INJURY(1/0) > config.yaml
+        match_conditions.score_injury_adjust / score_injury_shadow
+    """
+    adjust_enabled = False
+    try:
+        import yaml
+        cfg_path = os.path.join(PROJECT_DIR, 'config.yaml')
+        if os.path.exists(cfg_path):
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                cfg = yaml.safe_load(f) or {}
+            mc_cfg = cfg.get('match_conditions') or {}
+            adjust_enabled = bool(mc_cfg.get('score_injury_adjust', False))
+            shadow_enabled = bool(mc_cfg.get('score_injury_shadow', True))
+        else:
+            shadow_enabled = True
+    except Exception:
+        shadow_enabled = True
+    env = os.environ.get('TRAE_MC_SCORE_INJURY', '').strip().lower()
+    if env in ('1', 'true', 'yes', 'on'):
+        adjust_enabled = True
+    elif env in ('0', 'false', 'no', 'off'):
+        adjust_enabled = False
+    return adjust_enabled, shadow_enabled
+
+
+MC_SCORE_INJURY_ADJUST, MC_SCORE_INJURY_SHADOW = _mc_score_injury_config()
 
 # P1-13: λ 主客差值告警阈值（>1.2 表示两队进球期望极度失衡，需赛后拿真实 xG 复核 λ 链路）
 LAMBDA_DIFF_ALERT_THRESHOLD = 1.2
@@ -172,7 +307,7 @@ USE_UNIFIED_ENGINE = _unified_engine_enabled()
 def get_unified_engine(strong_handicap=False, league=None):
     """阶段 C: DixonColesGenerator 懒加载单例（max_goals=7 与 T-006 对齐）。
 
-    前置项 2/3（unified_engine_integration_plan §8）:
+    前置项 2/3（已归档：原 unified_engine_integration_plan §8）:
       - max_goals=7 与 T-006 现有 max_goals=7 对齐
       - ρ 策略: strong_handicap → T006_RHO_HIGH(-0.10)，否则 T006_RHO(-0.30)
         （引擎 set_league_rho 内置等价逻辑；league 分支供阶段 A/B 使用）
@@ -560,24 +695,31 @@ def compute_hcp_features_from_odds(hcp_win, hcp_draw, hcp_lose):
         'hcp_draw_risk': p_draw,
         'hcp_confidence': float(np.max(probs)),
         'hcp_entropy': float(-np.sum(probs * np.log(np.clip(probs, eps, 1.0)))),
-        'hcp_expected_value': (1.0 / max(hcp_win, eps)) - (1.0 / max(hcp_lose, eps)),
+        'hcp_expected_value': p_win - p_lose,
         'hcp_volatility': float(np.std(probs)),
-        'hcp_market_sentiment': inv_w / (inv_w + inv_d + inv_l),
+        'hcp_market_sentiment': p_win,
         'hcp_underdog_ratio': p_lose / max(p_win, eps),
-        'hcp_favorite_margin': abs(p_win - p_lose),
-        'hcp_balance': (p_win - p_lose) / max(p_draw, eps),
-        'hcp_upset_risk': p_lose / max(p_win, eps),
+        'hcp_favorite_margin': 1.0 - float(np.max(probs)),
+        'hcp_balance': abs(p_win - p_lose),
+        'hcp_upset_risk': p_draw + p_lose,
         'hcp_odds_skew': float(np.max(probs) - np.min(probs)),
     }
 
 
-def compute_wdl_draw_features(wdl_win, wdl_draw, wdl_lose):
-    """从 WDL 赔率计算平局相关特征"""
-    hp, dp, ap = odds_to_implied_prob(wdl_win, wdl_draw, wdl_lose)
+def compute_wdl_draw_features(wdl_win, wdl_draw, wdl_lose, hcp_draw_prob=None):
+    """从 WDL 赔率计算平局相关特征。
+
+    C-20260920-025：与训练侧 build_wdl_draw_features 对齐：
+      wdl_draw_prob = 1/wdl_draw（单项倒数，保留抽水），
+      draw_divergence = |wdl_draw_prob − hcp 去水走水概率|。
+    """
+    eps = 1e-10
+    draw_p = 1.0 / max(wdl_draw, eps) if wdl_draw and wdl_draw > 0 else 1.0 / 3.5
+    hcp_d = hcp_draw_prob if isinstance(hcp_draw_prob, (int, float)) else draw_p
     return {
-        'wdl_draw_odds': wdl_draw,
-        'wdl_draw_prob': dp,
-        'draw_divergence': dp - 0.5 * (hp + ap),
+        'wdl_draw_odds': wdl_draw if wdl_draw and wdl_draw > 0 else 3.5,
+        'wdl_draw_prob': draw_p,
+        'draw_divergence': abs(draw_p - hcp_d),
     }
 
 
@@ -790,11 +932,12 @@ def _load_stacking_meta_learner():
         return None
 
 
-def apply_stacking_meta_learner(sub_probs):
+def apply_stacking_meta_learner(sub_probs, extra_features=None):
     """用 LR meta-learner 融合 5 基础模型（P1-7）。
 
     仅当 meta-learner 已加载且 5 个基础模型全部可用时才返回 WDL 概率字典，
     否则返回 None（由调用方回退固定权重 Stacking）。
+    extra_features: 额外 meta 特征（如 dc_odds_fallback），键名与 feature_names 中的非 '__' 项匹配。
     """
     meta = _load_stacking_meta_learner()
     if meta is None:
@@ -807,10 +950,14 @@ def apply_stacking_meta_learner(sub_probs):
         if sub_probs.get(m) is None:
             return None
 
+    extra_features = extra_features or {}
     x = np.zeros(len(feature_names), dtype=float)
     for i, name in enumerate(feature_names):
-        model, cls = name.rsplit("__", 1)
-        x[i] = float(sub_probs[model][cls])
+        if "__" in name:
+            model, cls = name.rsplit("__", 1)
+            x[i] = float(sub_probs[model][cls])
+        else:
+            x[i] = float(extra_features.get(name, 0.0))
 
     logits = meta["intercept_"] + meta["coef_"] @ x
     z = np.exp(logits - logits.max())
@@ -842,6 +989,31 @@ class WDLPredictor:
         self._bayes_failed = False
         self._cached_df = None
         self._cached_X = None
+        self._primed_fixtures = None
+
+    def prime_fixtures(self, fixtures):
+        """
+        C-20260919-018: 批量预测前注入待赛场列表。
+
+        fixtures: list of dict，每项含 home_team/away_team(英文)、home_team_cn/away_team_cn、
+                  league、date、可选 wdl_match_id（竞彩 wdl_history 键）。
+        缓存特征矩阵初始化时，这些未赛场会以「虚拟行」追加到已赛 df 尾部并走同一套
+        build_all_features：Elo 用赛前值、赔率按 wdl_match_id 对齐、球队历史特征基于
+        全量上下文。避免 fallback 只覆盖 sofa_ 特征、其余特征残留模板行（df 最后一场）
+        导致 LGB/XGB 方向系统性反转。
+        """
+        from feature_utils import normalize_team_name
+        normed = []
+        for fx in fixtures:
+            normed.append({
+                'home_team_name': normalize_team_name(fx.get('home_team_cn') or fx['home_team']),
+                'away_team_name': normalize_team_name(fx.get('away_team_cn') or fx['away_team']),
+                'competition_name': fx.get('league', ''),
+                'date': fx['date'],
+                'match_id': fx.get('wdl_match_id'),
+            })
+        self._primed_fixtures = normed
+        log_model('WDL模型', 'Prime', f'已注入 {len(normed)} 场待赛虚拟行')
 
     def predict(self, match, odds_data, t005_models=None, is_mock=False):
         """
@@ -921,8 +1093,9 @@ class WDLPredictor:
                 sub_probs['poisson'] = poisson_probs
                 log_model('WDL模型', 'Poisson', f'主胜={poisson_probs["win"]*100:.1f}% 平局={poisson_probs["draw"]*100:.1f}% 客胜={poisson_probs["lose"]*100:.1f}%')
 
-                # 2. Dixon-Coles WDL
-                dc_probs = CalcEngine.calc_win_draw_lose_dixon_coles(lambda_home, lambda_away)
+                # 2. Dixon-Coles WDL — 联赛ρ查表（C-20260920-030: train/serve 同源）
+                _rho_dc = LEAGUE_RHO.get(league, T006_RHO_HIGH)
+                dc_probs = CalcEngine.calc_win_draw_lose_dixon_coles(lambda_home, lambda_away, rho=_rho_dc)
                 sub_probs['dixonColes'] = dc_probs
                 log_model('WDL模型', 'DC', f'主胜={dc_probs["win"]*100:.1f}% 平局={dc_probs["draw"]*100:.1f}% 客胜={dc_probs["lose"]*100:.1f}%')
 
@@ -974,13 +1147,22 @@ class WDLPredictor:
                 def _get_feature_vector_for_match(home_norm, away_norm, odds_data, scaler, features):
                     """从缓存特征矩阵或实时构建特征向量 (C-20260823-020)"""
                     if self._cached_df is None:
-                        df = load_match_data_odds()
+                        df = load_match_data_odds(dedup=True)
+                        # C-20260919-018: 追加待赛场虚拟行（见 prime_fixtures）
+                        if self._primed_fixtures:
+                            import pandas as _pd
+                            vrows = _pd.DataFrame(self._primed_fixtures)
+                            vrows['date'] = _pd.to_datetime(vrows['date'], format='mixed')
+                            vrows = vrows.reindex(columns=df.columns)
+                            df = _pd.concat([df.reset_index(drop=True), vrows], ignore_index=True)
                         self._cached_df = df
                         self._cached_X, _ = build_all_features(df, include_odds=True, ts_odds=True, consensus_odds=True)
                     df = self._cached_df
                     X_all = self._cached_X
 
-                    mask = (df['home_team_name'] == home_norm) | (df['away_team_name'] == away_norm)
+                    # C-20260919-018: 精确主客对匹配（原为 OR 逻辑会误中无关场次）；
+                    # primed 虚拟行在 df 尾部，index[-1] 即本场真实特征行
+                    mask = (df['home_team_name'] == home_norm) & (df['away_team_name'] == away_norm)
                     if mask.sum() > 0 and scaler is not None:
                         match_idx = df[mask].index[-1]
                         if match_idx < len(X_all):
@@ -1012,24 +1194,27 @@ class WDLPredictor:
                         sofa_cols = [desc[0] for desc in cur.description]
                         conn.close()
 
-                        # 用 df 的最后一行作为模板特征向量
-                        if len(df) == 0:
-                            return None, '特征矩阵为空'
-                        template_idx = len(df) - 1
-                        template_vec = X_all.iloc[template_idx:template_idx+1]
-
-                        # 构建特征向量: 从模板复制，然后覆盖 sofascore 特征
-                        available = [f for f in features if f in template_vec.columns]
+                        # C-20260919-019: 不再以 df 最后一行为模板——残留他场赔率/Elo 是
+                        # 主客反转根因（对照实验：纯模板主19.9%/客54.3%）。改用中性向量：
+                        # 非 sofa/pa 特征取 0（模型先验），sofa_/pa_ 特征取 -1.0 缺失哨兵
+                        # （C-20260924-078 风险 C：与训练端 feature_utils.fillna(-1.0) 对齐），
+                        # 再注入本场真实 sofa_/pa_ 特征。
+                        available = list(features)
                         if len(available) != scaler.n_features_in_:
-                            return None, f'模板特征维度不匹配 ({len(available)}/{scaler.n_features_in_})'
+                            return None, f'特征维度不匹配 ({len(available)}/{scaler.n_features_in_})'
 
-                        X_vec = template_vec[available].values.copy()
+                        import numpy as _np
+                        X_vec = _np.zeros((1, len(available)), dtype=float)
                         feature_list = available
+                        # sofa_/pa_ 特征初始化为 -1.0 缺失哨兵，其余保持 0.0 中性先验
+                        for j, feat in enumerate(feature_list):
+                            if feat.startswith('sofa_') or feat.startswith('pa_'):
+                                X_vec[0, j] = -1.0
 
-                        # 覆盖 sofascore 球员特征 (T-007, 前缀 sofa_)
+                        # 覆盖 sofascore 球员特征 (T-007 sofa_ + P0-3 pa_)
                         sofa_feature_map = {}
                         for col_name in sofa_cols:
-                            if col_name.startswith('sofa_'):
+                            if col_name.startswith('sofa_') or col_name.startswith('pa_'):
                                 sofa_feature_map[col_name] = sofa_row[sofa_cols.index(col_name)]
 
                         sofa_count = 0
@@ -1039,9 +1224,9 @@ class WDLPredictor:
                                 sofa_count += 1
 
                         log_model('WDL模型', 'Fallback',
-                                  f'实时注入: {sofa_count}/{len(sofa_feature_map)} 个 sofascore 特征, '
+                                  f'实时注入: {sofa_count}/{len(sofa_feature_map)} 个 sofa/pa 特征, '
                                   f'来源: {home_norm} vs {away_norm}')
-                        return X_vec, f'实时查询 ({sofa_count} sofa特征)'
+                        return X_vec, f'实时查询 ({sofa_count} sofa/pa特征)'
                     except Exception as e:
                         log_model('WDL模型', 'Fallback', f'实时查询失败: {e}', 'warning')
                         return None, f'查询异常: {e}'
@@ -1083,8 +1268,11 @@ class WDLPredictor:
                                 import xgboost as _xgb
                                 xgb_dmat = _xgb.DMatrix(X_scaled)
                                 xgb_raw = xgb.predict(xgb_dmat)[0]
+                                # C-20260919-020: Booster.predict 返回 numpy.float32，
+                                # 不 isinstance(…, float)，报告渲染端类型校验会误判缺失；
+                                # 显式转 Python float（不影响 meta 融合数值）
                                 sub_probs['xgboost'] = {
-                                    'win': xgb_raw[2], 'draw': xgb_raw[1], 'lose': xgb_raw[0]
+                                    'win': float(xgb_raw[2]), 'draw': float(xgb_raw[1]), 'lose': float(xgb_raw[0])
                                 }
                                 log_model('WDL模型', 'XGB', f'主胜={xgb_raw[2]*100:.1f}% 平局={xgb_raw[1]*100:.1f}% 客胜={xgb_raw[0]*100:.1f}% [{source}]')
                             else:
@@ -1098,9 +1286,12 @@ class WDLPredictor:
                         traceback.print_exc()
 
                 # Stacking 融合 (P1-7: 优先 LR meta-learner，回退固定权重)
-                available_models = [name for name in sub_probs if sub_probs[name] is not None]
+                # C-20260919-023: 只统计 5 个 Stacking 基础模型；sub_probs 中另有
+                # poisson/ssm 两个辅助参考源（不参与融合、不在报告子模型表展示），
+                # 计入会导致标题出现 7/5 这种分子>分母的显示 bug。
+                available_models = [name for name in STACKING_META_MODELS if sub_probs.get(name) is not None]
                 if len(available_models) >= 2:
-                    meta_probs = apply_stacking_meta_learner(sub_probs)
+                    meta_probs = apply_stacking_meta_learner(sub_probs, extra_features={'dc_odds_fallback': 0.0})
                     if meta_probs is not None:
                         final_hp, final_dp, final_ap = meta_probs['win'], meta_probs['draw'], meta_probs['lose']
                         model_used = f"LR meta-learner ({len(available_models)}/5)"
@@ -1118,18 +1309,79 @@ class WDLPredictor:
                 import traceback
                 traceback.print_exc()
 
-        # 决策阈值
+        # 决策阈值（C-20260926-094: 因子读 config.yaml，单一来源）
         wdl_pred = '主胜' if final_hp > max(final_dp, final_ap) else ('平局' if final_dp > final_ap else '客胜')
-        if final_dp * WDL_DRAW_THRESHOLD_FACTOR > max(final_hp, final_ap):
+        _dtf = get_draw_threshold_factor(league)
+        if _dtf is not None and final_dp * _dtf > max(final_hp, final_ap):
             wdl_pred = '平局'
         conf = max(final_hp, final_dp, final_ap)
 
         log_model('WDL模型', '决策', f'预测={wdl_pred} 置信度={conf*100:.1f}% method={model_used}')
 
+        # C-20260919-022: XGB 缺失哨兵——防止"—"再次悄无声息（历史教训 C-020 float32、
+        # 以及 pkl/特征/scaler 任一未就绪或推理异常都会令 xgboost 缺键）。
+        # 只告警不改任何概率/标签：缺 XGB 时 meta 已按实际可用子模型融合。
+        _xgb_p = sub_probs.get('xgboost')
+        if _xgb_p is None or not all(isinstance(_xgb_p.get(k), (int, float)) for k in ('win', 'draw', 'lose')):
+            log_model('WDL模型', '哨兵',
+                      '🚨 XGBoost 本场未产出有效概率（报告将显示 —），请检查上方 XGB 加载/特征/推理日志；'
+                      f'当前可用子模型 {len([n for n in STACKING_META_MODELS if sub_probs.get(n) is not None])}/5',
+                      'error')
+
+        # C-20260922-050 冷门因子库：推理侧置信度调整
+        # 计算 upset_risk_score（与训练侧 upset_factor_engine.compute_upset_risk_score 同源）
+        # 高冷门风险（≥0.5）时压缩 max_p，等比例分配给其余两方向，模拟「市场过度自信」修正
+        upset_risk_score_val = 0.0
+        upset_data_missing_flag = 1
+        upset_alert_flag = False
+        try:
+            from upset_factor_engine import compute_upset_risk_score, apply_inference_confidence_adjustment
+            urs_result = compute_upset_risk_score(
+                home_odds=last.get('win') if isinstance(last, dict) else None,
+                draw_odds=last.get('draw') if isinstance(last, dict) else None,
+                away_odds=last.get('lose') if isinstance(last, dict) else None,
+                ml_probs={'主胜': final_hp, '平局': final_dp, '客胜': final_ap},
+                # C-055: 传入队名+比赛日，自动查询 Elo 差距与积分榜战意（train/serve 同源）
+                home_team=home_team, away_team=away_team,
+                match_date=match.get('match_date'),
+            )
+            upset_risk_score_val = float(urs_result.get('upset_risk_score', 0.0))
+            upset_data_missing_flag = int(urs_result.get('upset_data_missing', 1))
+            upset_alert_flag = bool(urs_result.get('upset_alert', False))
+
+            # 仅在中高风险（≥0.3）时应用置信度调整
+            if upset_risk_score_val >= 0.3 and not upset_data_missing_flag:
+                adj_probs = apply_inference_confidence_adjustment(
+                    {'主胜': final_hp, '平局': final_dp, '客胜': final_ap},
+                    upset_risk_score=upset_risk_score_val,
+                    upset_data_missing=upset_data_missing_flag,
+                )
+                old_hp, old_dp, old_ap = final_hp, final_dp, final_ap
+                final_hp = float(adj_probs.get('主胜', final_hp))
+                final_dp = float(adj_probs.get('平局', final_dp))
+                final_ap = float(adj_probs.get('客胜', final_ap))
+                # 重新决策（概率被调整后可能改变 argmax；阈值因子同一来源 config.yaml）
+                wdl_pred = '主胜' if final_hp > max(final_dp, final_ap) else ('平局' if final_dp > final_ap else '客胜')
+                _dtf2 = get_draw_threshold_factor(league)
+                if _dtf2 is not None and final_dp * _dtf2 > max(final_hp, final_ap):
+                    wdl_pred = '平局'
+                conf = max(final_hp, final_dp, final_ap)
+                log_model('WDL模型', '冷门调整',
+                          f'upset_risk={upset_risk_score_val:.3f} '
+                          f'概率调整: ({old_hp:.3f},{old_dp:.3f},{old_ap:.3f}) → '
+                          f'({final_hp:.3f},{final_dp:.3f},{final_ap:.3f}) '
+                          f'新决策={wdl_pred} 新置信度={conf*100:.1f}%'
+                          + (' [熔断]' if upset_alert_flag else ''))
+        except Exception as _e:
+            log_model('WDL模型', '冷门调整', f'upset_risk_score 计算失败（降级不调整）: {_e}', 'warn')
+
         return {
             'home_prob': float(final_hp),
             'draw_prob': float(final_dp),
             'away_prob': float(final_ap),
+            # C-20260920-027: 供 predict_unified 传给 ScorePredictor 做 WDL→比分重加权
+            # （此前该键缺失，C-20260823-019 重加权长期静默失效）
+            'probabilities': {'win': float(final_hp), 'draw': float(final_dp), 'lose': float(final_ap)},
             'prediction': wdl_pred,
             'confidence': float(conf),
             'open': first,
@@ -1140,6 +1392,10 @@ class WDLPredictor:
             'model_used': model_used,
             'epl_reference': epl_reference,  # C-20260823-002: 英超独立模型参考(不参与Stacking)
             'sub_models': sub_probs,  # P1-02: 5 子模型原始概率 {name: {win,draw,lose}}，供报告展示
+            # C-050 冷门因子库输出
+            'upset_risk_score': upset_risk_score_val,
+            'upset_data_missing': upset_data_missing_flag,
+            'upset_alert': upset_alert_flag,
         }
 
     def _predict_epl(self, match, odds_data):
@@ -1445,32 +1701,42 @@ class HandicapPredictor:
         # 2. WDL 平局特征 (3维)
         wdl = odds_data['wdl_odds']
         w = wdl['close'] or wdl['records'][-1] if wdl['records'] else {'win': 2.0, 'draw': 3.4, 'lose': 3.0}
-        wdl_features = compute_wdl_draw_features(w['win'], w['draw'], w['lose'])
+        wdl_features = compute_wdl_draw_features(w['win'], w['draw'], w['lose'],
+                                                 hcp_draw_prob=hcp_features.get('hcp_prob_draw'))
         features.update(wdl_features)
         log_model('T-005 v3', '特征构造', f'WDL平局特征: {len(wdl_features)}维 (实时计算)')
 
         # 3. 球队历史特征 (43维) + Elo (10维)
+        hist43 = {}
         if is_mock:
-            hist_home = {}
-            hist_away = {}
             elo_data = {'elo_ratings': {}, 'elo_momentum': {}}
             log_model('T-005 v3', '特征构造', 'Mock模式: 使用空历史特征')
         else:
-            hist_home = {}
-            hist_away = {}
             elo_data = {'elo_ratings': self.t005_models.get('elo_ratings', {}),
                         'elo_momentum': self.t005_models.get('elo_momentum', {})}
+            # C-20260920-025：严格复用训练管线 v2 全量矩阵（进程内单例，首次约1分钟），
+            # 修复此前 hist 恒空导致 43 维（form/rest/cards/opponent_lag）全为 0。
+            try:
+                from hcp_features_v2 import get_serving_feature_matrix, V2_FEATURE_GROUPS
+                v2_mat = get_serving_feature_matrix()
+                _date = match.get('match_date') or match.get('match_time', '')[:10]
+                _key = "{}_{}_{}".format(_date, home_team, away_team)
+                if _key in v2_mat.index:
+                    _row = v2_mat.loc[_key]
+                    _hist_cols = (V2_FEATURE_GROUPS['form'] + V2_FEATURE_GROUPS['rest']
+                                  + V2_FEATURE_GROUPS['cards'] + V2_FEATURE_GROUPS['opponent_lag'])
+                    hist43 = {c: float(_row[c]) for c in _hist_cols}
+                    log_model('T-005 v3', '特征构造',
+                              '43维历史特征命中 v2 训练口径矩阵 (key=%s)' % _key)
+                else:
+                    log_model('T-005 v3', '特征构造',
+                              'v2 矩阵未命中 key=%s，43维降级为0' % _key, 'warning')
+            except Exception as _e:
+                log_model('T-005 v3', '特征构造',
+                          'v2 历史特征供给异常: %s，43维降级为0' % _e, 'warning')
 
-        # 合并历史特征
-        for key in T005V3_CORE_FEATURES:
-            if key.startswith('home_') and key in hist_home:
-                features[key] = hist_home[key]
-            elif key.startswith('away_') and key in hist_away:
-                features[key] = hist_away[key]
-            elif key in hist_home:
-                features[key] = hist_home[key]
-            elif key in hist_away:
-                features[key] = hist_away[key]
+        # 合并 43 维历史特征（未命中项在末尾统一按 0 兜底）
+        features.update(hist43)
 
         # Elo 特征
         elo_ratings = elo_data.get('elo_ratings', {})
@@ -1734,11 +2000,38 @@ class ScorePredictor:
 class TotalGoalsPredictor:
     """总进球预测器 (Poisson λ + 总进球赔率融合)"""
 
-    def predict(self, odds_data, lambda_home=None, lambda_away=None):
-        """总进球预测"""
+    @staticmethod
+    def _build_top3(goals_dist: dict) -> list:
+        """8 档分布（键 '0'..'6'/'7+'）→ 概率降序 Top3。
+
+        返回 [{goals:int(7 表示 7+), label, prob}]；同概率时低进球数优先。
+        """
+        items = []
+        for k, v in goals_dist.items():
+            g = 7 if str(k) == '7+' else int(k)
+            items.append((g, float(v)))
+        items.sort(key=lambda x: (-x[1], x[0]))
+        return [{'goals': g, 'label': ('7+球' if g == 7 else f'{g}球'), 'prob': round(p, 4)}
+                for g, p in items[:3]]
+
+    def predict(self, odds_data, lambda_home=None, lambda_away=None, tg_calibration_factor=1.0, w_odds=None):
+        """总进球预测
+
+        C-20260921-036: tg_calibration_factor 为 λ_total 滚动缩放校准因子（默认 1.0）。
+        生产路径永远传 1.0（复盘口径不变）；Shadow 路径传入分层校准因子，
+        在进入 Poisson/DC 之前对 (λ_home, λ_away) 同比例缩放。
+        C-20260921-040: w_odds 为融合权重（默认 None→读 config 生产值 0.15）；
+        Shadow 路径传入 0.30（C-039 验证首个统计显著结果）。
+        """
         tg_records = odds_data['tg_odds']['records']
 
         if lambda_home is not None and lambda_away is not None:
+            # C-20260921-036: 校准注入点（保持主客相对强度，只缩总期望）
+            # C-20260921-040: w_odds 从参数读（None→config 生产值）
+            if w_odds is None:
+                w_odds = TG_W_ODDS_PROD
+            lambda_home = lambda_home * tg_calibration_factor
+            lambda_away = lambda_away * tg_calibration_factor
             try:
                 if USE_UNIFIED_ENGINE:
                     # C-20260823-P0-4 阶段 C: 引擎 total_goals 分布替代 calc_total_goals_from_lambda
@@ -1771,7 +2064,7 @@ class TotalGoalsPredictor:
                             if g == 7:
                                 p_poisson = sum(tg_lambda['distribution'].get(gg, 0) for gg in range(7, 9))
                                 p_odds = odds_probs.get(7, 0)
-                            fused_dist[g] = p_poisson * 0.85 + p_odds * 0.15
+                            fused_dist[g] = p_poisson * (1.0 - w_odds) + p_odds * w_odds
 
                         ft = sum(fused_dist.values())
                         if ft > 0:
@@ -1779,40 +2072,51 @@ class TotalGoalsPredictor:
                                 fused_dist[g] /= ft
 
                         over25 = sum(fused_dist.get(g, 0) for g in range(3, 8))
-                        prediction = '大球(>2.5)' if over25 > 0.5 else '小球(<2.5)'
+
+                        goals_out = {('7+' if k == 7 else str(k)): v for k, v in fused_dist.items()}
+                        top3 = self._build_top3(goals_out)
 
                         return {
-                            'goals': {str(k): v for k, v in fused_dist.items()},
+                            'goals': goals_out,
+                            # C-20260921-035: 结论改为精确进球数 Top1（大小球仅留底层概率）
+                            'top3': top3,
+                            'prediction': top3[0]['label'],
                             'over_25_prob': over25,
-                            'prediction': prediction,
                             'method': f'Poisson λ + TG赔率融合 (λ={lambda_home:.2f}/{lambda_away:.2f})',
                             'lambda_home': lambda_home,
                             'lambda_away': lambda_away,
+                            # C-20260921-036: 实际使用的校准因子（生产恒 1.0，shadow JSONL 可追溯）
+                            'tg_calibration_factor': round(float(tg_calibration_factor), 4),
+                            # C-20260921-040: 实际使用权重（生产恒 0.15，shadow 可调）
+                            'w_odds': round(float(w_odds), 4),
                         }
             except Exception as e:
                 log_model('总进球', '预测', f'Poisson λ失败: {e}，降级为赔率', 'warning')
 
         # 降级: 赔率隐含概率
         if not tg_records:
-            return {'goals': {}, 'over_25_prob': 0.0, 'prediction': '数据不足', 'method': '数据不足'}
+            return {'goals': {}, 'top3': [], 'over_25_prob': 0.0,
+                    'prediction': '数据不足', 'method': '数据不足'}
 
         tg = tg_records[-1]
         goals = tg.get('goals', {})
         if not goals:
-            return {'goals': {}, 'over_25_prob': 0.0, 'prediction': '数据不足', 'method': '数据不足'}
+            return {'goals': {}, 'top3': [], 'over_25_prob': 0.0,
+                    'prediction': '数据不足', 'method': '数据不足'}
 
         probs = {}
         total_inv = sum(1.0 / max(float(v), 1e-10) for v in goals.values())
         for k, v in goals.items():
             probs[k] = (1.0 / max(float(v), 1e-10)) / total_inv
 
-        over_25 = sum(probs.get(str(i), 0) for i in range(3, 8))
-        prediction = '大球(>2.5)' if over_25 > 0.5 else '小球(<2.5)'
+        over_25 = sum(probs.get(str(i), 0) for i in range(3, 7)) + probs.get('7+', 0)
+        top3 = self._build_top3(probs)
 
         return {
             'goals': probs,
+            'top3': top3,
+            'prediction': top3[0]['label'],
             'over_25_prob': over_25,
-            'prediction': prediction,
             'method': '赔率隐含概率',
         }
 
@@ -1862,6 +2166,7 @@ class PredictionCore:
 
         # 预先计算 λ (原始 + A-002 调整)
         lambda_home, lambda_away = None, None
+        lambda_home_score, lambda_away_score = None, None  # C-081: Score 去重通道
         lambda_alert = None  # P1-13: λ 主客差值告警标志
         if not is_mock:
             try:
@@ -1875,6 +2180,72 @@ class PredictionCore:
                     "lambda_away": round(lambda_away_raw, 4),
                 }
                 result['lambda_trace'] = lambda_trace
+                # C-20260924-077: 比赛条件因子（伤病/核心球员/天气）调整 λ
+                # 对齐 prediction-engine.js calcLambdaMatch 语义：
+                #   attack = base_attack * injury * keyPlayer * weather_attack
+                #   defence = base_defence * weather_defence
+                #   λ_home ∝ attack_home * defence_away → λ_home *= injury_home * key_player_home * weather_attack * weather_defence
+                #   λ_away 同理
+                # C-20260925-081（风险 G 去重）: λ 双路分流——
+                #   · lambda_home/away（全量=伤病×核心×天气）→ TG（TG 无 WDL/pa_*
+                #     通道，λ 乘数是其唯一伤病信号）及 P1-13 告警/TG shadow
+                #   · lambda_home_score/away_score（默认仅天气）→ T-006 Score；
+                #     伤病已由 pa_*（含官方缺阵名单）进入 WDL，且 Score 网格用
+                #     wdl_probs 重要性重加权（边际强制=WDL），再乘伤病因子属重复计数；
+                #     天气不在 WDL/pa_*，保留。开关 MC_SCORE_INJURY_ADJUST（默认关）
+                # 任何异常降级为因子 1.0（不改变 λ），绝不影响主链路
+                lambda_home_score, lambda_away_score = lambda_home, lambda_away
+                try:
+                    from features.match_condition_features import MatchConditionFeatures
+                    _mc_gen = MatchConditionFeatures()
+                    try:
+                        _mc = _mc_gen.build_match_conditions(
+                            home_team=home_cn, away_team=away_cn,
+                            match_date=str(match.get('match_date', '')),
+                            league=match.get('league', ''),
+                        )
+                        _w_atk = float(_mc.get('weather', {}).get('attack_impact', 1.0))
+                        _w_def = float(_mc.get('weather', {}).get('defence_impact', 1.0))
+                        _weather_mult = _w_atk * _w_def
+                        _h_inj = float(_mc.get('home_injury', 1.0)) \
+                            * float(_mc.get('home_key_player', 1.0))
+                        _a_inj = float(_mc.get('away_injury', 1.0)) \
+                            * float(_mc.get('away_key_player', 1.0))
+                        _lh_before, _la_before = lambda_home, lambda_away
+                        # 全量 λ（TG 通道）
+                        lambda_home = lambda_home * _h_inj * _weather_mult
+                        lambda_away = lambda_away * _a_inj * _weather_mult
+                        # Score 通道：默认剔除伤病/核心，仅保留天气
+                        if MC_SCORE_INJURY_ADJUST:
+                            lambda_home_score, lambda_away_score = lambda_home, lambda_away
+                        else:
+                            lambda_home_score = _lh_before * _weather_mult
+                            lambda_away_score = _la_before * _weather_mult
+                        lambda_trace["match_condition"] = {
+                            "home_injury": _mc.get('home_injury'),
+                            "away_injury": _mc.get('away_injury'),
+                            "home_key_player": _mc.get('home_key_player'),
+                            "away_key_player": _mc.get('away_key_player'),
+                            "weather_attack_impact": _w_atk,
+                            "weather_defence_impact": _w_def,
+                            "home_injury_mult": round(_h_inj, 4),
+                            "away_injury_mult": round(_a_inj, 4),
+                            "weather_mult": round(_weather_mult, 4),
+                            "score_injury_adjust_enabled": MC_SCORE_INJURY_ADJUST,
+                            "lambda_home_before": round(_lh_before, 4),
+                            "lambda_away_before": round(_la_before, 4),
+                            # after* = 全量 λ（TG 口径，保持 C-077 原键语义）
+                            "lambda_home_after": round(lambda_home, 4),
+                            "lambda_away_after": round(lambda_away, 4),
+                            # Score 实际使用的去重 λ
+                            "lambda_score_home_after": round(lambda_home_score, 4),
+                            "lambda_score_away_after": round(lambda_away_score, 4),
+                        }
+                        result['match_conditions'] = _mc
+                    finally:
+                        _mc_gen.close()
+                except Exception as _e:
+                    log_model('统一预测', 'λ', f'match_condition 因子调整跳过: {_e}', 'warning')
                 log_model('统一预测', 'λ', f'原始: {lambda_home_raw:.3f}/{lambda_away_raw:.3f} → A-002调整: {lambda_home:.3f}/{lambda_away:.3f}')
                 # P1-13: λ 主客差值告警
                 lambda_diff = abs(lambda_home - lambda_away)
@@ -1900,16 +2271,117 @@ class PredictionCore:
         result['hcp'] = self.hcp_predictor.predict(match, odds_data, is_mock)
 
         # 3. 比分预测 (T-006 v4) — C-20260823-019: 传入 WDL 概率做重要性重加权
+        # C-20260925-081（风险 G 去重）: Score 使用去重 λ（默认仅天气；伤病信号
+        # 已由 WDL 重加权承载），全量 λ 仅喂给 TG
         print(f"\n--- 比分预测 (T-006 v4) ---")
         wdl_result = result['wdl']
         wdl_probs = None
         if wdl_result and wdl_result.get('probabilities'):
             wdl_probs = wdl_result['probabilities']
-        result['score'] = self.score_predictor.predict(odds_data, lambda_home, lambda_away, wdl_probs=wdl_probs)
+        result['score'] = self.score_predictor.predict(
+            odds_data, lambda_home_score, lambda_away_score, wdl_probs=wdl_probs)
+
+        # C-20260925-081: 伤病 λ 去重 Shadow 双算——生产 Score 用去重 λ（仅天气），
+        # 影子用全量伤病 λ（C-077 原口径）重跑同一 Score 预测器做对照，仅写
+        # result['_shadow_score_injury']，不展示、不落库；try/except 全隔离。
+        # 仅当去重生效且确实存在伤病扣减（两路 λ 数值不同）时才双算。
+        if MC_SCORE_INJURY_SHADOW and not MC_SCORE_INJURY_ADJUST and not is_mock \
+                and lambda_home_score is not None and lambda_away_score is not None \
+                and (abs(lambda_home_score - lambda_home) > 1e-9
+                     or abs(lambda_away_score - lambda_away) > 1e-9):
+            try:
+                _shadow_sc = self.score_predictor.predict(
+                    odds_data, lambda_home, lambda_away, wdl_probs=wdl_probs)
+                _ctrl_sc = result['score']
+                result['_shadow_score_injury'] = {
+                    'control_lambda': [round(lambda_home_score, 4),
+                                       round(lambda_away_score, 4)],
+                    'shadow_full_lambda': [round(lambda_home, 4),
+                                           round(lambda_away, 4)],
+                    'control_most_likely': _ctrl_sc.get('most_likely'),
+                    'shadow_most_likely': _shadow_sc.get('most_likely'),
+                    'control_most_likely_prob': _ctrl_sc.get('most_likely_prob'),
+                    'shadow_most_likely_prob': _shadow_sc.get('most_likely_prob'),
+                    'control_top5': _ctrl_sc.get('top5'),
+                    'shadow_top5': _shadow_sc.get('top5'),
+                }
+            except Exception as e:
+                result['_shadow_score_injury'] = {'error': f'{type(e).__name__}: {e}'}
+
+        # C-20260920-029: T-006 v5 Shadow 双算——仅写 result['_shadow_v5'] 供批量层记录，
+        # 不展示、不落库；任何异常就地隔离，绝不影响 v4 生产路径。
+        if T006_SHADOW_V5 and wdl_probs:
+            try:
+                from t006_score_predictor_v5 import predict_score_v5
+                _shadow = predict_score_v5(odds_data, wdl_probs, match.get('league'))
+                result['_shadow_v5'] = {
+                    'top5': _shadow['top5'],
+                    'most_likely': _shadow['most_likely'],
+                    'lambdas': [round(_shadow['lambdas'][0], 4),
+                                round(_shadow['lambdas'][1], 4)],
+                    'rho': _shadow['rho'],
+                    'tg_total': round(_shadow['tg_total'], 3),
+                    'method': _shadow['method'],
+                }
+            except Exception as e:
+                result['_shadow_v5'] = {'error': f'{type(e).__name__}: {e}'}
 
         # 4. 总进球预测
         print(f"\n--- 总进球预测 ---")
         result['tg'] = self.tg_predictor.predict(odds_data, lambda_home, lambda_away)
+
+        # C-20260921-036: TG λ 校准 Shadow 双算——仅写 result['_shadow_tg_calib'] 供批量层
+        # 落 reports/tg_calib_shadow.jsonl；不展示、不落 model_predictions；try/except 全隔离。
+        # 生产路径 result['tg'] 恒为 factor=1.0 结果，复盘口径不变。
+        if TG_CALIB_SHADOW and not is_mock and lambda_home is not None and lambda_away is not None \
+                and match.get('match_date'):
+            try:
+                from tg_lambda_calibrator import get_calib_factor_hierarchical
+                factor, trace = get_calib_factor_hierarchical(
+                    match['match_date'], match.get('league'))
+                shadow_tg = None
+                if factor != 1.0:
+                    shadow_tg = self.tg_predictor.predict(
+                        odds_data, lambda_home, lambda_away,
+                        tg_calibration_factor=factor)
+                ctrl = result['tg']
+                result['_shadow_tg_calib'] = {
+                    'factor': round(float(factor), 4),
+                    'source': trace.get('source'),
+                    'trace': trace,
+                    'control_over25': ctrl.get('over_25_prob'),
+                    'shadow_over25': (shadow_tg.get('over_25_prob')
+                                      if shadow_tg else ctrl.get('over_25_prob')),
+                    'control_top3': ctrl.get('top3'),
+                    'shadow_top3': shadow_tg.get('top3') if shadow_tg else ctrl.get('top3'),
+                    'control_goals': ctrl.get('goals'),
+                    'shadow_goals': shadow_tg.get('goals') if shadow_tg else ctrl.get('goals'),
+                    'activated': shadow_tg is not None,
+                }
+            except Exception as e:
+                result['_shadow_tg_calib'] = {'error': f'{type(e).__name__}: {e}'}
+
+        # C-20260921-040: TG 融合权重 Shadow 双算——仅写 result['_shadow_tg_wodds']
+        # 用 config shadow_w_odds=0.30 重跑 predict（factor=1.0 隔离 λ 校准变量），
+        # 不展示、不落 model_predictions；try/except 全隔离。
+        if TG_CALIB_SHADOW and not is_mock and lambda_home is not None and lambda_away is not None:
+            try:
+                shadow_w = self.tg_predictor.predict(
+                    odds_data, lambda_home, lambda_away,
+                    tg_calibration_factor=1.0,
+                    w_odds=TG_W_ODDS_SHADOW)
+                ctrl = result['tg']
+                result['_shadow_tg_wodds'] = {
+                    'w_odds': TG_W_ODDS_SHADOW,
+                    'control_over25': ctrl.get('over_25_prob'),
+                    'shadow_over25': shadow_w.get('over_25_prob'),
+                    'control_top3': ctrl.get('top3'),
+                    'shadow_top3': shadow_w.get('top3'),
+                    'control_goals': ctrl.get('goals'),
+                    'shadow_goals': shadow_w.get('goals'),
+                }
+            except Exception as e:
+                result['_shadow_tg_wodds'] = {'error': f'{type(e).__name__}: {e}'}
 
         # 汇总
         print(f"\n{'='*60}")

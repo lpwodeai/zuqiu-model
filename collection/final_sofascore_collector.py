@@ -45,9 +45,9 @@ API 端点（每场比赛调用 4 个）:
   python final_sofascore_collector.py --leagues 西甲 --season 25/26 --dry-run --limit 3
 
 输出：
-  - logs/sofascore_collector_YYYYMMDD_HHMMSS.log  详细日志（每个关键节点都有打印）
+  - logs/sofascore_collector.log                 详细日志（Rotating 5MB×3，C-091）
   - logs/sofascore_progress_{season}.json         断点续传进度文件
-  - logs/sofascore_collector_summary_*.json       运行汇总报告
+  - logs/sofascore_collector_summary_*.json       运行汇总报告（保留最近 10 个）
 """
 
 from __future__ import annotations
@@ -55,6 +55,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import logging.handlers
 import sqlite3
 import sys
 import time
@@ -74,6 +75,9 @@ MODEL_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = MODEL_PROJECT_ROOT / "data" / "odds.db"
 LOG_DIR = MODEL_PROJECT_ROOT / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
+# C-20260923-062: SofaScore Akamai IP 级封锁后，改用 Edge 浏览器取 cookie 方案（同 500.com 流程）
+# data/cookies_sofascore.json 由用户手动从 Edge 浏览器导出（访问 sofascore.com 解决 JS challenge 后的 _abck/bm_sz 等）
+COOKIE_FILE = MODEL_PROJECT_ROOT / "data" / "cookies_sofascore.json"
 # 原始 JSON 落盘目录（用于排查数据缺失/解析错误，按联赛分目录）
 RAW_JSON_DIR = MODEL_PROJECT_ROOT / "data" / "sofascore_raw"
 RAW_JSON_DIR.mkdir(parents=True, exist_ok=True)
@@ -202,21 +206,61 @@ CN_TZ = timezone(timedelta(hours=8))
 # 日志配置（双输出：控制台 + 文件，详细分级）
 # ============================================================
 
+# 日志/汇总历史产物保留策略（C-20260926-091 风险M）
+LEGACY_COLLECTOR_LOG_KEEP = 3    # 旧时间戳 sofascore_collector_TS.log 保留最近 N 个
+COLLECTOR_SUMMARY_KEEP = 10      # sofascore_collector_summary_TS.json 保留最近 N 个
+
+def purge_old_collector_artifacts(logger: Optional[logging.Logger] = None) -> Dict[str, int]:
+    """清理采集器历史产物：旧时间戳 .log 与 summary JSON。
+
+    - 旧时间戳日志 ``sofascore_collector_YYYYMMDD_HHMMSS.log`` 保留最近 3 个；
+    - summary JSON 保留最近 10 个；
+    - 轮转文件 ``sofascore_collector.log(.N)`` 与 ``sofascore_progress_*.json``
+      不匹配清理模式，不受影响（resume 依赖 progress 文件）。
+    全程 try/except 隔离，清理失败只告警，绝不阻断采集。
+    """
+    removed = {"legacy_logs": 0, "summaries": 0}
+
+    def _purge(pattern: str, keep: int, key: str) -> None:
+        try:
+            files = sorted(
+                LOG_DIR.glob(pattern),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            for p in files[keep:]:
+                p.unlink()
+                removed[key] += 1
+        except Exception as e:
+            if logger is not None:
+                logger.warning(f"历史产物清理失败({pattern}, 已忽略): {e}")
+
+    _purge("sofascore_collector_*.log", LEGACY_COLLECTOR_LOG_KEEP, "legacy_logs")
+    _purge("sofascore_collector_summary_*.json", COLLECTOR_SUMMARY_KEEP, "summaries")
+    return removed
+
+
 def setup_logging(season_tag: str) -> logging.Logger:
     """配置日志：控制台 INFO 级别 + 文件 DEBUG 级别。
 
-    日志文件命名：sofascore_collector_YYYYMMDD_HHMMSS.log
-    位于 logs/ 目录下，每次运行独立成文件，便于排查数据缺失/解析错误。
+    C-20260926-091（风险M）：原方案每次运行生成
+    ``sofascore_collector_YYYYMMDD_HHMMSS.log``（累积 527 个/56.5MB 无清理），
+    现改为固定文件 ``logs/sofascore_collector.log`` +
+    ``RotatingFileHandler(maxBytes=5MB, backupCount=3)``，磁盘上限约 20MB。
+    启动时顺带清理历史时间戳日志与旧 summary。
     """
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = LOG_DIR / f"sofascore_collector_{ts}.log"
-
     logger = logging.getLogger("sofascore")
     logger.setLevel(logging.DEBUG)
     logger.handlers.clear()
 
-    # 文件 handler：DEBUG 级别，记录所有细节
-    fh = logging.FileHandler(str(log_file), encoding="utf-8")
+    # 文件 handler：DEBUG 级别，按大小轮转（当前文件 + 3 备份 ≈ 20MB 上限）
+    log_file = LOG_DIR / "sofascore_collector.log"
+    fh = logging.handlers.RotatingFileHandler(
+        str(log_file),
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8",
+    )
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(logging.Formatter(
         "%(asctime)s | %(levelname)-7s | %(threadName)-12s | %(message)s",
@@ -234,11 +278,19 @@ def setup_logging(season_tag: str) -> logging.Logger:
     logger.addHandler(fh)
     logger.addHandler(ch)
 
+    # 清理历史产物（全隔离，失败不影响采集）
+    purged = purge_old_collector_artifacts(logger)
+
     logger.info("=" * 70)
     logger.info(f"SofaScore 五大联赛采集器启动 | season={season_tag}")
-    logger.info(f"日志文件: {log_file}")
+    logger.info(f"日志文件: {log_file}（Rotating 5MB×3）")
     logger.info(f"数据库  : {DB_PATH}")
     logger.info(f"原始JSON: {RAW_JSON_DIR}")
+    if any(purged.values()):
+        logger.info(
+            f"历史产物清理: 旧时间戳日志 {purged['legacy_logs']} 个 / "
+            f"旧summary {purged['summaries']} 个"
+        )
     logger.info("=" * 70)
     return logger
 
@@ -263,6 +315,33 @@ except ImportError:
     std_requests = None
     _HAS_STD_REQUESTS = False
 
+# 可选后端：Playwright（真实 Chromium）。curl_cffi 被 Akamai 403 challenge 时自动切换。
+# C-20260926: 实测本轮风控纯靠客户端全套指纹（TLS/HTTP2/导航头），
+# 且 Akamai 未下发任何 cookie——真实 Chromium 页面导航 200，curl_cffi 与 APIRequestContext 均 403。
+try:
+    import playwright.sync_api  # noqa: F401
+    _HAS_PLAYWRIGHT = True
+except Exception:
+    _HAS_PLAYWRIGHT = False
+
+
+class _PwJsonResponse:
+    """把 Playwright 页面响应适配为 curl_cffi/requests 响应接口。
+
+    仅暴露采集器实际使用的成员：status_code / content / text / json()。
+    """
+
+    def __init__(self, status_code: int, content: bytes):
+        self.status_code = status_code
+        self.content = content
+
+    @property
+    def text(self) -> str:
+        return self.content.decode("utf-8", errors="replace")
+
+    def json(self):
+        return json.loads(self.text)
+
 
 class SofaScoreClient:
     """SofaScore API 客户端：封装 curl_cffi 会话 + 重试 + 限速。
@@ -271,14 +350,68 @@ class SofaScoreClient:
     所有请求都会被 logger 记录（URL / 状态码 / 耗时 / 响应大小）。
     """
 
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger, cookies: Optional[str] = None):
         if not _HAS_CURL_CFFI:
             logger.warning("⚠️ curl_cffi 未安装！Akamai 反爬将无法绕过，可能导致 403。"
                            "请执行: pip install curl_cffi")
         self.logger = logger
-        self.session = cffi_requests.Session(impersonate="chrome") if _HAS_CURL_CFFI else None
+        # C-20260923-062: 改用 impersonate="edge"（与用户 Edge 浏览器一致，cookie 与 UA 绑定）；
+        # 旧 chrome 指纹已被 Akamai IP 级封锁（7 天持续 403 challenge），需配合 Edge 浏览器导出的 cookie 使用
+        self.session = cffi_requests.Session(impersonate="edge") if _HAS_CURL_CFFI else None
         self._last_request_ts = 0.0
         self.challenge_detected = False  # Akamai 403 challenge 触发标记
+        self._load_cookies(cookies)
+        # Playwright(Chromium) 后端状态：curl_cffi 首次 403 challenge 后惰性切换
+        self._pw = None
+        self._pw_browser = None
+        self._pw_context = None
+        self._pw_page = None
+        self._pw_active = False   # Chromium 后端是否已就绪并作为主通道
+        self._pw_tried = False    # 是否已尝试启动（失败后不反复尝试）
+
+    def _load_cookies(self, path: Optional[str]) -> None:
+        """C-20260923-062: 从 JSON 文件加载 Edge 浏览器导出的 cookie（绕过 Akamai IP 级封锁）。
+
+        path 为空时用默认 data/cookies_sofascore.json；不存在则跳过（回退无 cookie 场景）。
+        支持两种格式：
+          A) {"name": "value", ...}  —— 含可选 __user_agent 覆盖 UA
+          B) [{"name":..,"value":..,"domain":..,"path":..}, ...] —— 逐条设置
+        关键 cookie: _abck / bm_sz / bm_sv（Akamai JS challenge 解决后由浏览器写入）
+        """
+        if not path:
+            path = str(COOKIE_FILE)
+        if not path or not Path(path).exists():
+            self.logger.info(f"[Cookie] 未发现 cookie 文件（{COOKIE_FILE.name}），"
+                             f"以无 cookie 模式运行（可能触发 403 challenge）")
+            return
+        try:
+            data = json.loads(Path(path).read_text(encoding="utf-8"))
+        except Exception as e:
+            self.logger.warning(f"[Cookie] 文件解析失败，已忽略: {e}")
+            return
+        domains = (".sofascore.com", "api.sofascore.com", "www.sofascore.com")
+        count = 0
+        if isinstance(data, dict):
+            ua_override = data.get("__user_agent")
+            if ua_override and self.session is not None:
+                self.session.headers["User-Agent"] = ua_override
+            for name, value in data.items():
+                if name == "__user_agent":
+                    continue
+                for d in domains:
+                    if self.session is not None:
+                        self.session.cookies.set(name, value, domain=d, path="/")
+                count += 1
+        elif isinstance(data, list):
+            for c in data:
+                if self.session is not None:
+                    self.session.cookies.set(
+                        c.get("name"), c.get("value"),
+                        domain=c.get("domain", ".sofascore.com"),
+                        path=c.get("path", "/"),
+                    )
+                count += 1
+        self.logger.info(f"[Cookie] 已加载 {count} 条 cookie（UA override={'Y' if isinstance(data, dict) and data.get('__user_agent') else 'N'}）")
 
     def _respect_rate_limit(self) -> None:
         """简单限速：确保两次请求间隔 >= REQUEST_DELAY 秒。"""
@@ -286,6 +419,96 @@ class SofaScoreClient:
         if elapsed < REQUEST_DELAY:
             time.sleep(REQUEST_DELAY - elapsed)
         self._last_request_ts = time.time()
+
+    # ---------------- Playwright(Chromium) 后备后端 ----------------
+
+    def _send(self, url: str):
+        """发送 GET，返回响应对象（curl_cffi / requests 原生响应）。
+
+        curl_cffi 首次命中 Akamai 403 challenge 时自动启动 Playwright
+        并重发同一请求；Playwright 不可用或启动失败时返回原 403 响应，
+        由 get() 按既有逻辑处理。
+        """
+        if self._pw_active:
+            return self._pw_send(url)
+        if self.session is not None:
+            resp = self.session.get(url, timeout=REQUEST_TIMEOUT)
+        elif _HAS_STD_REQUESTS:
+            resp = std_requests.get(url, timeout=REQUEST_TIMEOUT,
+                                    headers={"User-Agent": "Mozilla/5.0"})
+        else:
+            return None
+        if (resp.status_code == 403 and not self._pw_tried
+                and any(kw in (resp.text or "")[:300].lower()
+                        for kw in ("challenge", "akamai", "blocked", "denied"))):
+            self.challenge_detected = True
+            if self._start_playwright():
+                self.logger.warning("➡️ curl_cffi 403 challenge，已切换 Playwright(Chromium) 后端重发")
+                return self._pw_send(url)
+        return resp
+
+    def _start_playwright(self) -> bool:
+        """惰性启动 headless Chromium。成功 True；未安装/已试过/异常 False（全异常隔离）。"""
+        if self._pw_active:
+            return True
+        if self._pw_tried:
+            return False
+        self._pw_tried = True
+        if not _HAS_PLAYWRIGHT:
+            self.logger.warning("[Playwright] 未安装，无法切换后端"
+                                "（pip install playwright && playwright install chromium）")
+            return False
+        try:
+            from playwright.sync_api import sync_playwright
+            self._pw = sync_playwright().start()
+            self._pw_browser = self._pw.chromium.launch(headless=True)
+            self._pw_context = self._pw_browser.new_context(
+                locale="en-US",
+                viewport={"width": 1366, "height": 900},
+            )
+            self._pw_page = self._pw_context.new_page()
+            # 热身：模拟真实用户先访问 www 站让 Akamai 传感器执行（失败不阻断，api 可裸过）
+            try:
+                self._pw_page.goto("https://www.sofascore.com/",
+                                   timeout=REQUEST_TIMEOUT * 1000,
+                                   wait_until="domcontentloaded")
+            except Exception:
+                pass
+            self._pw_active = True
+            return True
+        except Exception as e:
+            self.logger.error(f"[Playwright] 启动失败: {type(e).__name__}: {e}")
+            self._close_playwright()
+            return False
+
+    def _pw_send(self, url: str) -> Optional[_PwJsonResponse]:
+        """用 Chromium 页面导航请求 API。导航/读取异常上抛给 get() 的重试逻辑。"""
+        if not self._pw_active or self._pw_page is None:
+            return None
+        pw_resp = self._pw_page.goto(url, timeout=REQUEST_TIMEOUT * 1000,
+                                     wait_until="domcontentloaded")
+        if pw_resp is None:
+            raise RuntimeError("page.goto returned None")
+        return _PwJsonResponse(pw_resp.status, pw_resp.body())
+
+    def _close_playwright(self) -> None:
+        for attr in ("_pw_page", "_pw_context", "_pw_browser"):
+            obj = getattr(self, attr, None)
+            if obj is not None:
+                try:
+                    obj.close()
+                except Exception:
+                    pass
+                setattr(self, attr, None)
+        if self._pw is not None:
+            try:
+                self._pw.stop()
+            except Exception:
+                pass
+            self._pw = None
+        self._pw_active = False
+
+    # ----------------------------------------------------------------
 
     def get(self, endpoint: str, tag: str = "") -> Optional[Dict[str, Any]]:
         """GET 请求，返回 JSON dict。失败返回 None。
@@ -301,12 +524,8 @@ class SofaScoreClient:
             self._respect_rate_limit()
             t0 = time.time()
             try:
-                if self.session is not None:
-                    resp = self.session.get(url, timeout=REQUEST_TIMEOUT)
-                elif _HAS_STD_REQUESTS:
-                    resp = std_requests.get(url, timeout=REQUEST_TIMEOUT,
-                                            headers={"User-Agent": "Mozilla/5.0"})
-                else:
+                resp = self._send(url)
+                if resp is None:
                     self.logger.error(f"{log_prefix} 无可用 HTTP 客户端")
                     return None
 
@@ -369,6 +588,7 @@ class SofaScoreClient:
                 self.session.close()
             except Exception:
                 pass
+        self._close_playwright()
 
 
 # ============================================================
@@ -468,8 +688,15 @@ def fetch_round_events(client: SofaScoreClient, league: str, season: str,
 
 def fetch_event_detail(client: SofaScoreClient, event_id: str,
                        logger: logging.Logger) -> Optional[Dict[str, Any]]:
-    """获取单场比赛基础信息。"""
-    return client.get(f"/event/{event_id}", tag="event")
+    """获取单场比赛基础信息。
+
+    C-20260923-062: /event/{id} 端点当前返回包裹结构 {"event": {...}}，
+    旧版为裸 event dict；此处统一 unwrap，调用方直接拿 event dict。
+    """
+    data = client.get(f"/event/{event_id}", tag="event")
+    if isinstance(data, dict) and isinstance(data.get("event"), dict):
+        return data["event"]
+    return data
 
 
 def fetch_event_statistics(client: SofaScoreClient, event_id: str,
@@ -889,11 +1116,12 @@ def collect_post_match(client: SofaScoreClient, event_id: str,
     返回 dict（不含联赛/规范队名，由调用方补充）；比赛未结束或 detail 关键字段缺失返回 None。
     """
     detail = fetch_event_detail(client, event_id, logger)
-    if not detail or "event" not in detail:
+    if not detail:
         logger.warning(f"[event {event_id}] 赛后采集失败：event detail 接口无数据")
         return None
 
-    event = detail.get("event", {}) or {}
+    # C-20260923-062: fetch_event_detail 已统一 unwrap，detail 即 event dict
+    event = detail
     status_obj = event.get("status") or {}
     status_type = str(status_obj.get("type", "")).lower()
     status_code = status_obj.get("code")
@@ -1815,6 +2043,7 @@ def collect_single_event(client: SofaScoreClient, event: Dict[str, Any],
         "match": f"{home_team} vs {away_team}",
         "date": match_date,
         "status": "ok" if not errors else "partial",
+        "event_status": parsed.get("status", ""),
         "counts": counts,
         "errors": errors,
         "api_success": ok_count,
@@ -1906,9 +2135,14 @@ def collect_league(client: SofaScoreClient, league: str, season: str,
                 partial_count += 1
             else:
                 fail_count += 1
-            # 标记进度（即使部分接口失败也标记，避免反复重试）
-            if not dry_run:
+            # 仅对已结束比赛标记进度；未结束比赛（notstarted/inprogress）不标记，
+            # 下次运行自动重试，避免提前采集致数据永久缺失
+            event_status = str(r.get("event_status", "")).lower()
+            is_finished = event_status in ("finished", "ended")
+            if not dry_run and is_finished:
                 progress.mark_done(league, event_id)
+            elif not dry_run:
+                logger.info(f"[{league}] event {event_id} 未结束（status={event_status}），不标记进度，留待下次重试")
         except SofaScoreChallengeError as ce:
             logger.error(f"[{league}] Akamai 反爬封禁，立即中止整轮采集: {ce}")
             logger.error(f"[{league}] 当前场未写入进度，请冷却 {CHALLENGE_COOLDOWN_SECONDS}s 后 --resume 续传")
@@ -1931,11 +2165,12 @@ def collect_league(client: SofaScoreClient, league: str, season: str,
 
 
 def run_main(leagues: List[str], season: str, rounds_range: Optional[Tuple[int, int]],
-             limit: Optional[int], resume: bool, dry_run: bool) -> None:
+             limit: Optional[int], resume: bool, dry_run: bool,
+             cookies: Optional[str] = None) -> None:
     """主入口。"""
     logger = setup_logging(season)
     progress = ProgressTracker(season)
-    client = SofaScoreClient(logger)
+    client = SofaScoreClient(logger, cookies=cookies)
 
     # DB 连接
     conn: Optional[sqlite3.Connection] = None
@@ -2057,14 +2292,71 @@ def main() -> None:
                         help="仅采集不写库，原始 JSON 仍会落盘")
     parser.add_argument("--post-match", metavar="EVENT_ID", default=None,
                         help="赛后采集调试：单场 event 拉取+解析（detail/statistics/lineups/incidents），不写库")
+    parser.add_argument("--recollect", metavar="EVENT_IDS", default=None,
+                        help="单场/多场重采写库（C-062）：逗号分隔 event_id 列表，"
+                             "先 fetch_event_detail 取 event dict 再调 collect_single_event 写库（幂等 INSERT OR REPLACE）；"
+                             "需配合 --leagues <单联赛> --season <赛季> 指定联赛与赛季")
+    parser.add_argument("--cookies", type=str, default=None,
+                        help="手动导出的 Cookie JSON 路径（默认 data/cookies_sofascore.json，"
+                             "从 Edge 浏览器访问 sofascore.com 解决 Akamai challenge 后导出）")
 
     args = parser.parse_args()
+
+    # 单场/多场重采写库模式（C-20260923-062）：复用 collect_single_event，幂等覆盖
+    if args.recollect:
+        event_ids = [e.strip() for e in args.recollect.split(",") if e.strip()]
+        league = args.leagues if args.leagues.lower() != "all" else ""
+        season = args.season
+        if not league or "," in league:
+            print("❌ --recollect 需配合 --leagues <单联赛>（不可用 all 或多联赛逗号）")
+            sys.exit(1)
+        if league not in LEAGUES_CONFIG:
+            print(f"❌ 未知联赛: {league}")
+            sys.exit(1)
+        if season not in LEAGUES_CONFIG[league]["seasons"]:
+            print(f"❌ 联赛 {league} 不支持赛季 {season}")
+            sys.exit(1)
+        if not DB_PATH.exists():
+            print(f"❌ 数据库不存在: {DB_PATH}")
+            sys.exit(1)
+
+        logger = setup_logging("recollect")
+        logger.info(f"[--recollect] 目标 {len(event_ids)} 场 | {league} {season} | {event_ids}")
+        client = SofaScoreClient(logger=logger, cookies=args.cookies)
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=CONNECT_TIMEOUT)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
+        init_db_schema_if_needed(conn, logger)
+        totals = {"ok": 0, "partial": 0, "failed": 0, "player_stats": 0}
+        try:
+            for eid in event_ids:
+                event = fetch_event_detail(client, eid, logger)
+                if not event:
+                    logger.error(f"[--recollect] event {eid} /event 接口拉取失败，跳过")
+                    totals["failed"] += 1
+                    continue
+                result = collect_single_event(client, event, league, season, conn, logger, dry_run=False)
+                counts = result.get("counts", {}) or {}
+                totals[result["status"]] = totals.get(result["status"], 0) + 1
+                totals["player_stats"] += counts.get("player_stats", 0)
+                logger.info(f"[--recollect] event={eid} status={result['status']} "
+                            f"player_stats={counts.get('player_stats', 0)} "
+                            f"lineups={counts.get('lineups', 0)}")
+        finally:
+            client.close()
+            conn.close()
+        logger.info("=" * 60)
+        logger.info(f"[--recollect] 完成 | ok={totals['ok']} partial={totals['partial']} "
+                    f"failed={totals['failed']} | player_stats 写入={totals['player_stats']} 行")
+        logger.info("=" * 60)
+        return
 
     logger = setup_logging("post-match")
 
     # 赛后采集调试模式：单场拉取+解析，不写库（批量触发走 scripts/run_post_match_pipeline.py）
     if args.post_match:
-        client = SofaScoreClient(logger=logger)
+        client = SofaScoreClient(logger=logger, cookies=args.cookies)
         try:
             data = collect_post_match(client, args.post_match, logger)
             if data is None:
@@ -2110,7 +2402,7 @@ def main() -> None:
         if resp != "y":
             sys.exit(0)
 
-    run_main(leagues, args.season, rounds_range, args.limit, args.resume, args.dry_run)
+    run_main(leagues, args.season, rounds_range, args.limit, args.resume, args.dry_run, cookies=args.cookies)
 
 
 if __name__ == "__main__":

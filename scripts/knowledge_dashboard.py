@@ -3,7 +3,7 @@
 knowledge_dashboard.py — 模块 B5：效果监控看板（P1）
 
 ===============================================
-背景（模型改进实施方案 v1.0 §四/B5，对齐指南 §3.5）：
+背景（已归档：原模型改进实施方案 v1.0 §四/B5，对齐指南 §3.5）：
   输出 docs/knowledge_dashboard/ 每周更新，监控知识库闭环进化效果。
   六项指标：
     1. 知识库条目数与可信度分布（4-5 级占比 ≥30%）
@@ -45,6 +45,7 @@ DATA_DIR = PROJECT_DIR / "data"
 ASSETS_DIR = PROJECT_DIR / "assets"
 DASHBOARD_DIR = PROJECT_DIR / "docs" / "knowledge_dashboard"
 DB_PATH = DATA_DIR / "odds.db"
+HIT_LOG = PROJECT_DIR / "logs" / "knowledge_hit.jsonl"
 
 # 阈值（对齐方案 §B5）
 TARGET_CONFIDENCE4_5 = 0.30      # 4-5 级占比 ≥30%
@@ -196,18 +197,61 @@ def _evolution_rate(reports: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     }
 
 
-def _hit_rate_note() -> str:
-    """知识库命中率：B2 读取无埋点，如实标注 N/A + 建议。"""
+def _load_hit_stats() -> Dict[str, Any]:
+    """数据源 4：读 logs/knowledge_hit.jsonl 统计报告侧 L2 读取命中率（feature_insights 层）。
+
+    口径：命中埋点「每条命中条目一行」、未命中埋点（C-20260924-066）「每场一行」，
+    命中率 = 命中行 / (命中行 + 未命中行)，为行级粗粒度近似（多命中场次会小幅高估）。
+    精准按场次需 match_id 级埋点，暂不展开。早于 2026-09-18 埋点落地的报告无记录，不计入分母。
+    """
+    stats: Dict[str, Any] = {"hit_rows": 0, "miss_rows": 0, "total": 0,
+                              "hit_rate": None, "denominator_incomplete": False}
+    if not HIT_LOG.exists():
+        return stats
+    try:
+        with HIT_LOG.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                if rec.get("layer") != "feature_insights":
+                    continue
+                if "未命中" in (rec.get("note") or ""):
+                    stats["miss_rows"] += 1
+                else:
+                    stats["hit_rows"] += 1
+    except OSError:
+        return stats
+    stats["total"] = stats["hit_rows"] + stats["miss_rows"]
+    # miss 埋点（C-20260924-066）刚落地，历史仅有命中无未命中 → 分母不完整，避免误判「100% 达标」
+    stats["denominator_incomplete"] = stats["total"] > 0 and stats["miss_rows"] == 0
+    if stats["total"]:
+        stats["hit_rate"] = stats["hit_rows"] / stats["total"]
+    return stats
+
+
+def _hit_rate_note(hit: Dict[str, Any]) -> str:
+    """知识库命中率口径说明。"""
+    if hit["total"] == 0:
+        return (
+            "无命中埋点数据：B2 赛前接入（get_insights → 报告十七节）尚未产生 `knowledge_hit.jsonl` 记录。"
+            "命中埋点已落地（C-20260918-007/008），生成报告后自动累积；未命中埋点见 C-20260924-066。"
+        )
     return (
-        "无命中埋点：B2 赛前接入（get_insights → 报告十七节）未记录每次读取是否命中知识库。"
-        "建议在 generate_unified_report.py 的十七节写入 `知识库命中/提示条目数` 到 model_predictions "
-        "或独立 jsonl 埋点后，本指标方可计算。"
+        f"命中率按行级埋点近似：命中 {hit['hit_rows']} 次 / 未命中 {hit['miss_rows']} 次"
+        f"（分母=命中行+未命中行）。未按场次去重，多命中场次会小幅高估；"
+        "精准按场次需 match_id 级埋点。早于 2026-09-18 埋点落地的报告无记录，不计入分母。"
     )
 
 
 # ==================== 看板渲染 ====================
 def _render_md(date: str, kb: Dict[str, Any], rev: Dict[str, Any],
-               reports: List[Dict[str, Any]], evo: Optional[Dict[str, Any]]) -> str:
+               reports: List[Dict[str, Any]], evo: Optional[Dict[str, Any]],
+               hit: Dict[str, Any]) -> str:
     lines: List[str] = []
 
     # ---- 头部 ----
@@ -361,9 +405,21 @@ def _render_md(date: str, kb: Dict[str, Any], rev: Dict[str, Any],
     lines.append("")
     lines.append("| 项 | 值 | 目标 | 判定 |")
     lines.append("|----|----|------|:----:|")
-    lines.append("| 知识库命中率 | N/A | ≥90% | ℹ️ 待埋点 |")
+    hit_rate = hit["hit_rate"]
+    if hit_rate is None:
+        lines.append("| 知识库命中率 | N/A | ≥90% | ℹ️ 待埋点数据 |")
+    elif hit["denominator_incomplete"]:
+        lines.append(
+            f"| 知识库命中率 | {hit_rate:.1%}（{hit['hit_rows']}/{hit['total']} 行，参考） | ≥90% | "
+            f"ℹ️ 分母不完整（未命中埋点待累积） |"
+        )
+    else:
+        lines.append(
+            f"| 知识库命中率 | {hit_rate:.1%}（{hit['hit_rows']}/{hit['total']} 行） | ≥90% | "
+            f"{_judge(hit_rate, TARGET_HIT_RATE, 'ge')} |"
+        )
     lines.append("")
-    lines.append(f"- {_hit_rate_note()}")
+    lines.append(f"- {_hit_rate_note(hit)}")
     lines.append("")
 
     # ---- 补充：复盘口径准确率（降级来源） ----
@@ -401,7 +457,10 @@ def _render_md(date: str, kb: Dict[str, Any], rev: Dict[str, Any],
         pass_ok = "ℹ️ N/A"
         corr_ok = "ℹ️ N/A"
     evo_ok = _judge((evo["per30_pp"] / 100.0) if evo else None, TARGET_EVOLUTION, "ge")
-    hit_ok = "ℹ️ N/A"
+    hit_ok = (
+        "ℹ️ N/A" if (hit["hit_rate"] is None or hit["denominator_incomplete"])
+        else _judge(hit["hit_rate"], TARGET_HIT_RATE, "ge")
+    )
     results = [
         ("1 可信度 4-5 级占比", conf_ok),
         ("2 审核通过率", pass_ok),
@@ -457,8 +516,9 @@ def main() -> None:
     rev = _load_review_stats()
     reports = _load_training_reports()
     evo = _evolution_rate(reports)
+    hit = _load_hit_stats()
 
-    md = _render_md(args.date, kb, rev, reports, evo)
+    md = _render_md(args.date, kb, rev, reports, evo, hit)
 
     DASHBOARD_DIR.mkdir(parents=True, exist_ok=True)
     out_path = DASHBOARD_DIR / f"{args.date.replace('-', '')}_dashboard.md"

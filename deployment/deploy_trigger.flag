@@ -1,7 +1,7 @@
 {
   "trigger_type": "deploy",
-  "model_version": "20260815_125649",
-  "created_at": "2026-08-15T12:56:49.938939",
+  "model_version": "20260920_011218",
+  "created_at": "2026-09-20T01:12:18.392405",
   "model_paths": {
     "draw_detector": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_draw_detector.pkl",
     "direction_predictor": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_direction_predictor.pkl",

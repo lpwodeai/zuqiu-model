@@ -54,7 +54,7 @@ def check_odds_db():
 def check_import_logs():
     """检查导入日志"""
     log_files = [
-        BASE_DIR / "data" / "import_log.md",
+        BASE_DIR / "docs" / "archive" / "epl_import_log.md",  # C-20260918-039: 由 data/import_log.md 迁移
         BASE_DIR / "docs" / "optimization_log.md",
         BASE_DIR / "docs" / "change_log.md"
     ]

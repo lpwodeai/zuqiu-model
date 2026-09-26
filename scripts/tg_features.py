@@ -56,15 +56,20 @@ GOAL_COLS = ['goals_0', 'goals_1', 'goals_2', 'goals_3',
              'goals_4', 'goals_5', 'goals_6', 'goals_7_plus']
 
 
-def load_tg_data(conn: Optional[sqlite3.Connection] = None) -> pd.DataFrame:
+def load_tg_data(conn: Optional[sqlite3.Connection] = None,
+                 max_valid_timestamp: str = MAX_VALID_TIMESTAMP) -> pd.DataFrame:
     """
     加载总进球赔率数据，关联 match_id_mapping 和 matches 表。
-    
+
+    参数:
+        max_valid_timestamp: 赔率时间戳截止（默认 MAX_VALID_TIMESTAMP，训练防漂移；
+            serving/deploy 传 "2099-12-31 23:59:59" 以纳入近期比赛）
+
     返回 DataFrame，包含:
         - history_match_id: 原始中文 match_id
         - matches_match_id: 映射后的英文 match_id
         - timestamp: 赔率时间戳
-        - goals_0~goals_7_plus: 各进球数概率
+        - goals_0~goals_7_plus: 各进球数赔率
         - actual_total_goals: 实际总进球（来自 matches 表）
         - league: 联赛名称
         - date: 比赛日期
@@ -81,7 +86,7 @@ def load_tg_data(conn: Optional[sqlite3.Connection] = None) -> pd.DataFrame:
         "goals_0, goals_1, goals_2, goals_3, "
         "goals_4, goals_5, goals_6, goals_7_plus "
         "FROM total_goals_history WHERE timestamp < ?",
-        conn, params=(MAX_VALID_TIMESTAMP,)
+        conn, params=(max_valid_timestamp,)
     )
 
     # 2. 双通道对齐：history.match_id(中文) → matches.match_id(英文)
@@ -135,35 +140,42 @@ def get_latest_snapshot(df: pd.DataFrame) -> pd.DataFrame:
 
 def normalize_probabilities(df: pd.DataFrame) -> pd.DataFrame:
     """
-    归一化总进球概率，确保每行 goals_0~goals_7_plus 之和 = 1.0。
-    
-    处理异常：全0行 → 均匀分布；NaN → 0
+    总进球赔率 → 去水概率，确保每行 goals_0~goals_7_plus 之和 = 1.0。
+
+    口径（与 hcp_features.normalize_probabilities 一致，project_memory FEAT-014）：
+    goals_* 列存储的是**赔率**（实测行和 70~100），必须先 `1/odds` 取隐含概率，
+    再按行归一化去水；**禁止对原始赔率直接线性归一化**——高赔率对应低概率，
+    线性归一化会把罕见结果（如0球赔率37）赋成高概率，方向恰反。
+    赔率≤0/NaN 视为无效（概率 0）；全无效行 → 均匀分布兜底。
     """
     goal_cols = GOAL_COLS
-    
-    # 填充 NaN
-    df[goal_cols] = df[goal_cols].fillna(0.0)
-    
-    # 归一化
-    row_sums = df[goal_cols].sum(axis=1)
-    zero_mask = row_sums == 0
-    
+
+    # 统一转数值；NaN → 0
+    odds = df[goal_cols].apply(pd.to_numeric, errors='coerce').fillna(0.0).values
+
+    eps = 1e-10
+    valid = odds > eps
+    implied = np.where(valid, 1.0 / np.clip(odds, eps, None), 0.0)
+    row_sums = implied.sum(axis=1)
+
+    zero_mask = row_sums <= eps
     if zero_mask.any():
-        print(f"[TG] 警告: {zero_mask.sum()} 行概率全为0，使用均匀分布填充")
-        for col in goal_cols:
-            df.loc[zero_mask, col] = 1.0 / len(goal_cols)
-        row_sums = df[goal_cols].sum(axis=1)
-    
-    # 归一化
-    for col in goal_cols:
-        df[col] = df[col] / row_sums
-    
+        print(f"[TG] 警告: {int(zero_mask.sum())} 行赔率全无效，使用均匀分布填充")
+
+    probs = np.empty_like(implied)
+    nz = ~zero_mask
+    probs[nz] = implied[nz] / row_sums[nz, None]
+    probs[zero_mask] = 1.0 / len(goal_cols)
+
+    for i, col in enumerate(goal_cols):
+        df[col] = probs[:, i]
+
     # 验证
-    new_sums = df[goal_cols].sum(axis=1)
+    new_sums = pd.DataFrame(probs).sum(axis=1)
     max_deviation = (new_sums - 1.0).abs().max()
     if max_deviation > 0.01:
         print(f"[TG] 警告: 归一化后最大偏差 = {max_deviation:.6f}")
-    
+
     return df
 
 
@@ -238,18 +250,30 @@ def extract_tg_features(df: pd.DataFrame) -> pd.DataFrame:
     return features
 
 
-def build_tg_features(conn: Optional[sqlite3.Connection] = None) -> pd.DataFrame:
+def build_tg_features(conn: Optional[sqlite3.Connection] = None,
+                      max_valid_timestamp: str = MAX_VALID_TIMESTAMP) -> pd.DataFrame:
     """
     一站式构建总进球预测特征。
-    
+
+    参数:
+        max_valid_timestamp: 赔率时间戳截止（训练默认防漂移；
+            serving/deploy 传 "2099-12-31 23:59:59" 纳入近期比赛）
+
     返回:
         features DataFrame (index=matches_match_id, 20维特征 + metadata)
     """
     # 1. 加载数据
-    raw = load_tg_data(conn)
+    raw = load_tg_data(conn, max_valid_timestamp=max_valid_timestamp)
     
     # 2. 取最新快照
     latest = get_latest_snapshot(raw)
+
+    # 对齐可能多对一（多个 history 键映射到同一 matches 场）：
+    # 按 matches_match_id 去重，保留时间戳最新的一条，避免下游索引重复
+    dup_n = latest['matches_match_id'].duplicated().sum()
+    if dup_n:
+        print(f"[TG] matches_match_id 多对一去重: 丢弃 {int(dup_n)} 条")
+        latest = latest.drop_duplicates(subset=['matches_match_id'], keep='last')
     
     # 3. 归一化概率
     normalized = normalize_probabilities(latest)

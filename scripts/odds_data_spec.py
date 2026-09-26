@@ -260,6 +260,35 @@ def generate_odds_prompt(match_data: MatchOddsData) -> str:
 
 # ==================== 训练日志系统 ====================
 
+# 训练日志保留策略（C-20260926-091 风险M）
+TRAINING_LOG_MAX_AGE_DAYS = 30   # training_*.json 保留天数
+TRAINING_LOG_KEEP_MIN = 20       # 无论多旧，至少保留最近 N 个（retrain 回退消费）
+
+def purge_old_training_logs() -> int:
+    """清理超过保留期的 logs/training_*.json。
+
+    规则：mtime 超过 30 天的删除，但最近 ``TRAINING_LOG_KEEP_MIN`` 个始终保留。
+    ``retrain_trigger_runner`` 只按 mtime 窗口消费最新一个 training JSON，
+    删除旧文件不影响重训决策（风险O 的 ±700s 窗口只触及当场文件）。
+    全程 try/except 隔离，清理失败静默忽略（日志非核心链路）。
+    """
+    import glob
+    removed = 0
+    try:
+        candidates = sorted(
+            glob.glob(os.path.join(LOG_DIR, 'training_*.json')),
+            key=lambda p: os.path.getmtime(p),
+            reverse=True,
+        )
+        cutoff = datetime.now().timestamp() - TRAINING_LOG_MAX_AGE_DAYS * 86400
+        for p in candidates[TRAINING_LOG_KEEP_MIN:]:
+            if os.path.getmtime(p) < cutoff:
+                os.remove(p)
+                removed += 1
+    except Exception:
+        pass
+    return removed
+
 @dataclass
 class TrainingLog:
     """训练日志条目"""
@@ -281,6 +310,7 @@ class TrainingLogger:
         self.log_entries: List[TrainingLog] = []
         self.start_time = datetime.now()
         self.loss_history: Dict[str, List[Dict]] = {}  # 损失曲线历史
+        purge_old_training_logs()  # C-20260926-091 风险M：顺带清理超期旧日志
     
     def log(self, stage: str, action: str, **kwargs):
         """记录日志条目"""

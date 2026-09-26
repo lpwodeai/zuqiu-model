@@ -20,11 +20,12 @@ sys.path.insert(0, SCRIPT_DIR)
 os.chdir(PROJECT_DIR)
 
 from feature_utils import build_all_features, load_match_data_odds
+from load_odds_from_db import find_match_id_by_cn, load_odds_from_db
 
 ASSETS_DIR = os.path.join(PROJECT_DIR, "assets")
 REPORT_DIR = os.path.join(PROJECT_DIR, "docs")
 RAW_DIR = os.path.join(PROJECT_DIR, "data", "sofascore_raw", "pre_match")
-ODDS_TXT = os.path.join(PROJECT_DIR, "data", "西甲2026-2027赛季完整时序赔率.txt")
+# C-20260918-020: 移除 ODDS_TXT 硬编码 TXT 路径，改从 odds.db 加载（SSOT）
 
 CN_TZ = timezone(timedelta(hours=8))
 
@@ -829,15 +830,26 @@ def render_match_section(m, s, o, r):
 # ============================================================
 # 主函数
 # ============================================================
+def _default_odds():
+    """默认赔率兜底（odds.db 未命中时使用，C-20260918-020）"""
+    return {
+        'wdl_odds': {'records': [{'time': '2026-08-15 21:00:00', 'win': 2.2, 'draw': 3.0, 'lose': 3.2}],
+                     'open': {'win': 2.2, 'draw': 3.0, 'lose': 3.2}, 'close': {'win': 2.2, 'draw': 3.0, 'lose': 3.2}},
+        'handicap_odds': {'line': -1, 'records': [], 'open': {}, 'close': {'win': 5.5, 'draw': 3.5, 'lose': 1.5}},
+        'score_odds': {'records': []},
+        'tg_odds': {'records': [{'time': '2026-08-15 21:00:00', 'o0':5.0,'o1':3.0,'o2':3.2,'o3':4.5,'o4':8.0,'o5':18.0,'o6':35.0,'o7':50.0}]},
+    }
+
+
 def main():
     print("=" * 70)
     print("西甲第1轮赛前完整预测报告生成器")
     print("=" * 70)
     
-    # 1. 解析赔率 TXT
-    print("\n[1/5] 解析赔率TXT文件...")
-    all_odds = parse_odds_txt(ODDS_TXT)
-    print(f"  共解析到 {len(all_odds)} 场比赛赔率")
+    # 1. 从 odds.db 加载赔率（SSOT 改造，C-20260918-020）
+    print("\n[1/5] 从 odds.db 加载赔率数据...")
+    # 注意: 每场比赛单独用 find_match_id_by_cn + load_odds_from_db 加载
+    # 替代原 parse_odds_txt(ODDS_TXT) 批量解析
     
     # 2. 加载模型
     print("\n[2/5] 加载预测模型...")
@@ -867,20 +879,19 @@ def main():
         print(f"    首发: {len(s.get('home_starters',[]))}/{len(s.get('away_starters',[]))}")
         print(f"    伤停: {len(s.get('home_missing',[]))}+{len(s.get('away_missing',[]))}人")
         
-        # 赔率匹配
-        od = match_odds_to_match(m, all_odds)
-        if od:
-            match_odds[m['id']] = od
-            print(f"    WDL: {len(od['wdl_odds']['records'])}条, Score: {len(od['score_odds']['records'])}条, TG: {len(od['tg_odds']['records'])}条")
+        # 赔率加载（SSOT 改造：从 odds.db 按中文队名反查 match_id）
+        match_id = find_match_id_by_cn(m['home_team_cn'], m['away_team_cn'])
+        if match_id:
+            od = load_odds_from_db(match_id)
+            if od:
+                match_odds[m['id']] = od
+                print(f"    WDL: {len(od['wdl_odds']['records'])}条, Score: {len(od['score_odds']['records'])}条, TG: {len(od['tg_odds']['records'])}条 (match_id={match_id})")
+            else:
+                print(f"    ⚠️ match_id={match_id} 但无赔率数据，使用默认值")
+                match_odds[m['id']] = _default_odds()
         else:
-            print(f"    ⚠️ 未匹配到赔率，使用默认值")
-            match_odds[m['id']] = {
-                'wdl_odds': {'records': [{'time': '2026-08-15 21:00:00', 'win': 2.2, 'draw': 3.0, 'lose': 3.2}],
-                             'open': {'win': 2.2, 'draw': 3.0, 'lose': 3.2}, 'close': {'win': 2.2, 'draw': 3.0, 'lose': 3.2}},
-                'handicap_odds': {'line': -1, 'records': [], 'open': {}, 'close': {'win': 5.5, 'draw': 3.5, 'lose': 1.5}},
-                'score_odds': {'records': []},
-                'tg_odds': {'records': [{'time': '2026-08-15 21:00:00', 'o0':5.0,'o1':3.0,'o2':3.2,'o3':4.5,'o4':8.0,'o5':18.0,'o6':35.0,'o7':50.0}]},
-            }
+            print(f"    ⚠️ odds.db 未找到比赛，使用默认值")
+            match_odds[m['id']] = _default_odds()
         
         # 预测
         predictions[m['id']] = predict_match(m, match_odds[m['id']], models)

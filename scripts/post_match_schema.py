@@ -3,7 +3,7 @@
 post_match_schema.py — 模块 A1：赛后事实表 schema 与幂等写库（P0）
 
 ===============================================
-背景（模型改进实施方案 v1.0 §三/A1）：
+背景（已归档：原模型改进实施方案 v1.0 §三/A1）：
   赛后复盘闭环完全缺失：data/odds.db 无 post_match_review 表，
   model_predictions 无 actual_* 字段。本脚本建立复盘数据基础：
     1. 新建 post_match_review 赛后事实表（UNIQUE(match_id) 幂等）
@@ -29,7 +29,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -61,12 +61,16 @@ CREATE TABLE IF NOT EXISTS post_match_review (
     pred_score_top1 TEXT,
     pred_score_top5 TEXT,            -- JSON
     pred_hcp        TEXT,
-    pred_tg         TEXT,
+    pred_tg         TEXT,            -- 旧：大小球方向（C-20260921-035 起停用）
+    pred_tg_top1    TEXT,            -- C-20260921-035：精确进球 Top1（如 "4球"）
+    pred_tg_top3    TEXT,            -- C-20260921-035：JSON [{goals,label,prob}]
     wdl_correct     INTEGER,         -- 0/1
     score_top1_hit  INTEGER,
     score_top5_cover INTEGER,
     hcp_correct     INTEGER,
-    tg_correct      INTEGER,
+    tg_correct      INTEGER,         -- 旧：大小球正确（停用）
+    tg_top1_hit     INTEGER,         -- C-20260921-035：精确进球 Top1 命中 0/1
+    tg_top3_cover   INTEGER,         -- C-20260921-035：Top3 覆盖 0/1
     single_rps      REAL,
     single_logloss  REAL,
     prob_rank       INTEGER,         -- 1/2/3
@@ -86,8 +90,9 @@ REVIEW_WRITABLE_COLS = [
     "match_id", "league", "match_date", "home_team", "away_team",
     "actual_score", "actual_half_score", "actual_wdl", "actual_hcp", "actual_tg",
     "pred_wdl", "pred_wdl_probs", "pred_score_top1", "pred_score_top5",
-    "pred_hcp", "pred_tg",
-    "wdl_correct", "score_top1_hit", "score_top5_cover", "hcp_correct", "tg_correct",
+    "pred_hcp", "pred_tg", "pred_tg_top1", "pred_tg_top3",
+    "wdl_correct", "score_top1_hit", "score_top5_cover", "hcp_correct",
+    "tg_correct", "tg_top1_hit", "tg_top3_cover",
     "single_rps", "single_logloss", "prob_rank",
     "attribution_json", "confidence_level", "data_quality_score",
     "human_reviewed", "human_notes", "reviewed_at",
@@ -108,6 +113,15 @@ def ensure_post_match_schema(conn: sqlite3.Connection) -> None:
     （UNIQUE(match_id, model_name, prediction_type)，actual_* 四行幂等写入的前提）。
     """
     conn.execute(POST_MATCH_REVIEW_DDL)
+    conn.commit()
+
+    # C-20260921-035：旧库补列（CREATE IF NOT EXISTS 不会更新既有表结构）
+    cur = conn.cursor()
+    have = {r[1] for r in cur.execute("PRAGMA table_info(post_match_review)")}
+    for col, decl in (("pred_tg_top1", "TEXT"), ("pred_tg_top3", "TEXT"),
+                      ("tg_top1_hit", "INTEGER"), ("tg_top3_cover", "INTEGER")):
+        if col not in have:
+            cur.execute(f"ALTER TABLE post_match_review ADD COLUMN {col} {decl}")
     conn.commit()
 
     cur = conn.cursor()
@@ -176,8 +190,23 @@ def write_post_match_review(conn: sqlite3.Connection, review: Dict[str, Any]) ->
         f"INSERT OR IGNORE INTO post_match_review ({','.join(cols)}) VALUES ({placeholders})",
         list(row.values()),
     )
+    inserted = cur.rowcount > 0
+    if not inserted:
+        # C-20260919-021: 行已存在时仅补 NULL 事实列（如早先生成时缺盘口线，actual_hcp 为空），
+        # 不覆盖已填值——幂等"补洞"，attribution_json 等不在本 dict 中故不受影响
+        set_sql, set_vals = [], []
+        for col in cols:
+            if col == "match_id":
+                continue
+            set_sql.append(f"{col}=CASE WHEN {col} IS NULL THEN ? ELSE {col} END")
+            set_vals.append(row[col])
+        if set_sql:
+            cur.execute(
+                f"UPDATE post_match_review SET {','.join(set_sql)} WHERE match_id=?",
+                (*set_vals, row["match_id"]),
+            )
     conn.commit()
-    return cur.rowcount > 0
+    return inserted
 
 
 def write_actual_predictions(
@@ -191,10 +220,11 @@ def write_actual_predictions(
 ) -> int:
     """赛果 4 行 actual_* 追加写入 model_predictions（INSERT OR IGNORE 幂等）。
 
-    probability/confidence 固定 1.0（结果已确定）；timestamp 为当前 UTC ISO 时间，
-    与既有 EV_direction 行格式（ISO+00:00）一致。返回实际写入行数。
+    probability/confidence 固定 1.0（结果已确定）；timestamp 为本地（Asia/Shanghai）naive
+    时间 %Y-%m-%d %H:%M:%S（C-20260921-034：此前误用 UTC ISO+00:00，与库内口径不一致）。
+    返回实际写入行数。
     """
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     rows: List[tuple] = []
     if actual_wdl:
         rows.append((match_id, model_name, "actual_wdl", actual_wdl, 1.0, 1.0, ts))

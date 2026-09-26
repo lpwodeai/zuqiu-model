@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+import sys
 import json
 from datetime import datetime
 from pathlib import Path
@@ -16,7 +17,7 @@ def load_existing_features():
     
     latest_file = sorted(feature_files)[-1]
     print(f"加载现有特征矩阵: {latest_file}")
-    return pd.read_csv(os.path.join(OUTPUT_DIR, latest_file))
+    return pd.read_csv(os.path.join(OUTPUT_DIR, latest_file), float_precision='round_trip')
 
 def load_player_features():
     player_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith('player_features_')]
@@ -26,7 +27,7 @@ def load_player_features():
     
     latest_file = sorted(player_files)[-1]
     print(f"加载球员特征矩阵: {latest_file}")
-    return pd.read_csv(os.path.join(OUTPUT_DIR, latest_file))
+    return pd.read_csv(os.path.join(OUTPUT_DIR, latest_file), float_precision='round_trip')
 
 def load_selected_player_features():
     selected_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith('selected_player_features_')]
@@ -37,14 +38,29 @@ def load_selected_player_features():
     latest_file = sorted(selected_files)[-1]
     print(f"加载选择的球员特征: {latest_file}")
     df = pd.read_csv(os.path.join(OUTPUT_DIR, latest_file))
+    if 'feature' not in df.columns:
+        print(f"错误: {latest_file} 缺少 'feature' 列")
+        return None
     return df['feature'].tolist()
 
 def integrate_features(existing_features, player_features, selected_player_features=None):
     if selected_player_features:
-        player_features = player_features[selected_player_features]
-        print(f"使用选择的球员特征，维度: {len(selected_player_features)}")
+        # 仅取真实存在的列，防止过期清单触发 KeyError
+        available = [c for c in selected_player_features if c in player_features.columns]
+        missing = [c for c in selected_player_features if c not in player_features.columns]
+        if missing:
+            print(f"警告: {len(missing)} 个清单特征已不存在，将跳过: {missing[:5]}")
+        if available:
+            player_features = player_features[available]
+        print(f"使用选择的球员特征，维度: {len(available)}")
     else:
         print(f"使用全部球员特征，维度: {player_features.shape[1]}")
+
+    # 两矩阵按位置 concat：行数必须一致，否则静默错位
+    if len(existing_features) != len(player_features):
+        raise ValueError(
+            f"行数不一致，禁止位置对齐: 现有特征 {len(existing_features)} 行 vs "
+            f"球员特征 {len(player_features)} 行；请确认两份 CSV 来自同一比赛集合")
     
     print(f"\n现有特征维度: {existing_features.shape[1]}")
     print(f"球员特征维度: {player_features.shape[1]}")
@@ -111,9 +127,9 @@ def main():
     print("\n2. 加载球员特征...")
     player_features = load_player_features()
     if player_features is None:
-        print("错误: 未找到球员特征，退出")
-        return
-    
+        print("错误: 未找到球员特征，请先运行 player_feature_engineer.py 生成上游产物")
+        sys.exit(1)
+
     print("\n3. 加载选择的球员特征...")
     selected_features = load_selected_player_features()
     

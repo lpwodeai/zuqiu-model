@@ -50,7 +50,7 @@ TEAM_ALIASES = {
     '阿森纳': ['阿森纳', 'Arsenal', 'AFC'],
     '曼城': ['曼城', 'Manchester City', 'Man City', 'MCI', '曼彻斯特城'],
     '曼联': ['曼联', 'Manchester United', 'Man Utd', 'MUFC', 'MUN', '曼彻斯特联'],
-    '热刺': ['热刺', 'Tottenham Hotspur', 'Spurs', 'Tottenham', 'THFC'],
+    '热刺': ['热刺', '托特纳姆热刺', 'Tottenham Hotspur', 'Spurs', 'Tottenham', 'THFC'],
     '纽卡斯尔': ['纽卡斯尔', 'Newcastle United', 'Newcastle', 'Magpies', 'NUFC'],
     '布莱顿': ['布莱顿', 'Brighton & Hove Albion', 'Brighton', 'BHA', '布赖顿'],
     '伯恩茅斯': ['伯恩茅斯', 'AFC Bournemouth', 'Bournemouth'],
@@ -73,18 +73,18 @@ TEAM_ALIASES = {
     '门兴格拉德巴赫': ['门兴格拉德巴赫', 'Borussia Monchengladbach', 'Monchengladbach', 'Gladbach', 'BMG'],
     '法兰克福': ['法兰克福', 'Eintracht Frankfurt', 'Frankfurt'],
     '斯图加特': ['斯图加特', 'VfB Stuttgart', 'Stuttgart'],
-    '莱比锡': ['莱比锡', 'RB Leipzig', 'Leipzig'],
+    '莱比锡': ['莱比锡', '莱比锡红牛', 'RB Leipzig', 'Leipzig'],
     '弗赖堡': ['弗赖堡', 'SC Freiburg', 'Freiburg'],
     '霍芬海姆': ['霍芬海姆', 'TSG Hoffenheim', 'Hoffenheim'],
     '柏林联合': ['柏林联合', 'Union Berlin'],
     '科隆': ['科隆', 'FC Koln', 'Koln', '1. FC Köln', 'Köln', '1. FC Koln'],
     '奥格斯堡': ['奥格斯堡', 'FC Augsburg', 'Augsburg'],
     '美因茨': ['美因茨', 'Mainz 05', 'Mainz'],
-    '云达不莱梅': ['云达不莱梅', 'Werder Bremen', 'Bremen'],
+    '云达不莱梅': ['云达不莱梅', '云达不来梅', 'Werder Bremen', 'Bremen'],
     '圣保利': ['圣保利', 'FC St. Pauli', 'St. Pauli'],
     '海登海姆': ['海登海姆', '1. FC Heidenheim', 'Heidenheim'],
     '汉堡': ['汉堡', 'Hamburger SV', 'Hamburg', 'HSV'],
-    '巴黎圣日耳曼': ['巴黎圣日耳曼', 'Paris Saint-Germain', 'PSG', 'Paris SG'],
+    '巴黎圣日耳曼': ['巴黎圣日耳曼', '巴黎圣日尔曼', 'Paris Saint-Germain', 'PSG', 'Paris SG'],
     '里昂': ['里昂', 'Olympique Lyonnais', 'Lyon', 'OL'],
     '马赛': ['马赛', 'Olympique Marseille', 'Marseille', 'OM'],
     '摩纳哥': ['摩纳哥', 'AS Monaco', 'Monaco'],
@@ -110,8 +110,8 @@ TEAM_ALIASES = {
     '比利亚雷亚尔': ['比利亚雷亚尔', 'Villarreal CF', 'Villarreal', 'Yellow Submarine'],
     '皇家贝蒂斯': ['皇家贝蒂斯', 'Real Betis', 'Betis'],
     '皇家社会': ['皇家社会', 'Real Sociedad', 'Sociedad'],
-    '毕尔巴鄂': ['毕尔巴鄂', 'Athletic Bilbao', 'Bilbao', 'Athletic'],
-    '塞尔塔': ['塞尔塔', 'Celta Vigo', 'Celta'],
+    '毕尔巴鄂': ['毕尔巴鄂', '毕尔巴鄂竞技', 'Athletic Bilbao', 'Bilbao', 'Athletic'],
+    '塞尔塔': ['塞尔塔', '维戈塞尔塔', 'Celta Vigo', 'Celta'],
     '赫塔费': ['赫塔费', 'Getafe CF', 'Getafe', '赫塔菲'],
     '奥萨苏纳': ['奥萨苏纳', 'CA Osasuna', 'Osasuna'],
     '赫罗纳': ['赫罗纳', 'Girona FC', 'Girona'],
@@ -142,15 +142,16 @@ TEAM_ALIASES = {
     '比萨': ['比萨', 'Pisa SC', 'Pisa'],
     '科莫': ['科莫', 'Como 1907', 'Como'],
     '克雷莫纳': ['克雷莫纳', 'Cremonese', 'US Cremonese'],
-    '弗罗西诺内': ['弗罗西诺内', 'Frosinone'],
+    '弗罗西诺内': ['弗罗西诺内', '弗洛西诺内', 'Frosinone'],
     '蒙扎': ['蒙扎', 'Monza', 'AC Monza'],
     '特鲁瓦': ['特鲁瓦', 'Troyes', 'ESTAC Troyes'],
     '伊普斯维奇': ['伊普斯维奇', 'Ipswich Town', 'Ipswich'],
     '马拉加': ['马拉加', 'Malaga', 'Malaga CF', 'Málaga', 'Málaga CF'],
     '沙尔克04': ['沙尔克04', 'Schalke 04', 'FC Schalke 04', 'Schalke'],
+    '埃尔沃斯堡': ['埃尔沃斯堡', '埃沃斯堡', 'SV Elversberg', 'Elversberg', 'SV 07 Elversberg'],
     # ---- 英冠/英超升降级 ----
     '南安普顿': ['南安普顿', 'Southampton', 'Soton', '南安普敦'],
-    '莱斯特城': ['莱斯特城', 'Leicester City', 'Leicester', 'Leicester City FC'],
+    '莱斯特城': ['莱斯特城', '莱切斯特城', 'Leicester City', 'Leicester', 'Leicester City FC'],
     '卢顿': ['卢顿', 'Luton Town', 'Luton', 'LTFC'],
     '赫尔城': ['赫尔城', 'Hull City', 'Hull', 'Hull City Tigers'],
     '沃特福德': ['沃特福德', 'Watford', 'Watford FC'],
@@ -216,6 +217,228 @@ TEAM_ALIASES = {
     '基尔': ['基尔', 'Holstein Kiel', 'Kiel'],
     '不伦瑞克': ['不伦瑞克', 'Eintracht Braunschweig', 'Braunschweig'],
 }
+
+
+# ============================================================
+# xgscore.io 队名 slug 映射表（C-20260922）
+# 来源：抓取 xgscore.io/xg-statistics/{league} 页面，从
+#   api.xgscore.io/public/img/logos/{slug}_32.png 提取真实 slug。
+# key 为标准中文名（与 TEAM_ALIASES 对齐），value 为 xgscore URL slug。
+# 推断项（标注 #推断）未经 404 验证，采集器需实现 fuzzy fallback。
+# ============================================================
+
+XGSCORE_LEAGUE_SLUGS = {
+    "英超": "epl",
+    "西甲": "la-liga",
+    "意甲": "serie-a",
+    "德甲": "bundesliga",
+    "法甲": "league-1",
+}
+
+XGSCORE_TEAM_SLUGS = {
+    # ---- 英超（含历史英冠队，xgscore epl 页面收录）----
+    "阿森纳": "arsenal",
+    "阿斯顿维拉": "aston-villa",
+    "伯恩茅斯": "bournemouth",
+    "布伦特福德": "brentford",
+    "布莱顿": "brighton",
+    "伯恩利": "burnley",
+    "切尔西": "chelsea",
+    "水晶宫": "crystal-palace",
+    "埃弗顿": "everton",
+    "富勒姆": "fulham",
+    "利兹联": "leeds",
+    "利物浦": "liverpool",
+    "曼城": "man-city",
+    "曼联": "man-united",
+    "纽卡斯尔": "newcastle",
+    "诺丁汉森林": "nottingham-forest",
+    "桑德兰": "sunderland",
+    "热刺": "tottenham",
+    "西汉姆": "west-ham",
+    "狼队": "wolverhampton",
+    "考文垂": "coventry-city",          # 英冠历史
+    "赫尔城": "hull-city",              # 英冠历史
+    "伊普斯维奇": "ipswich-town",       # 英冠历史
+    "南安普顿": "southampton",          # 推断
+    "莱斯特城": "leicester",            # 推断
+    "卢顿": "luton-town",               # 推断
+    "沃特福德": "watford",              # 推断
+    "西布罗姆维奇": "west-bromwich-albion",  # 推断
+    "谢菲尔德联": "sheffield-united",   # 推断
+    "斯托克城": "stoke-city",           # 推断
+    "斯旺西": "swansea-city",           # 推断
+    "诺维奇": "norwich-city",           # 推断
+    "米德尔斯堡": "middlesbrough",      # 推断
+    "加的夫城": "cardiff-city",         # 推断
+    "哈德斯菲尔德": "huddersfield-town",# 推断
+    # ---- 意甲 ----
+    "亚特兰大": "atalanta",
+    "博洛尼亚": "bologna",
+    "卡利亚里": "cagliari",
+    "科莫": "como",
+    "佛罗伦萨": "fiorentina",
+    "弗罗西诺内": "frosinone",
+    "热那亚": "genoa",
+    "国际米兰": "inter",
+    "尤文图斯": "juventus",
+    "拉齐奥": "lazio",
+    "莱切": "lecce",
+    "AC米兰": "milan",
+    "蒙扎": "monza",
+    "那不勒斯": "napoli",
+    "帕尔马": "parma",
+    "罗马": "roma",
+    "萨索洛": "sassuolo",
+    "都灵": "torino",
+    "乌迪内斯": "udinese",
+    "威尼斯": "venezia",
+    "维罗纳": "verona",                # 推断
+    "比萨": "pisa",                    # 推断
+    "克雷莫纳": "cremonese",           # 推断
+    "恩波利": "empoli",                # 推断
+    "萨勒尼塔纳": "salernitana",       # 推断
+    "斯佩齐亚": "spezia",              # 推断
+    "桑普多利亚": "sampdoria",         # 推断
+    "巴勒莫": "palermo",               # 推断
+    "布雷西亚": "brescia",             # 推断
+    # ---- 西甲 ----
+    "阿拉维斯": "alaves",
+    "毕尔巴鄂": "athletic",
+    "马德里竞技": "atletico",
+    "巴塞罗那": "barcelona",
+    "塞尔塔": "celta",
+    "埃尔切": "elche",
+    "西班牙人": "espanyol",
+    "赫塔费": "getafe",
+    "拉科鲁尼亚": "la-coruna",
+    "莱万特": "levante",
+    "马拉加": "malaga",
+    "奥萨苏纳": "osasuna",
+    "巴列卡诺": "r-vallecano",
+    "桑坦德竞技": "racing-santander",
+    "皇家贝蒂斯": "real-betis",
+    "皇家马德里": "real-madrid",
+    "皇家社会": "real-sociedad",
+    "塞维利亚": "sevilla",
+    "瓦伦西亚": "valencia",
+    "比利亚雷亚尔": "villarreal",
+    "皇家奥维耶多": "real-oviedo",     # 推断
+    "莱加内斯": "leganes",             # 推断
+    "加的斯": "cadiz",                 # 推断
+    "阿尔梅里亚": "almeria",           # 推断
+    "格拉纳达": "granada",             # 推断
+    "埃瓦尔": "eibar",                 # 推断
+    "巴利亚多利德": "real-valladolid",# 推断
+    "希洪竞技": "sporting-gijon",     # 推断
+    "韦斯卡": "huesca",                # 推断
+    "拉斯帕尔马斯": "las-palmas",     # 推断
+    # ---- 德甲 ----
+    "奥格斯堡": "augsburg",
+    "勒沃库森": "bayer",
+    "拜仁慕尼黑": "bayern-munich",
+    "多特蒙德": "borussia-d",
+    "门兴格拉德巴赫": "borussia-m",
+    "科隆": "cologne",
+    "法兰克福": "eintracht",
+    "埃尔沃斯堡": "elversberg",
+    "弗赖堡": "freiburg",
+    "汉堡": "hamburg",
+    "霍芬海姆": "hoffenheim",
+    "美因茨": "mainz",
+    "帕德博恩": "paderborn",
+    "莱比锡": "rb-leipzig",
+    "沙尔克04": "schalke",
+    "斯图加特": "stuttgart",
+    "柏林联合": "union-berlin",
+    "云达不莱梅": "werder",
+    "海登海姆": "heidenheim",          # 推断
+    "圣保利": "st-pauli",              # 推断
+    "柏林赫塔": "hertha-berlin",       # 推断
+    "波鸿": "bochum",                  # 推断
+    "汉诺威96": "hannover-96",         # 推断
+    "纽伦堡": "nurnberg",              # 推断
+    "杜塞尔多夫": "fortuna-dusseldorf",# 推断
+    "比勒费尔德": "arminia-bielefeld", # 推断
+    "达姆施塔特": "darmstadt",         # 推断
+    "因戈尔施塔特": "ingolstadt",      # 推断
+    "菲尔特": "greuther-furth",        # 推断
+    "基尔": "holstein-kiel",           # 推断
+    "不伦瑞克": "braunschweig",        # 推断
+    # ---- 法甲 ----
+    "昂热": "angers",
+    "欧塞尔": "auxerre",
+    "布雷斯特": "brest",
+    "勒阿弗尔": "le-havre",
+    "勒芒": "le-mans",
+    "朗斯": "lens",
+    "里尔": "lille",
+    "洛里昂": "lorient",
+    "里昂": "lyon",
+    "马赛": "marseille",
+    "摩纳哥": "monaco",
+    "尼斯": "nice",
+    "巴黎FC": "paris",
+    "巴黎圣日耳曼": "psg",
+    "雷恩": "rennes",
+    "斯特拉斯堡": "strasbourg",
+    "图卢兹": "toulouse",
+    "特鲁瓦": "troyes",
+    "梅斯": "metz",                    # 推断
+    "南特": "nantes",                  # 推断
+    "蒙彼利埃": "montpellier",         # 推断
+    "圣埃蒂安": "saint-etienne",      # 推断
+    "波尔多": "bordeaux",              # 推断
+    "兰斯": "reims",                   # 推断
+    "第戎": "dijon",                   # 推断
+    "卡昂": "caen",                    # 推断
+    "甘冈": "guingamp",               # 推断
+    "亚眠": "amiens",                 # 推断
+    "南锡": "nancy",                  # 推断
+    "尼姆": "nimes",                  # 推断
+    "巴斯蒂亚": "bastia",             # 推断
+    "阿雅克肖": "ajaccio",            # 推断
+    "克莱蒙": "clermont",             # 推断
+}
+
+
+def to_xgscore_slug(raw_name: str) -> Optional[str]:
+    """队名（中文/英文/Understat 英文）→ xgscore.io slug。
+
+    优先查 XGSCORE_TEAM_SLUGS（标准中文名 key）；
+    fallback 用 normalize_team_name 归一化后查表；
+    再 fallback 对英文别名做规范化（小写、空格→连字符、Manchester→man、
+    去 United/City/FC/Wanderers 等后缀）返回候选，由调用方 404 验证。
+    """
+    if not raw_name:
+        return None
+    raw = str(raw_name).strip()
+    # 1. 直接查表（标准中文名命中）
+    if raw in XGSCORE_TEAM_SLUGS:
+        return XGSCORE_TEAM_SLUGS[raw]
+    # 2. 归一化后查表
+    std = normalize_team_name(raw)
+    if std and std in XGSCORE_TEAM_SLUGS:
+        return XGSCORE_TEAM_SLUGS[std]
+    # 3. 英文规范化 fallback（返回候选，调用方需 404 验证）
+    if raw.isascii():
+        n = raw.lower().strip()
+        # Manchester City/United → man-city/man-united
+        n = n.replace("manchester city", "man-city").replace("manchester united", "man-united")
+        # 去常见后缀
+        for suf in (" wanderers", " united", " city", " town", " fc", " cf", " ac", " bc", " athletic"):
+            if n.endswith(suf):
+                n = n[:-len(suf)]
+                break
+        # 去常见前缀
+        for pre in ("fc ", "sc ", "tsg ", "1. ", "rc ", "as ", "ss ", "us ", "vfl ", "vfb "):
+            if n.startswith(pre):
+                n = n[len(pre):]
+                break
+        n = n.replace(" ", "-").replace("'", "").replace(".", "").replace("ö", "o").replace("ü", "u")
+        n = "-".join(n.split("-"))  # 压缩连续连字符
+        return n if n else None
+    return None
 
 
 def normalize_team_name(raw_name, fuzzy_threshold=0.8):

@@ -53,7 +53,7 @@ class DixonColesGenerator:
         "德甲": -0.05, "法甲": -0.10,
     }
 
-    # T-006 ρ 策略对齐（前置项 3，unified_engine_integration_plan §8）
+    # T-006 ρ 策略对齐（前置项 3，已归档：原 unified_engine_integration_plan §8）
     # 与 prediction_core.py 的 T006_RHO=-0.30 / T006_RHO_HIGH=-0.10 保持一致
     T006_RHO = -0.30
     T006_RHO_HIGH = -0.10
@@ -106,7 +106,7 @@ class DixonColesGenerator:
     ) -> float:
         """Dixon-Coles τ 修正（论文标准版，对齐 prediction_core.CalcEngine）。
 
-        前置项 1（unified_engine_integration_plan §8）：原简化版 `1±ρ` 在 λ 偏离 1
+        前置项 1（已归档：原 unified_engine_integration_plan §8）：原简化版 `1±ρ` 在 λ 偏离 1
         时产生偏差，改为 Dixon & Coles (1997) 标准形式：
           τ(0,0) = 1 - λ_home·λ_away·ρ
           τ(0,1) = 1 + λ_home·ρ

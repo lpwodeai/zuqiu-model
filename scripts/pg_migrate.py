@@ -25,6 +25,7 @@ import argparse
 import csv
 import io
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -41,7 +42,8 @@ SCHEMA_JSON = PROJECT_ROOT / "scripts" / "pg_migration_schema.json"
 EXPORT_DIR = PROJECT_ROOT / "data" / "pg_export"
 
 PG_HOST, PG_PORT = "localhost", 5432
-PG_USER, PG_PASSWORD = "postgres", "postgres"
+PG_USER = "postgres"
+PG_PASSWORD = os.environ.get("PG_PASSWORD", "postgres")
 PG_DB = "odds"
 
 # 三张分区大表

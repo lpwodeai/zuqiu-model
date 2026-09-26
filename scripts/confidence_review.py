@@ -3,7 +3,7 @@
 confidence_review.py — 模块 A5：可信度分级 + 人工审核流程（P1）
 
 ===============================================
-背景（模型改进实施方案 v1.0 §三/A5，对齐指南 §2.3/§2.4）：
+背景（已归档：原模型改进实施方案 v1.0 §三/A5，对齐指南 §2.3/§2.4）：
   可信度分级（以方案为准，post_match_review 表注释「3 级起写因子库」与方案冲突时以方案「≥4 级」为准）：
     1 级 = 纯模型归因，无外部数据验证        → 不写因子库
     2 级 = 模型归因 + 部分结构化外部数据验证  → 不写因子库
@@ -46,8 +46,8 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 ODDS_DB = PROJECT_DIR / "data" / "odds.db"
 
 # B1 统一模块：知识库读写统一走 knowledge_base_schema（避免双写路径）
+# C-20260918-031：add_correction 不再使用（--disagree 改为只读归档，B4 走 auto_scan_and_import_corrections）
 from knowledge_base_schema import (
-    add_correction,
     add_insight,
     count_corrections,
     count_insights,
@@ -219,6 +219,14 @@ def cmd_disagree(
     correction_type: str,
     corrected_attribution: Optional[str],
 ) -> int:
+    """C-20260918-031 改造：--disagree 已废弃人工写入流程，改为只读归档。
+
+    原 B4 流程：人工 --disagree 写 human_corrections.json（status=open）
+    新 B4 流程：自动归因错误修正（auto_scan_and_import_corrections 扫描
+    attribution_json 归因不显著+预测错误场次，自动写入 status='auto'）
+
+    本命令仍标记已审并保留备注作为归档，但不再写入 human_corrections.json。
+    """
     review = get_review(conn, match_id)
     if review is None:
         print(f"❌ post_match_review 无 {match_id}")
@@ -231,15 +239,13 @@ def cmd_disagree(
         return 0
 
     orig = _primary_cause(review.get("attribution_json")) or "无归因"
-    written = add_correction(
-        match_id, review.get("league"), correction_type,
-        orig, corrected_attribution, note,
-    )
     base = baseline_level(review)
-    # 不同意：记录修正，保持基线（不升 4 级），标记已审
+    # 不同意：保持基线（不升 4 级），标记已审；备注作为归档留存，不写 human_corrections.json
     _apply_review(conn, review, base["level"],
                   f"[不同意] {note}" + (f" 修正归因：{corrected_attribution}" if corrected_attribution else ""))
-    print(f"✅ 已审核不同意 {match_id}：保持基线 {base['level']} 级，修正记录 {'已写入' if written else '已存在'}")
+    print(f"✅ 已审核不同意 {match_id}：保持基线 {base['level']} 级（备注已归档）")
+    print(f"  ⚠️ B4 已切换为自动归因错误修正：--disagree 不再写 human_corrections.json")
+    print(f"  🔁 自动扫描入口：python scripts/knowledge_base_schema.py --auto-scan")
     print(f"  🔁 建议重跑 A3 重归因：python scripts/attribution_engine.py --match-id {match_id} --collect --write")
     return 0
 

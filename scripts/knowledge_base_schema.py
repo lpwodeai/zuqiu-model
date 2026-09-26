@@ -3,7 +3,7 @@
 knowledge_base_schema.py — 模块 B1：知识库目录与 schema 统一（P1）
 
 ===============================================
-背景（模型改进实施方案 v1.0 §四/B1，对齐指南 §3.1）：
+背景（已归档：原模型改进实施方案 v1.0 §四/B1，对齐指南 §3.1）：
   data/knowledge_base/ 按联赛分类，统一外层 wrapper + 条目 schema：
     data/knowledge_base/
       ├── 英超/ 西甲/ 意甲/ 德甲/ 法甲/ global/
@@ -64,6 +64,8 @@ SCHEMA_VERSION = "1.0"
 MIN_CONFIDENCE = 4          # 写入门禁：≥4 级才写入 feature_insights
 DEFAULT_EXPIRE_DAYS = 90    # 每月清理阈值：last_verified 超期且 active → expired
 DEFAULT_EXPIRE_CONDITION = "连续5场不再验证则降级"
+# C-20260918-031 B4 自动归因错误修正：归因权重<该阈值视为不显著
+AUTO_WEIGHT_THRESHOLD = 50
 
 # feature_insights 条目必填字段（对齐方案 §B1）
 INSIGHT_REQUIRED_FIELDS = [
@@ -156,6 +158,34 @@ def load_human_corrections() -> List[Dict[str, Any]]:
 def save_human_corrections(entries: List[Dict[str, Any]]) -> None:
     """human_corrections 统一写入（根目录全局文件，layer 自描述为 global）。"""
     _save_wrapper(_human_path(), "global", HUMAN_CORRECTIONS_LAYER, entries)
+
+
+# ==================== 命中埋点（B5 闭环可观测性，C-20260918-007） ====================
+HIT_LOG = PROJECT_DIR / "logs" / "knowledge_hit.jsonl"
+
+
+def record_kb_hit(layer, league, entry_id, n_hit, weight, source_count, note=""):
+    """知识库命中埋点：训练侧 L3/B4 加权命中、报告侧 L2 读取命中均持久化一行。
+
+    追加写至 logs/knowledge_hit.jsonl，供 knowledge_dashboard 统计闭环效果。
+    失败仅告警，绝不阻断训练/报告（对齐 L3/CORR 降级惯例）。
+    """
+    rec = {
+        "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "layer": layer,
+        "league": league,
+        "entry_id": entry_id,
+        "n_hit": n_hit,
+        "weight": weight,
+        "source_count": source_count,
+        "note": note,
+    }
+    try:
+        HIT_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with HIT_LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except OSError as _e:
+        print(f"  [KB-HIT-WARN] 埋点写入失败，跳过: {_e}")
 
 
 # ==================== attribution_json 解析（A3 双形态兼容） ====================
@@ -280,6 +310,120 @@ def add_correction(
     })
     save_human_corrections(entries)
     return True
+
+
+def add_auto_correction(
+    match_id: str,
+    league: Optional[str],
+    original_attribution: Optional[str],
+    reason: str,
+    corrected_attribution: str = "待人工复核",
+) -> bool:
+    """写 data/knowledge_base/human_corrections.json（status='auto'，C-20260918-031）。
+
+    自动归因错误修正：从 post_match_review.attribution_json 扫描归因不显著 + 预测错误场次，
+    自动写入待人工复核的修正记录；废弃人工 --disagree 流程，保留 human_corrections.json
+    作为归因档案。
+
+    与 add_correction 区别：
+      - correction_type 固定 'auto_attribution'
+      - status='auto'（新增状态值，与 open/applied 区分，不衰减）
+      - 不被 mark_correction_applied 改为 applied（保留供多轮重训）
+
+    按 match_id 去重幂等，返回 True=新写入 / False=已存在跳过。
+    """
+    entries = load_human_corrections()
+    if any(it.get("match_id") == match_id for it in entries):
+        return False
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    entries.append({
+        "id": f"auto_{match_id}",
+        "match_id": match_id,
+        "league": league,
+        "match_type": "post_match",
+        "correction_type": "auto_attribution",
+        "original_attribution": original_attribution,
+        "corrected_attribution": corrected_attribution,
+        "reason": reason,
+        "created_at": now,
+        "applied_count": 0,
+        "status": "auto",
+    })
+    save_human_corrections(entries)
+    return True
+
+
+def auto_scan_and_import_corrections(verbose: bool = True) -> Dict[str, int]:
+    """B4 自动归因错误修正（C-20260918-031）：从 post_match_review 扫描归因不显著 +
+    预测错误场次，写入 human_corrections.json。
+
+    触发条件（任一满足即写入 status='auto' 修正记录）：
+      1. attribution_json 非空 AND wdl_correct=0（预测错误）
+      2. primary_cause='模型局限性归因'（A3 兜底无显著归因）
+         OR attributions 所有维度 weight < AUTO_WEIGHT_THRESHOLD（归因不显著）
+
+    写入字段：
+      correction_type='auto_attribution'
+      original_attribution=primary_cause
+      corrected_attribution='待人工复核'
+      status='auto'（不衰减，保留供多轮重训，避免人工干预断流）
+
+    返回 {"scanned", "triggered", "written", "skipped"}。
+    """
+    import sqlite3
+    odds_db = PROJECT_DIR / "data" / "odds.db"
+    if not odds_db.exists():
+        if verbose:
+            print(f"[AUTO-CORR-WARN] odds.db 不存在: {odds_db}")
+        return {"scanned": 0, "triggered": 0, "written": 0, "skipped": 0}
+
+    conn = sqlite3.connect(str(odds_db))
+    conn.execute("PRAGMA busy_timeout = 5000")
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT match_id, league, attribution_json, actual_wdl, pred_wdl "
+            "FROM post_match_review "
+            "WHERE attribution_json IS NOT NULL AND wdl_correct=0"
+        )
+        rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    stats = {"scanned": len(rows), "triggered": 0, "written": 0, "skipped": 0}
+    for match_id, league, attr_json, actual_wdl, pred_wdl in rows:
+        parsed = parse_attribution(attr_json)
+        if not parsed:
+            continue
+        primary = parsed.get("primary_cause")
+        attrs = parsed.get("attributions") or []
+
+        # 触发条件：模型局限性归因兜底 OR 所有维度权重 < AUTO_WEIGHT_THRESHOLD
+        is_model_limit = primary == "模型局限性归因"
+        is_low_weight = bool(attrs) and all(
+            float(a.get("weight", 0) or 0) < AUTO_WEIGHT_THRESHOLD for a in attrs
+        )
+        if not (is_model_limit or is_low_weight):
+            continue
+
+        stats["triggered"] += 1
+        reason = (
+            f"自动扫描：归因主因='{primary}'，"
+            f"{'模型局限性兜底' if is_model_limit else f'所有维度权重<{AUTO_WEIGHT_THRESHOLD}'}，"
+            f"wdl 错误(预测={pred_wdl}/实际={actual_wdl})，需人工复核"
+        )
+        written = add_auto_correction(match_id, league, primary, reason)
+        if written:
+            stats["written"] += 1
+            if verbose:
+                print(f"  [AUTO-CORR] {match_id} 写入：{primary}")
+        else:
+            stats["skipped"] += 1
+
+    if verbose:
+        print(f"\n[AUTO-CORR] 扫描完成：{stats['scanned']} 场 → 触发 {stats['triggered']} → "
+              f"写入 {stats['written']} / 跳过 {stats['skipped']}")
+    return stats
 
 
 # ==================== B4 消费端：人工修正记忆三级（C-20260908-013） ====================
@@ -515,6 +659,8 @@ def main() -> None:
     parser.add_argument("--cleanup", action="store_true", help="清理失效条目（last_verified 超期 active→expired）")
     parser.add_argument("--max-age", type=int, default=DEFAULT_EXPIRE_DAYS, help="--cleanup 超期天数（默认 90）")
     parser.add_argument("--verify", action="store_true", help="全量 schema 校验")
+    parser.add_argument("--auto-scan", action="store_true",
+                        help="B4 自动归因错误修正：扫描 post_match_review 归因不显著+预测错误场次写入 human_corrections.json")
     args = parser.parse_args()
 
     if args.init:
@@ -543,6 +689,10 @@ def main() -> None:
                 print(f"  ❌ {p}")
         else:
             print("=== schema 校验：19 个文件全部合规 ===")
+    elif args.auto_scan:
+        print("=== B4 自动归因错误修正（C-20260918-031）===")
+        stats = auto_scan_and_import_corrections(verbose=True)
+        print(f"扫描 {stats['scanned']} → 触发 {stats['triggered']} → 写入 {stats['written']} / 跳过 {stats['skipped']}")
     else:
         # 默认 --list 全部
         leagues = [args.list] if args.list else LEAGUES

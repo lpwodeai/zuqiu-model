@@ -33,7 +33,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pandas numpy scikit-learn xgboost lightgbm psutil pyyaml pytest optuna
+        pip install pandas numpy scikit-learn xgboost lightgbm psutil pyyaml pytest optuna requests
 
     - name: Prepare runtime dirs
       run: |
@@ -45,6 +45,7 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    continue-on-error: true  # 存量代码告警多，lint 暂不阻断 CI，仅作报告；测试 job 保持严格
     steps:
     - uses: actions/checkout@v4
 

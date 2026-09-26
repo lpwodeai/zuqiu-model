@@ -319,6 +319,8 @@ def load_importance_from_file(filename=None):
     return []
 
 def analyze_feature_drift(importance_df, threshold=0.2):
+    """[DEPRECATED C-20260918-037] 重要性漂移检测已废弃，统一改用 shap_feature_importance.detect_feature_drift（特征值漂移）。
+    本函数仅保留向后兼容，train_models.py 钩子已不再调用。JSON 仍由 save_importance_to_file 维护作训练历史快照。"""
     history = load_importance_from_file()
     
     if len(history) < 2:

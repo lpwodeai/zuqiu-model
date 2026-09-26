@@ -227,7 +227,12 @@ def two_stage_predict_final(draw_model, dir_model, X, handicap_categories=None,
 # ========================================
 
 def build_team_elo_snapshot():
-    """基于历史比赛结果计算所有球队的最新 Elo 评分快照。"""
+    """基于历史比赛结果计算所有球队的最新 Elo 评分快照。
+
+    C-20260919-018: 队名归一化 + (日期,主,客) 去重，消除双轨重复双重计数；
+    写入英文主键及全部英文别名键，保证 prediction_core 查询命中。
+    """
+    import re
     conn = sqlite3.connect(DB_PATH)
     query = """
         SELECT match_id, match_date, home_team, away_team, actual_score
@@ -236,8 +241,20 @@ def build_team_elo_snapshot():
           AND actual_score != ''
         ORDER BY match_date
     """
-    df = pd.read_sql(query, conn)
+    raw = pd.read_sql(query, conn)
     conn.close()
+
+    from feature_utils import normalize_team_name
+    raw['home_n'] = raw['home_team'].apply(normalize_team_name)
+    raw['away_n'] = raw['away_team'].apply(normalize_team_name)
+    df = raw.drop_duplicates(subset=['match_date', 'home_n', 'away_n'], keep='first').reset_index(drop=True)
+
+    team_raw_names = {}
+    for _, r in raw.iterrows():
+        if re.search(r'[A-Za-z]', r['home_team']):
+            team_raw_names.setdefault(r['home_n'], set()).add(r['home_team'])
+        if re.search(r'[A-Za-z]', r['away_team']):
+            team_raw_names.setdefault(r['away_n'], set()).add(r['away_team'])
 
     def parse_score(s):
         try:
@@ -253,19 +270,19 @@ def build_team_elo_snapshot():
             return None, None
 
     from elo_rating import update_elo, K_FACTOR
-    elo_ratings = {}
+    elo_ratings_cn = {}
     team_history = {}
 
     for _, row in df.iterrows():
         hg, ag = parse_score(row['actual_score'])
         if hg is None:
             continue
-        home = row['home_team']
-        away = row['away_team']
+        home = row['home_n']
+        away = row['away_n']
         date = row['match_date']
 
-        elo_h = elo_ratings.get(home, DEFAULT_ELO)
-        elo_a = elo_ratings.get(away, DEFAULT_ELO)
+        elo_h = elo_ratings_cn.get(home, DEFAULT_ELO)
+        elo_a = elo_ratings_cn.get(away, DEFAULT_ELO)
 
         if hg > ag:
             actual_h = 1.0
@@ -275,21 +292,40 @@ def build_team_elo_snapshot():
             actual_h = 0.0
 
         new_elo_h, new_elo_a = update_elo(elo_h, elo_a, actual_h, K_FACTOR, HOME_ADVANTAGE)
-        elo_ratings[home] = new_elo_h
-        elo_ratings[away] = new_elo_a
+        elo_ratings_cn[home] = new_elo_h
+        elo_ratings_cn[away] = new_elo_a
         team_history.setdefault(home, []).append((date, new_elo_h))
         team_history.setdefault(away, []).append((date, new_elo_a))
 
-    elo_momentum = {}
+    elo_momentum_cn = {}
     for team, hist in team_history.items():
         if len(hist) >= 5:
             recent_5 = [h[1] for h in hist[-5:]]
-            elo_momentum[team] = recent_5[-1] - recent_5[0]
+            elo_momentum_cn[team] = recent_5[-1] - recent_5[0]
         else:
-            elo_momentum[team] = 0.0
+            elo_momentum_cn[team] = 0.0
 
-    print(f"[ELO] 计算了 {len(elo_ratings)} 支球队的最新 Elo 评分")
-    print(f"[ELO] Elo 评分范围: {min(elo_ratings.values()):.1f} ~ {max(elo_ratings.values()):.1f}")
+    from team_name_mapping import TEAM_ALIASES
+    def _en_keys(canon):
+        names = set(team_raw_names.get(canon, set()))
+        for std, aliases in TEAM_ALIASES.items():
+            if normalize_team_name(std) == canon:
+                for a in aliases:
+                    if re.search(r'[A-Za-z]', a) and not re.search(r'[\u4e00-\u9fff]', a):
+                        names.add(a)
+        return names
+
+    elo_ratings = {}
+    elo_momentum = {}
+    for canon, elo in elo_ratings_cn.items():
+        keys = _en_keys(canon) or {canon}
+        for k in keys:
+            elo_ratings[k] = elo
+            elo_momentum[k] = elo_momentum_cn.get(canon, 0.0)
+
+    print(f"[ELO] 计算了 {len(elo_ratings_cn)} 支球队的最新 Elo 评分（{len(elo_ratings)} 个英文键）")
+    vals = list(elo_ratings_cn.values())
+    print(f"[ELO] Elo 评分范围: {min(vals):.1f} ~ {max(vals):.1f}")
 
     return {
         'elo_ratings': elo_ratings,
@@ -777,4 +813,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--elo-only" in sys.argv:
+        # C-20260919-019: 仅重建 Elo 快照（每日赛前 20:30 流程调用），
+        # 不跑完整训练部署；build_team_elo_snapshot 已含归一化去重+别名展开
+        elo_snapshot = build_team_elo_snapshot()
+        elo_path = os.path.join(ASSETS_DIR, 't005v2_final_elo_ratings.json')
+        with open(elo_path, 'w', encoding='utf-8') as f:
+            json.dump(elo_snapshot, f, ensure_ascii=False, indent=2)
+        print(f"✅ Elo 快照已重建: {elo_path} (顶层 {len(elo_snapshot)} 键 / "
+              f"{len(elo_snapshot['elo_ratings'])} 个球队键)")
+    else:
+        main()

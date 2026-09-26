@@ -95,7 +95,7 @@ def load_sofascore_data(conn: Optional[sqlite3.Connection] = None) -> pd.DataFra
 
     query = """
         SELECT 
-            s.match_id_en,
+            COALESCE(m_f.match_id, m_c.match_id) AS match_id_en,
             s.match_id_cn,
             s.match_date,
             s.home_team_cn,
@@ -152,7 +152,10 @@ def load_sofascore_data(conn: Optional[sqlite3.Connection] = None) -> pd.DataFra
             mt.home_team,
             mt.away_team
         FROM sofascore_team_features s
-        INNER JOIN matches mt ON s.match_id_en = mt.match_id
+        LEFT JOIN fbref_match_mapping f ON s.event_id = f.fbref_match_id
+        LEFT JOIN matches m_f ON f.odds_match_id = m_f.match_id
+        LEFT JOIN matches m_c ON s.match_id_cn = m_c.match_id
+        INNER JOIN matches mt ON COALESCE(m_f.match_id, m_c.match_id) = mt.match_id
     """
 
     df = pd.read_sql(query, conn)
@@ -258,6 +261,8 @@ def build_sofascore_features_for_tg(tg_features: pd.DataFrame,
     # 对齐 index
     # tg_features index 是 matches_match_id，sofa_features index 是 match_id_en
     # 两者应该相同（都是 matches.match_id）
+    # 先按索引去重（多路对齐可能多对一），再 reindex
+    sofa_features = sofa_features[~sofa_features.index.duplicated(keep='last')]
     aligned = sofa_features.reindex(tg_features.index)
 
     sofa_cols = [c for c in aligned.columns if c.startswith('sofa_')]

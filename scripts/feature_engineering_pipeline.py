@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, log_loss, f1_score
-from datetime import datetime
+from datetime import datetime, timedelta
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from odds_temporal_features import build_odds_temporal_features_from_df
@@ -21,40 +21,9 @@ PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 
 DATA_DIR = PROJECT_DIR
 DB_PATH = os.path.join(PROJECT_DIR, "data", "five_leagues.db")
+ODDS_DB_PATH = os.path.join(PROJECT_DIR, "data", "odds.db")
 CONFIG_PATH = os.path.join(PROJECT_DIR, "config.yaml")
 OUTPUT_DIR = os.path.join(PROJECT_DIR, "output")
-
-# CSV 数据源配置（用于数据导入/补充）
-CSV_FILES = {
-    'EPL': 'EPL_2025-26.csv',
-    'BUNDESLIGA': 'BUNDESLIGA_2025-26.csv',
-    'LALIGA': 'LALIGA_2025-26.csv',
-    'SERIEA': 'SERIEA_2025-26.csv',
-    'LIGUE1': 'LIGUE1_2025-26.csv'
-}
-
-CSV_FILES_DETAILED = {
-    'SERIEA': 'SERIEA_2025-26_DETAILED.csv',
-}
-
-
-def get_csv_file(league):
-    """获取指定联赛的CSV文件路径（支持新数据源优先）"""
-    data_path = os.path.join(DATA_DIR, 'data')
-    
-    if league in CSV_FILES_DETAILED:
-        detailed_path = os.path.join(data_path, CSV_FILES_DETAILED[league])
-        if os.path.exists(detailed_path):
-            print(f"  ✅ 使用新详细数据源: {CSV_FILES_DETAILED[league]}")
-            return detailed_path
-    
-    if league in CSV_FILES:
-        old_path = os.path.join(data_path, CSV_FILES[league])
-        if os.path.exists(old_path):
-            return old_path
-    
-    print(f"  ⚠️ 数据源文件不存在: {league}")
-    return None
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -144,117 +113,13 @@ def winsorize_series(series, lower_percentile=1, upper_percentile=99):
     upper = np.percentile(series.dropna(), upper_percentile)
     return series.clip(lower=lower, upper=upper)
 
-def normalize_league_data(df, league):
-    normalized = df.copy()
-    
-    if '日期' in df.columns:
-        normalized['date'] = pd.to_datetime(df['日期'], format='%d/%m/%Y', errors='coerce')
-        normalized['home_team_name'] = df['主队'].apply(normalize_team_name)
-        normalized['away_team_name'] = df['客队'].apply(normalize_team_name)
-        normalized['homeGoals'] = df['主队进球']
-        normalized['awayGoals'] = df['客队进球']
-        normalized['homeShots'] = df['主队射门'] if '主队射门' in df.columns else np.nan
-        normalized['awayShots'] = df['客队射门'] if '客队射门' in df.columns else np.nan
-        normalized['homeShotsOnTarget'] = df['主队射正'] if '主队射正' in df.columns else np.nan
-        normalized['awayShotsOnTarget'] = df['客队射正'] if '客队射正' in df.columns else np.nan
-        normalized['homeCorners'] = df['主队角球'] if '主队角球' in df.columns else np.nan
-        normalized['awayCorners'] = df['客队角球'] if '客队角球' in df.columns else np.nan
-        normalized['homeYellowCards'] = df['主队黄牌'] if '主队黄牌' in df.columns else np.nan
-        normalized['awayYellowCards'] = df['客队黄牌'] if '客队黄牌' in df.columns else np.nan
-        normalized['homeFouls'] = df['主队犯规'] if '主队犯规' in df.columns else np.nan
-        normalized['awayFouls'] = df['客队犯规'] if '客队犯规' in df.columns else np.nan
-        normalized['homePossession'] = df['主队控球率'] if '主队控球率' in df.columns else np.nan
-        
-        normalized['bet365_主胜'] = df['bet365_主胜'] if 'bet365_主胜' in df.columns else np.nan
-        normalized['bet365_平局'] = df['bet365_平局'] if 'bet365_平局' in df.columns else np.nan
-        normalized['bet365_客胜'] = df['bet365_客胜'] if 'bet365_客胜' in df.columns else np.nan
-        normalized['Pinnacle_主胜'] = df['Pinnacle_主胜'] if 'Pinnacle_主胜' in df.columns else np.nan
-        normalized['Pinnacle_平局'] = df['Pinnacle_平局'] if 'Pinnacle_平局' in df.columns else np.nan
-        normalized['Pinnacle_客胜'] = df['Pinnacle_客胜'] if 'Pinnacle_客胜' in df.columns else np.nan
-        normalized['最高_主胜'] = df['最高_主胜'] if '最高_主胜' in df.columns else np.nan
-        normalized['最高_平局'] = df['最高_平局'] if '最高_平局' in df.columns else np.nan
-        normalized['最高_客胜'] = df['最高_客胜'] if '最高_客胜' in df.columns else np.nan
-        normalized['平均_主胜'] = df['平均_主胜'] if '平均_主胜' in df.columns else np.nan
-        normalized['平均_平局'] = df['平均_平局'] if '平均_平局' in df.columns else np.nan
-        normalized['平均_客胜'] = df['平均_客胜'] if '平均_客胜' in df.columns else np.nan
-        normalized['bet365_大2.5'] = df['bet365_大2.5'] if 'bet365_大2.5' in df.columns else np.nan
-        normalized['bet365_小2.5'] = df['bet365_小2.5'] if 'bet365_小2.5' in df.columns else np.nan
-        normalized['Pinnacle_大2.5'] = df['Pinnacle_大2.5'] if 'Pinnacle_大2.5' in df.columns else np.nan
-        normalized['Pinnacle_小2.5'] = df['Pinnacle_小2.5'] if 'Pinnacle_小2.5' in df.columns else np.nan
-        normalized['bet365_亚盘主'] = df['bet365_亚盘主'] if 'bet365_亚盘主' in df.columns else np.nan
-        normalized['bet365_亚盘客'] = df['bet365_亚盘客'] if 'bet365_亚盘客' in df.columns else np.nan
-        normalized['Pinnacle_亚盘主'] = df['Pinnacle_亚盘主'] if 'Pinnacle_亚盘主' in df.columns else np.nan
-        normalized['Pinnacle_亚盘客'] = df['Pinnacle_亚盘客'] if 'Pinnacle_亚盘客' in df.columns else np.nan
-        normalized['亚盘盘口'] = df['亚盘盘口'] if '亚盘盘口' in df.columns else np.nan
-    else:
-        normalized['date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y', errors='coerce')
-        normalized['home_team_name'] = df['HomeTeam']
-        normalized['away_team_name'] = df['AwayTeam']
-        normalized['homeGoals'] = df['FTHG']
-        normalized['awayGoals'] = df['FTAG']
-        normalized['homeShots'] = df['HS'] if 'HS' in df.columns else np.nan
-        normalized['awayShots'] = df['AS'] if 'AS' in df.columns else np.nan
-        normalized['homeShotsOnTarget'] = df['HST'] if 'HST' in df.columns else np.nan
-        normalized['awayShotsOnTarget'] = df['AST'] if 'AST' in df.columns else np.nan
-        normalized['homeCorners'] = df['HC'] if 'HC' in df.columns else np.nan
-        normalized['awayCorners'] = df['AC'] if 'AC' in df.columns else np.nan
-        normalized['homeYellowCards'] = df['HY'] if 'HY' in df.columns else np.nan
-        normalized['awayYellowCards'] = df['AY'] if 'AY' in df.columns else np.nan
-        normalized['homeFouls'] = df['HF'] if 'HF' in df.columns else np.nan
-        normalized['awayFouls'] = df['AF'] if 'AF' in df.columns else np.nan
-        normalized['homePossession'] = np.nan
-        
-        normalized['bet365_主胜'] = df['B365H'] if 'B365H' in df.columns else np.nan
-        normalized['bet365_平局'] = df['B365D'] if 'B365D' in df.columns else np.nan
-        normalized['bet365_客胜'] = df['B365A'] if 'B365A' in df.columns else np.nan
-        normalized['Pinnacle_主胜'] = df['PSH'] if 'PSH' in df.columns else np.nan
-        normalized['Pinnacle_平局'] = df['PSD'] if 'PSD' in df.columns else np.nan
-        normalized['Pinnacle_客胜'] = df['PSA'] if 'PSA' in df.columns else np.nan
-        normalized['最高_主胜'] = df['MaxH'] if 'MaxH' in df.columns else np.nan
-        normalized['最高_平局'] = df['MaxD'] if 'MaxD' in df.columns else np.nan
-        normalized['最高_客胜'] = df['MaxA'] if 'MaxA' in df.columns else np.nan
-        normalized['平均_主胜'] = df['AvgH'] if 'AvgH' in df.columns else np.nan
-        normalized['平均_平局'] = df['AvgD'] if 'AvgD' in df.columns else np.nan
-        normalized['平均_客胜'] = df['AvgA'] if 'AvgA' in df.columns else np.nan
-        normalized['bet365_大2.5'] = df['B365>2.5'] if 'B365>2.5' in df.columns else np.nan
-        normalized['bet365_小2.5'] = df['B365<2.5'] if 'B365<2.5' in df.columns else np.nan
-        normalized['Pinnacle_大2.5'] = df['P>2.5'] if 'P>2.5' in df.columns else np.nan
-        normalized['Pinnacle_小2.5'] = df['P<2.5'] if 'P<2.5' in df.columns else np.nan
-        normalized['bet365_亚盘主'] = df['B365AHH'] if 'B365AHH' in df.columns else np.nan
-        normalized['bet365_亚盘客'] = df['B365AHA'] if 'B365AHA' in df.columns else np.nan
-        normalized['Pinnacle_亚盘主'] = df['PAHH'] if 'PAHH' in df.columns else np.nan
-        normalized['Pinnacle_亚盘客'] = df['PAHA'] if 'PAHA' in df.columns else np.nan
-        normalized['亚盘盘口'] = df['AHh'] if 'AHh' in df.columns else np.nan
-    
-    normalized['competition_name'] = league
-    return normalized
+def load_match_data(db_path=None):
+    """从 five_leagues.db 加载比赛数据（SSOT）。
 
-def load_csv_odds_data():
-    dfs = []
-    for league, filename in CSV_FILES.items():
-        filepath = os.path.join(DATA_DIR, filename)
-        if os.path.exists(filepath):
-            df = pd.read_csv(filepath, encoding='utf-8')
-            df = normalize_league_data(df, league)
-            dfs.append(df)
-            print(f"Loaded {len(df)} matches from {filename}")
-        else:
-            print(f"Warning: {filepath} not found")
-    
-    if not dfs:
-        return pd.DataFrame()
-    
-    df = pd.concat(dfs, ignore_index=True)
-    df = df.dropna(subset=['homeGoals', 'awayGoals']).sort_values('date').reset_index(drop=True)
-    
-    df['result'] = np.where(df['homeGoals'] > df['awayGoals'], 2,
-                           np.where(df['homeGoals'] < df['awayGoals'], 0, 1))
-    df['goal_diff'] = df['homeGoals'] - df['awayGoals']
-    df['total_goals'] = df['homeGoals'] + df['awayGoals']
-    
-    return df
-
-def load_match_data(db_path=None, include_csv_odds=True):
+    历史背景: 原实现包含 CSV 补充路径（include_csv_odds），
+    现已删除——five_leagues.db 是 SSOT，赔率由 build_odds_features
+    从 odds.db 加载 close 赔率填充。
+    """
     if db_path is None:
         db_path = DB_PATH
     
@@ -308,15 +173,6 @@ def load_match_data(db_path=None, include_csv_odds=True):
     df['goal_diff'] = df['homeGoals'] - df['awayGoals']
     df['total_goals'] = df['homeGoals'] + df['awayGoals']
     
-    if include_csv_odds:
-        csv_df = load_csv_odds_data()
-        if len(csv_df) > 0:
-            db_keys = set(zip(df['date'].astype(str), df['home_team_name'], df['away_team_name']))
-            csv_keys = list(zip(csv_df['date'].astype(str), csv_df['home_team_name'], csv_df['away_team_name']))
-            csv_df = csv_df[~pd.Series(csv_keys).isin(db_keys)]
-            df = pd.concat([df, csv_df], ignore_index=True).sort_values('date').reset_index(drop=True)
-            print(f"Loaded {len(csv_df)} additional matches with odds data from CSV")
-    
     return df
 
 def build_temporal_features(df):
@@ -359,48 +215,237 @@ def extract_handicap(handicap_str):
             return 0
     return float(handicap_str)
 
+def _load_close_odds_from_db(df):
+    """从 odds.db 批量加载每场比赛的 close 赔率，返回与 df 等长的 odds_df。
+
+    3 级匹配策略（移植自 backtest_with_odds.load_close_odds_from_db，命中率 54.6%）：
+      1. 精确：match_id = f"{date}_{home_cn}_{away_cn}" 直接命中
+      2. 归一化：两边队名经 normalize_team_name（中文版）归一后再精确查
+      3. LIKE 模糊：match_id LIKE '{date}_%{home}%' AND match_id LIKE '%_{away}'
+
+    odds.db 无博彩商区分，统一用 close.win/draw/lose 填充所有赔率列。
+    handicap 列从 handicap_history close 取；亚盘盘口从 matches.handicap 单独批量补。
+    未命中的场次保持 NaN（由 build_odds_features 的 fillna(中位数) 兜底）。
+    """
+    # 复用 team_name_mapping.py 的中文归一化（处理 西汉姆联→西汉姆 等变体）
+    try:
+        from team_name_mapping import normalize_team_name as _normalize_cn
+    except ImportError:
+        _normalize_cn = None
+
+    n = len(df)
+    wdl_cols = ['Pinnacle_主胜', 'Pinnacle_平局', 'Pinnacle_客胜',
+                '平均_主胜', '平均_平局', '平均_客胜',
+                '最高_主胜', '最高_平局', '最高_客胜',
+                'bet365_主胜', 'bet365_平局', 'bet365_客胜']
+    hcp_cols = ['Pinnacle_亚盘主', 'Pinnacle_亚盘客',
+                'bet365_亚盘主', 'bet365_亚盘客']
+    all_cols = wdl_cols + hcp_cols + ['亚盘盘口']
+    odds_df = pd.DataFrame(np.nan, index=df.index, columns=all_cols)
+
+    conn = sqlite3.connect(ODDS_DB_PATH)
+    try:
+        cur = conn.cursor()
+        # 1. 预构建 wdl_history / handicap_history close 查找表
+        #    key: match_id → (win, draw, lose, ts) 取 timestamp 最大的一条作 close
+        cur.execute("SELECT match_id, win_a, draw, win_b, timestamp FROM wdl_history")
+        wdl_last = {}
+        for mid, win_a, draw, win_b, ts in cur.fetchall():
+            if win_a is None or draw is None or win_b is None:
+                continue
+            prev = wdl_last.get(mid)
+            if prev is None or (ts is not None and prev[3] is not None and ts > prev[3]):
+                wdl_last[mid] = (win_a, draw, win_b, ts)
+
+        cur.execute("SELECT match_id, hcp_win, hcp_draw, hcp_lose, timestamp FROM handicap_history")
+        hcp_last = {}
+        for mid, hcp_win, hcp_draw, hcp_lose, ts in cur.fetchall():
+            if hcp_win is None or hcp_lose is None:
+                continue
+            prev = hcp_last.get(mid)
+            if prev is None or (ts is not None and prev[3] is not None and ts > prev[3]):
+                hcp_last[mid] = (hcp_win, hcp_draw, hcp_lose, ts)
+
+        hit = 0
+        miss = 0
+        miss_samples = []
+
+        for idx, row in df.iterrows():
+            date_val = row['date']
+            if pd.isna(date_val):
+                miss += 1
+                continue
+            date_prefix = str(date_val)[:10]
+            home = row['home_team_name']
+            away = row['away_team_name']
+            if not isinstance(home, str) or not isinstance(away, str):
+                miss += 1
+                continue
+
+            # 级别 1：精确
+            mid = f"{date_prefix}_{home}_{away}"
+            wdl = wdl_last.get(mid)
+            hcp = hcp_last.get(mid)
+
+            # 级别 2：归一化两边（中文版 normalize_team_name）
+            if not wdl and _normalize_cn is not None:
+                home_n = _normalize_cn(home) or home
+                away_n = _normalize_cn(away) or away
+                if home_n != home or away_n != away:
+                    mid_n = f"{date_prefix}_{home_n}_{away_n}"
+                    wdl = wdl_last.get(mid_n)
+                    hcp = hcp_last.get(mid_n)
+                    if wdl:
+                        mid = mid_n
+
+            # 级别 3：LIKE 模糊 + 日期容差（±2 天，应对 five_leagues.db 与 odds.db 的时区/数据源日期差异）
+            if not wdl:
+                try:
+                    d0 = datetime.strptime(date_prefix, '%Y-%m-%d')
+                    date_candidates = [date_prefix] + [
+                        (d0 + timedelta(days=off)).strftime('%Y-%m-%d')
+                        for off in [-2, -1, 1, 2]
+                    ]
+                except (ValueError, TypeError):
+                    date_candidates = [date_prefix]
+                name_candidates = [(home, away)]
+                if _normalize_cn is not None:
+                    name_candidates.append((_normalize_cn(home) or home, _normalize_cn(away) or away))
+                for dc in date_candidates:
+                    for h, a in name_candidates:
+                        if h is None or a is None:
+                            continue
+                        cur.execute(
+                            "SELECT match_id FROM wdl_history "
+                            "WHERE match_id LIKE ? AND match_id LIKE ? "
+                            "ORDER BY match_id DESC LIMIT 1",
+                            (f"{dc}_%{h}%", f"%_{a}"),
+                        )
+                        r = cur.fetchone()
+                        if r:
+                            mid = r[0]
+                            wdl = wdl_last.get(mid)
+                            hcp = hcp_last.get(mid)
+                            if wdl:
+                                break
+                    if wdl:
+                        break
+
+            if wdl:
+                hit += 1
+                win, draw, lose, _ = wdl
+                # 胜平负：所有博彩商列统一填 close 值
+                for col, val in [('Pinnacle_主胜', win), ('Pinnacle_平局', draw), ('Pinnacle_客胜', lose),
+                                 ('平均_主胜', win), ('平均_平局', draw), ('平均_客胜', lose),
+                                 ('最高_主胜', win), ('最高_平局', draw), ('最高_客胜', lose),
+                                 ('bet365_主胜', win), ('bet365_平局', draw), ('bet365_客胜', lose)]:
+                    odds_df.at[idx, col] = val
+                if hcp:
+                    hwin, hdraw, hlose, _ = hcp
+                    odds_df.at[idx, 'Pinnacle_亚盘主'] = hwin
+                    odds_df.at[idx, 'Pinnacle_亚盘客'] = hlose
+                    odds_df.at[idx, 'bet365_亚盘主'] = hwin
+                    odds_df.at[idx, 'bet365_亚盘客'] = hlose
+            else:
+                miss += 1
+                if len(miss_samples) < 10:
+                    miss_samples.append((date_prefix, home, away))
+
+        # 亚盘盘口：从 matches.handicap 单独批量补（按已匹配的 match_id 或 LIKE）
+        for idx, row in df.iterrows():
+            if not pd.isna(odds_df.at[idx, '亚盘盘口']):
+                continue
+            date_val = row['date']
+            if pd.isna(date_val):
+                continue
+            date_prefix = str(date_val)[:10]
+            home = row['home_team_name']
+            away = row['away_team_name']
+            if not isinstance(home, str) or not isinstance(away, str):
+                continue
+            found = None
+            try:
+                d0 = datetime.strptime(date_prefix, '%Y-%m-%d')
+                date_candidates = [date_prefix] + [
+                    (d0 + timedelta(days=off)).strftime('%Y-%m-%d')
+                    for off in [-2, -1, 1, 2]
+                ]
+            except (ValueError, TypeError):
+                date_candidates = [date_prefix]
+            name_candidates = [(home, away)]
+            if _normalize_cn is not None:
+                name_candidates.append((_normalize_cn(home) or home, _normalize_cn(away) or away))
+            # 精确 match_id（含日期容差）
+            for dc in date_candidates:
+                for h, a in name_candidates:
+                    mid = f"{dc}_{h}_{a}"
+                    cur.execute("SELECT handicap FROM matches WHERE match_id = ?", (mid,))
+                    r = cur.fetchone()
+                    if r and r[0] is not None:
+                        found = r[0]
+                        break
+                if found is not None:
+                    break
+            # LIKE 模糊（含日期容差）
+            if found is None:
+                for dc in date_candidates:
+                    for h, a in name_candidates:
+                        cur.execute(
+                            "SELECT handicap FROM matches WHERE match_id LIKE ? AND match_id LIKE ? LIMIT 1",
+                            (f"{dc}_%{h}%", f"%_{a}"),
+                        )
+                        r = cur.fetchone()
+                        if r and r[0] is not None:
+                            found = r[0]
+                            break
+                    if found is not None:
+                        break
+            if found is not None:
+                odds_df.at[idx, '亚盘盘口'] = found
+    finally:
+        conn.close()
+
+    hit_rate = hit / n if n > 0 else 0.0
+    print(f"  build_odds_features: 赔率匹配 {hit}/{n} 命中 ({hit_rate*100:.1f}%), {miss} 场未命中（NaN）")
+    if miss_samples:
+        print(f"   未命中样本(前10): {miss_samples}")
+    return odds_df
+
+
 def build_odds_features(df):
+    """构建赔率特征（数据源: odds.db close 赔率，替代原 CSV 列）。
+
+    改造要点:
+      - 原 build_odds_features 从 df 的 CSV 赔率列（bet365_主胜 / B365H 等）读取。
+      - 现通过 _load_close_odds_from_db 批量查询 odds.db 的 wdl_history /
+        handicap_history close 记录，填充同名列。
+      - odds.db 无 bet365/Pinnacle/平均/最高 区分，统一用 close 赔率值。
+      - 下游计算逻辑（隐含概率、margin 等）完全保留。
+    """
     features = pd.DataFrame(index=df.index)
     feature_info = {}
-    
-    col_mapping = {
-        'bet365_主胜': 'B365H', 'bet365_平局': 'B365D', 'bet365_客胜': 'B365A',
-        'Pinnacle_主胜': 'PSH', 'Pinnacle_平局': 'PSD', 'Pinnacle_客胜': 'PSA',
-        '最高_主胜': 'MaxH', '最高_平局': 'MaxD', '最高_客胜': 'MaxA',
-        '平均_主胜': 'AvgH', '平均_平局': 'AvgD', '平均_客胜': 'AvgA',
-        'bet365_大2.5': 'B365>2.5', 'bet365_小2.5': 'B365<2.5',
-        'Pinnacle_大2.5': 'P>2.5', 'Pinnacle_小2.5': 'P<2.5',
-        'bet365_亚盘主': 'B365AHH', 'bet365_亚盘客': 'B365AHA',
-        'Pinnacle_亚盘主': 'PAHH', 'Pinnacle_亚盘客': 'PAHA',
-        '亚盘盘口': 'AHh'
-    }
-    
-    def get_col(chinese_name):
-        if chinese_name in df.columns:
-            return df[chinese_name]
-        english_name = col_mapping.get(chinese_name)
-        if english_name and english_name in df.columns:
-            return df[english_name]
-        return None
-    
+
+    # 从 odds.db 加载 close 赔率
+    odds_df = _load_close_odds_from_db(df)
+
     odds_cols = [
         'bet365_主胜', 'bet365_平局', 'bet365_客胜',
         'Pinnacle_主胜', 'Pinnacle_平局', 'Pinnacle_客胜',
         '最高_主胜', '最高_平局', '最高_客胜',
         '平均_主胜', '平均_平局', '平均_客胜'
     ]
-    
+
     for col in odds_cols:
-        col_data = get_col(col)
+        col_data = odds_df[col] if col in odds_df.columns else None
         if col_data is not None:
             col_data = col_data.fillna(col_data.median())
             col_data = winsorize_series(col_data, lower_percentile=1, upper_percentile=99)
             features[col] = col_data
-            feature_info[col] = {'description': f'{col}赔率', 'source': 'CSV赔率数据', 'calculation': '原始值，缺失填充中位数'}
+            feature_info[col] = {'description': f'{col}赔率', 'source': 'odds.db close赔率', 'calculation': '原始值，缺失填充中位数'}
         else:
             features[col] = np.nan
-            feature_info[col] = {'description': f'{col}赔率', 'source': 'CSV赔率数据', 'calculation': '无数据'}
-    
+            feature_info[col] = {'description': f'{col}赔率', 'source': 'odds.db close赔率', 'calculation': '无数据'}
+
     features['pinnacle_h2a'] = features['Pinnacle_主胜'] / (features['Pinnacle_客胜'] + 0.01)
     features['pinnacle_prob_home'] = 1 / (features['Pinnacle_主胜'] + 1e-8)
     features['pinnacle_prob_draw'] = 1 / (features['Pinnacle_平局'] + 1e-8)
@@ -410,7 +455,7 @@ def build_odds_features(df):
     features['pinnacle_implied_home'] = features['pinnacle_prob_home'] / features['pinnacle_prob_sum']
     features['pinnacle_implied_draw'] = features['pinnacle_prob_draw'] / features['pinnacle_prob_sum']
     features['pinnacle_implied_away'] = features['pinnacle_prob_away'] / features['pinnacle_prob_sum']
-    
+
     feature_info['pinnacle_h2a'] = {'description': 'Pinnacle主客赔率比', 'source': 'Pinnacle赔率', 'calculation': '主胜赔率/客胜赔率'}
     feature_info['pinnacle_prob_home'] = {'description': 'Pinnacle主胜隐含概率(未归一化)', 'source': 'Pinnacle赔率', 'calculation': '1/Pinnacle_主胜'}
     feature_info['pinnacle_prob_draw'] = {'description': 'Pinnacle平局隐含概率(未归一化)', 'source': 'Pinnacle赔率', 'calculation': '1/Pinnacle_平局'}
@@ -419,7 +464,7 @@ def build_odds_features(df):
     feature_info['pinnacle_implied_home'] = {'description': 'Pinnacle主胜隐含概率(归一化)', 'source': 'Pinnacle赔率', 'calculation': '主胜概率/总概率'}
     feature_info['pinnacle_implied_draw'] = {'description': 'Pinnacle平局隐含概率(归一化)', 'source': 'Pinnacle赔率', 'calculation': '平局概率/总概率'}
     feature_info['pinnacle_implied_away'] = {'description': 'Pinnacle客胜隐含概率(归一化)', 'source': 'Pinnacle赔率', 'calculation': '客胜概率/总概率'}
-    
+
     features['avg_h2a'] = features['平均_主胜'] / (features['平均_客胜'] + 0.01)
     features['avg_prob_home'] = 1 / (features['平均_主胜'] + 1e-8)
     features['avg_prob_draw'] = 1 / (features['平均_平局'] + 1e-8)
@@ -429,7 +474,7 @@ def build_odds_features(df):
     features['avg_implied_home'] = features['avg_prob_home'] / features['avg_prob_sum']
     features['avg_implied_draw'] = features['avg_prob_draw'] / features['avg_prob_sum']
     features['avg_implied_away'] = features['avg_prob_away'] / features['avg_prob_sum']
-    
+
     feature_info['avg_h2a'] = {'description': '平均主客赔率比', 'source': '平均赔率', 'calculation': '平均主胜赔率/平均客胜赔率'}
     feature_info['avg_prob_home'] = {'description': '平均主胜隐含概率(未归一化)', 'source': '平均赔率', 'calculation': '1/平均_主胜'}
     feature_info['avg_prob_draw'] = {'description': '平均平局隐含概率(未归一化)', 'source': '平均赔率', 'calculation': '1/平均_平局'}
@@ -438,69 +483,69 @@ def build_odds_features(df):
     feature_info['avg_implied_home'] = {'description': '平均主胜隐含概率(归一化)', 'source': '平均赔率', 'calculation': '主胜概率/总概率'}
     feature_info['avg_implied_draw'] = {'description': '平均平局隐含概率(归一化)', 'source': '平均赔率', 'calculation': '平局概率/总概率'}
     feature_info['avg_implied_away'] = {'description': '平均客胜隐含概率(归一化)', 'source': '平均赔率', 'calculation': '客胜概率/总概率'}
-    
+
     features['odds_diff_h2a'] = features['平均_主胜'] - features['平均_客胜']
     features['odds_spread'] = features['最高_主胜'] - features['Pinnacle_主胜']
     features['odds_margin'] = features['pinnacle_prob_sum'] - 1
-    
+
     feature_info['odds_diff_h2a'] = {'description': '主客赔率差值', 'source': '平均赔率', 'calculation': '平均主胜赔率 - 平均客胜赔率'}
     feature_info['odds_spread'] = {'description': '最高与Pinnacle赔率价差', 'source': '赔率数据', 'calculation': '最高主胜赔率 - Pinnacle主胜赔率'}
     feature_info['odds_margin'] = {'description': 'Pinnacle赔率margin', 'source': 'Pinnacle赔率', 'calculation': 'prob_sum - 1'}
-    
+
     features['pinnacle_margin_flag'] = (features['pinnacle_prob_sum'] > 1.15).astype(int)
     features['avg_margin_flag'] = (features['avg_prob_sum'] > 1.15).astype(int)
-    
+
     feature_info['pinnacle_margin_flag'] = {'description': 'Pinnacle高margin标记', 'source': 'Pinnacle赔率', 'calculation': 'prob_sum > 1.15'}
     feature_info['avg_margin_flag'] = {'description': '平均赔率高margin标记', 'source': '平均赔率', 'calculation': 'prob_sum > 1.15'}
-    
+
     over_under_cols = ['bet365_大2.5', 'bet365_小2.5', 'Pinnacle_大2.5', 'Pinnacle_小2.5']
     for col in over_under_cols:
-        col_data = get_col(col)
+        col_data = odds_df[col] if col in odds_df.columns else None
         if col_data is not None:
             col_data = col_data.fillna(col_data.median())
             col_data = winsorize_series(col_data, lower_percentile=1, upper_percentile=99)
             features[col] = col_data
-            feature_info[col] = {'description': f'{col}赔率', 'source': 'CSV赔率数据', 'calculation': '原始值，缺失填充中位数'}
+            feature_info[col] = {'description': f'{col}赔率', 'source': 'odds.db close赔率', 'calculation': '原始值，缺失填充中位数'}
         else:
             features[col] = np.nan
-            feature_info[col] = {'description': f'{col}赔率', 'source': 'CSV赔率数据', 'calculation': '无数据'}
-    
+            feature_info[col] = {'description': f'{col}赔率', 'source': 'odds.db close赔率', 'calculation': '无数据'}
+
     features['pinnacle_over_prob'] = 1 / (features['Pinnacle_大2.5'] + 1e-8)
     features['pinnacle_under_prob'] = 1 / (features['Pinnacle_小2.5'] + 1e-8)
     features['pinnacle_over_under_ratio'] = features['Pinnacle_大2.5'] / (features['Pinnacle_小2.5'] + 0.01)
-    
+
     feature_info['pinnacle_over_prob'] = {'description': 'Pinnacle大球隐含概率', 'source': 'Pinnacle总进球赔率', 'calculation': '1/Pinnacle_大2.5'}
     feature_info['pinnacle_under_prob'] = {'description': 'Pinnacle小球隐含概率', 'source': 'Pinnacle总进球赔率', 'calculation': '1/Pinnacle_小2.5'}
     feature_info['pinnacle_over_under_ratio'] = {'description': 'Pinnacle大球小球赔率比', 'source': 'Pinnacle总进球赔率', 'calculation': '大球赔率/小球赔率'}
-    
+
     asian_cols = ['bet365_亚盘主', 'bet365_亚盘客', 'Pinnacle_亚盘主', 'Pinnacle_亚盘客']
     for col in asian_cols:
-        col_data = get_col(col)
+        col_data = odds_df[col] if col in odds_df.columns else None
         if col_data is not None:
             col_data = col_data.fillna(col_data.median())
             col_data = winsorize_series(col_data, lower_percentile=1, upper_percentile=99)
             features[col] = col_data
-            feature_info[col] = {'description': f'{col}赔率', 'source': 'CSV赔率数据', 'calculation': '原始值，缺失填充中位数'}
+            feature_info[col] = {'description': f'{col}赔率', 'source': 'odds.db close赔率', 'calculation': '原始值，缺失填充中位数'}
         else:
             features[col] = np.nan
-            feature_info[col] = {'description': f'{col}赔率', 'source': 'CSV赔率数据', 'calculation': '无数据'}
-    
+            feature_info[col] = {'description': f'{col}赔率', 'source': 'odds.db close赔率', 'calculation': '无数据'}
+
     features['asian_handicap_diff'] = features['Pinnacle_亚盘主'] - features['Pinnacle_亚盘客']
-    
+
     feature_info['asian_handicap_diff'] = {'description': 'Pinnacle亚盘主客赔率差', 'source': 'Pinnacle亚盘赔率', 'calculation': '亚盘主赔率 - 亚盘客赔率'}
-    
-    handicap_col = get_col('亚盘盘口')
+
+    handicap_col = odds_df['亚盘盘口'] if '亚盘盘口' in odds_df.columns else None
     if handicap_col is not None:
         features['handicap_value'] = handicap_col.apply(extract_handicap)
     else:
         features['handicap_value'] = 0
-    
+
     features['handicap_value'] = winsorize_series(features['handicap_value'], lower_percentile=1, upper_percentile=99)
-    feature_info['handicap_value'] = {'description': '亚盘盘口数值', 'source': 'CSV赔率数据', 'calculation': '提取盘口数值'}
-    
+    feature_info['handicap_value'] = {'description': '亚盘盘口数值', 'source': 'odds.db close赔率', 'calculation': '提取盘口数值'}
+
     features['has_odds_data'] = (~features['Pinnacle_主胜'].isna() & ~features['Pinnacle_平局'].isna() & ~features['Pinnacle_客胜'].isna()).astype(int)
     feature_info['has_odds_data'] = {'description': '是否有赔率数据标记', 'source': 'Pinnacle赔率', 'calculation': '三项赔率均非空'}
-    
+
     return features, feature_info
 
 def build_league_features(df):

@@ -151,6 +151,30 @@ class MatchEVAnalysis:
     kelly_cap: float = 0.25
     kelly_strategy: str = "quarter"
 
+    # === C-20260923: urs 投注质量过滤器（shadow mode）===
+    # 诊断结论：urs(Elo差距)高区间模型投注ROI更差，低区间(urs<0.15)更优。
+    # shadow mode: 默认不实际过滤，只记录"过滤器会怎么选"，累积样本后转正。
+    # 预注册转正判据：组合桶≥500笔、≥6/8季为正且负向可归因、ROI 95%CI下限>0、最新季校准通过。
+    urs: Optional[float] = None                      # 传入的 Elo 差距分
+    shadow_urs_upper: float = 0.15                   # urs 上限阈值（低于此值才接受投注）
+    shadow_ev_lower: float = 0.20                    # EV 下限阈值
+    shadow_filter_active: bool = False               # 是否实际启用过滤（默认False=shadow）
+    shadow_would_pass: Optional[bool] = None         # 本场是否通过过滤器（无漂移惩罚）
+    shadow_filtered_decision: Optional[str] = None   # 若启用过滤，本场的决策结果
+
+    # === C-20260923: 漂移惩罚（shadow 内，k=0 已校准）===
+    # 诊断：2026 年快照→收盘赔率漂移 +1.41%（市场反模型走），快照 EV 虚高。
+    # 校准结论（calibrate_drift_penalty.py 跑完 1462 场 OOF）：
+    #   Q1 方向检验 β=-0.0126, CI=[-0.0667, 0.0415] 含 0, p=0.64
+    #   → 漂移对投注结果无预测力，惩罚为无效复杂度，k=0
+    # 后续：漂移信号改作主模型特征（D-014）验证 RPS 增量，而非 EV 惩罚层。
+    # shadow 字段保留用于继续累积样本，但 drift_k=0 使 adjusted_ev 恒等于 raw best_ev。
+    drift_signed: Optional[float] = None             # 投注方向 signed drift (live-init)/init
+    drift_k: float = 0.0                              # 惩罚系数（已校准：β CI 含 0，k=0 不惩罚）
+    shadow_adjusted_ev: Optional[float] = None       # 惩罚后 EV = best_ev × (1 - k × drift)；k=0 时恒等
+    shadow_drift_would_pass: Optional[bool] = None   # 漂移惩罚后的通过判定（k=0 时恒等于 shadow_would_pass）
+    shadow_drift_filtered_decision: Optional[str] = None  # 漂移惩罚后的决策（k=0 时恒等于 shadow_filtered_decision）
+
     # 风险提示
     risk_warnings: List[str] = field(default_factory=list)
 
@@ -326,8 +350,20 @@ def analyze_match(
     league: Optional[str] = None,
     home_team: Optional[str] = None,
     away_team: Optional[str] = None,
+    urs: Optional[float] = None,
+    shadow_urs_upper: float = 0.15,
+    shadow_ev_lower: float = 0.20,
+    shadow_filter_active: bool = False,
+    drift_signed: Optional[float] = None,
+    drift_k: float = 0.0,
 ) -> MatchEVAnalysis:
-    """主函数：对一场比赛进行完整的 EV 分析。"""
+    """主函数：对一场比赛进行完整的 EV 分析。
+
+    C-20260923 新增 urs 过滤器（shadow mode）：
+        urs: Elo 差距分（upset_risk_score 单维化后的值）
+        shadow_filter_active=False 时仅记录 shadow 字段，不改变实际决策；
+        True 时实际过滤：urs >= shadow_urs_upper 或 best_ev < shadow_ev_lower → AVOID。
+    """
     # 1. 校验输入
     if not probs.validate():
         raise ValueError(f"模型概率不合法: home={probs.home}, draw={probs.draw}, away={probs.away}")
@@ -412,6 +448,46 @@ def analyze_match(
     if best_kelly >= kelly_cap * 0.9:
         risk_warnings.append(f"建议仓位接近上限({best_kelly*100:.1f}%)，注意风险控制")
 
+    # === C-20260923: urs 投注质量过滤器（shadow mode）===
+    # 通过条件：urs 已知 且 urs < 上限 且 best_ev >= 下限
+    if urs is not None and overall_decision != "AVOID":
+        shadow_would_pass = urs < shadow_urs_upper and best_ev >= shadow_ev_lower
+    else:
+        shadow_would_pass = False if urs is not None else None
+
+    if shadow_would_pass:
+        shadow_filtered_decision = overall_decision
+    elif urs is not None:
+        shadow_filtered_decision = "AVOID"
+    else:
+        shadow_filtered_decision = None
+
+    # shadow_filter_active=True 时实际生效：不通过则降级为 AVOID
+    if shadow_filter_active and urs is not None and not shadow_would_pass and overall_decision != "AVOID":
+        overall_decision = "AVOID"
+        recommended_stake_pct = 0.0
+        risk_warnings.append(
+            f"urs过滤拦截: urs={urs:.3f}>={shadow_urs_upper} 或 EV={best_ev:.4f}<{shadow_ev_lower}"
+        )
+
+    # === 漂移惩罚（shadow 内，系数待校准）===
+    # adjusted_ev = best_ev × (1 - k × signed_drift)
+    # k=0 已校准（β CI 含 0）：漂移对投注结果无预测力，惩罚恒为 0。
+    # shadow 字段保留用于继续累积 forward 样本，待 D-014 漂移特征验证 RPS 增量后回顾。
+    shadow_adjusted_ev = None
+    shadow_drift_would_pass = None
+    shadow_drift_filtered_decision = None
+    if drift_signed is not None and urs is not None and overall_decision != "AVOID":
+        shadow_adjusted_ev = best_ev * (1.0 - drift_k * drift_signed)
+        # 漂移惩罚后的通过判定（用 adjusted_ev 替代 raw best_ev）
+        shadow_drift_would_pass = (
+            urs < shadow_urs_upper
+            and shadow_adjusted_ev >= shadow_ev_lower
+        )
+        shadow_drift_filtered_decision = (
+            overall_decision if shadow_drift_would_pass else "AVOID"
+        )
+
     # 组装结果
     result = MatchEVAnalysis(
         match_id=match_id,
@@ -437,6 +513,17 @@ def analyze_match(
         ev_threshold=ev_threshold,
         kelly_cap=kelly_cap,
         kelly_strategy=kelly_strategy,
+        urs=urs,
+        shadow_urs_upper=shadow_urs_upper,
+        shadow_ev_lower=shadow_ev_lower,
+        shadow_filter_active=shadow_filter_active,
+        shadow_would_pass=shadow_would_pass,
+        shadow_filtered_decision=shadow_filtered_decision,
+        drift_signed=drift_signed,
+        drift_k=drift_k,
+        shadow_adjusted_ev=shadow_adjusted_ev,
+        shadow_drift_would_pass=shadow_drift_would_pass,
+        shadow_drift_filtered_decision=shadow_drift_filtered_decision,
         risk_warnings=risk_warnings,
         calculated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     )

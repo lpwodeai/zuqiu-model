@@ -36,6 +36,7 @@ import requests
 # 复用既有队名映射（同目录模块，仅标准库依赖）
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sporttery_sync_to_odds import TEAM_NAME_MAP
+from team_name_mapping import normalize_team_name as _normalize_full
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "data" / "odds.db"
@@ -68,8 +69,23 @@ CRS_FIELDS = {
 
 
 def normalize_team(name: str) -> str:
-    """竞彩网队名 -> 项目标准中文名（含别名归并）"""
+    """竞彩网队名 -> 项目标准中文名。
+
+    4 级归一化（C-20260918-023）：
+      1. team_name_mapping.normalize_team_name()：精确别名→子串→模糊→序列相似度
+      2. fallback 到 TEAM_NAME_MAP 简单映射
+      3. fallback 到原名（确保不丢数据）
+    之前仅 TEAM_NAME_MAP.get(name, name)，竞彩 API 返回的 homeTeamAllName
+    不在映射表时直接用原始短名（如「皇马」而非「皇家马德里」），导致
+    wdl_history.match_id 与 500.com 归一化后的中文标准名不一致，
+    find_match_id_by_cn 跨表匹配失败。
+    """
     name = (name or "").strip()
+    if not name:
+        return name
+    normalized = _normalize_full(name)
+    if normalized:
+        return normalized
     return TEAM_NAME_MAP.get(name, name)
 
 

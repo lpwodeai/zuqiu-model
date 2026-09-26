@@ -22,12 +22,8 @@ from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.metrics import accuracy_score, log_loss, brier_score_loss
 from sklearn.preprocessing import StandardScaler
 
-# D1: MLflow 实验追踪（可选依赖；未安装时静默跳过，绝不因追踪失败影响训练流程）
-try:
-    import mlflow
-    MLFLOW_AVAILABLE = True
-except ImportError:
-    MLFLOW_AVAILABLE = False
+# C-20260926-094 方案 B：MLflow 集成已停用（mlruns 影子目录零消费、后端已维护模式）；
+# 可复现快照改由 mlflow_repro.save_repro_snapshot 直接落盘 assets（单一权威路径）。
 
 
 # C-20260823-P0-2: RPS (Ranked Probability Score) 计算函数
@@ -199,106 +195,208 @@ LGB_OPTUNA_BEST = {
 }
 LGB_OPTUNA_NUM_ROUNDS = 80  # 减少迭代: 105→80 (lr=0.12 下足够收敛)
 
-def get_anomaly_match_ids():
-    try:
-        conn = sqlite3.connect(ANOMALY_DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("SELECT match_id FROM anomaly_samples")
-        anomaly_ids = [row[0] for row in cursor.fetchall()]
-        conn.close()
-        return anomaly_ids
-    except Exception as e:
-        print(f"读取异常样本库失败: {e}")
-        return []
+def get_anomaly_match_ids(months_back=6):
+    """读取异常样本 match_id 列表（C-030：仅返回中文格式 + 时间窗内）。
 
-def create_sample_weights(df, anomaly_weight=3.0, double_error_weight=4.0):
-    anomaly_ids = get_anomaly_match_ids()
+    参数 months_back=6 防老化：只取最近 N 个月内 created_at 的样本。
+    返回 list[str]，元素为中文格式 match_id（与 df['match_id'] 直匹）。
+    """
+    try:
+        from anomaly_sample_manager import get_anomaly_match_ids as _get_ids
+        return _get_ids(months_back=months_back)
+    except ImportError:
+        # 退化路径：直接查 DB
+        try:
+            conn = sqlite3.connect(ANOMALY_DB_PATH)
+            cursor = conn.cursor()
+            if months_back:
+                from datetime import datetime, timedelta
+                cutoff = (datetime.now() - timedelta(days=months_back * 30)).strftime('%Y-%m-%d %H:%M:%S')
+                cursor.execute("SELECT match_id FROM anomaly_samples WHERE created_at >= ?", (cutoff,))
+            else:
+                cursor.execute("SELECT match_id FROM anomaly_samples")
+            ids = [row[0] for row in cursor.fetchall()]
+            conn.close()
+            return ids
+        except Exception as e:
+            print(f"读取异常样本库失败: {e}")
+            return []
+
+def create_sample_weights(df, anomaly_weight=3.0, double_error_weight=4.0,
+                          months_back=6, verbose=True):
+    """构造异常样本权重（C-030 改造：中文直匹 + 时间窗 + 来源日志）。
+
+    改造要点（C-20260918-030）：
+    1. 删除 cn_to_en_mapping 硬编码（仅 20 支英超队，非英超静默失效）
+       → 改用 anomaly_samples.match_id（中文）与 df['match_id']（中文）直接匹配
+    2. 加 months_back 时间窗过滤（默认 6 个月），防异常样本无失效机制导致的过时加权
+    3. 命中样本记录来源日志到 logs/knowledge_hit.jsonl（project_memory 硬约束）
+
+    返回：np.array 权重向量（正常=1.0，异常=anomaly_weight，双重错误=double_error_weight）
+    """
+    anomaly_ids = set(get_anomaly_match_ids(months_back=months_back))
     if not anomaly_ids:
-        print("未找到异常样本，使用等权重")
+        if verbose:
+            print("[ANOMALY] 未找到异常样本（最近{}月），使用等权重".format(months_back))
         return np.ones(len(df))
-    
-    print(f"\n加载到 {len(anomaly_ids)} 个异常样本")
-    
-    cn_to_en_mapping = {
-        '利物浦': 'Liverpool',
-        '切尔西': 'Chelsea',
-        '阿森纳': 'Arsenal',
-        '曼城': 'Manchester_City',
-        '曼联': 'Manchester_United',
-        '热刺': 'Tottenham_Hotspur',
-        '纽卡斯尔': 'Newcastle_United',
-        '布莱顿': 'Brighton_&_Hove_Albion',
-        '伯恩茅斯': 'AFC_Bournemouth',
-        '利兹联': 'Leeds_United',
-        '埃弗顿': 'Everton',
-        '阿斯顿维拉': 'Aston_Villa',
-        '富勒姆': 'Fulham',
-        '桑德兰': 'Sunderland',
-        '西汉姆': 'West_Ham_United',
-        '伯恩利': 'Burnley',
-        '狼队': 'Wolverhampton_Wanderers',
-        '诺丁汉森林': 'Nottingham_Forest',
-        '布伦特福德': 'Brentford',
-        '水晶宫': 'Crystal_Palace',
-    }
-    
+
+    if verbose:
+        print(f"\n[ANOMALY] 加载到 {len(anomaly_ids)} 个异常样本（最近{months_back}月）")
+
     weights = np.ones(len(df))
-    
-    for idx, row in df.iterrows():
-        date_str = row['date'].strftime('%Y-%m-%d') if hasattr(row['date'], 'strftime') else str(row['date'])[:10]
-        home_cn = str(row['home_team_name']).strip()
-        away_cn = str(row['away_team_name']).strip()
-        
-        home_en = cn_to_en_mapping.get(home_cn, home_cn).replace(' ', '_')
-        away_en = cn_to_en_mapping.get(away_cn, away_cn).replace(' ', '_')
-        
-        match_id_cn = f"{date_str}_{home_cn.replace(' ', '_')}_{away_cn.replace(' ', '_')}"
-        match_id_en = f"{date_str}_{home_en}_{away_en}"
-        
-        matched_id = None
-        if match_id_cn in anomaly_ids:
-            matched_id = match_id_cn
-        elif match_id_en in anomaly_ids:
-            matched_id = match_id_en
-        
-        if matched_id:
-            try:
-                conn = sqlite3.connect(ANOMALY_DB_PATH)
-                cursor = conn.cursor()
-                cursor.execute("SELECT anomaly_type FROM anomaly_samples WHERE match_id = ?", (matched_id,))
-                result = cursor.fetchone()
-                conn.close()
-                
-                if result and result[0] == '双重错误':
-                    weights[idx] = double_error_weight
-                    print(f"  双重错误样本: {matched_id} -> 权重 {double_error_weight}")
-                else:
-                    weights[idx] = anomaly_weight
-                    print(f"  异常样本: {matched_id} -> 权重 {anomaly_weight}")
-            except Exception as e:
+    # 一次性查所有 anomaly_type（避免逐行连库）
+    type_map = {}
+    try:
+        from anomaly_sample_manager import DB_PATH as _ANO_DB
+        conn = sqlite3.connect(_ANO_DB)
+        cursor = conn.cursor()
+        cutoff_clause = ""
+        params: list = []
+        if months_back:
+            from datetime import datetime, timedelta
+            cutoff = (datetime.now() - timedelta(days=months_back * 30)).strftime('%Y-%m-%d %H:%M:%S')
+            cutoff_clause = "WHERE created_at >= ?"
+            params.append(cutoff)
+        cursor.execute(f"SELECT match_id, anomaly_type FROM anomaly_samples {cutoff_clause}", params)
+        type_map = dict(cursor.fetchall())
+        conn.close()
+    except Exception as e:
+        if verbose:
+            print(f"[ANOMALY-WARN] 读取异常类型失败: {e}")
+
+    # df['match_id'] 直匹（中文格式）
+    df_ids = df['match_id'].astype(str).values if 'match_id' in df.columns else None
+    if df_ids is None:
+        if verbose:
+            print("[ANOMALY-WARN] df 无 match_id 列，无法匹配")
+        return np.ones(len(df))
+
+    # C-20260922-050 新增：一次性查 upset_risk_score（用于训练样本额外加权）
+    upset_score_map = {}
+    try:
+        from anomaly_sample_manager import DB_PATH as _ANO_DB2
+        conn_up = sqlite3.connect(_ANO_DB2)
+        cur_up = conn_up.cursor()
+        cutoff_clause_up = ""
+        params_up: list = []
+        if months_back:
+            from datetime import datetime as _dt, timedelta as _td
+            cutoff_up = (_dt.now() - _td(days=months_back * 30)).strftime('%Y-%m-%d %H:%M:%S')
+            cutoff_clause_up = "WHERE created_at >= ?"
+            params_up.append(cutoff_up)
+        cur_up.execute(
+            f"SELECT match_id, upset_risk_score, is_upset, "
+            f"COALESCE(pred_ts_valid, 1), COALESCE(ml_is_replay, 0) "
+            f"FROM anomaly_samples {cutoff_clause_up}",
+            params_up,
+        )
+        for row in cur_up.fetchall():
+            # (upset_risk_score, is_upset, pred_ts_valid, ml_is_replay)
+            upset_score_map[row[0]] = (row[1], row[2], row[3], row[4])
+        conn_up.close()
+    except Exception as _e:
+        if verbose:
+            print(f"[ANOMALY-WARN] 读取 upset_risk_score 失败: {_e}")
+
+    hit_count = 0
+    double_count = 0
+    hit_ids = []
+    posthoc_count = 0
+    replay_count = 0
+    for idx, mid in enumerate(df_ids):
+        if mid in anomaly_ids:
+            atype = type_map.get(mid)
+            if atype == '双重错误':
+                weights[idx] = double_error_weight
+                double_count += 1
+            elif atype == '三重错误':
+                weights[idx] = double_error_weight + 1.0
+                double_count += 1
+            else:
                 weights[idx] = anomaly_weight
-    
-    print(f"\n样本权重统计:")
-    print(f"  正常样本: {len(weights[weights == 1.0])}")
-    print(f"  异常样本(权重{anomaly_weight}): {len(weights[weights == anomaly_weight])}")
-    print(f"  双重错误样本(权重{double_error_weight}): {len(weights[weights == double_error_weight])}")
-    print(f"  平均权重: {weights.mean():.2f}")
-    
+            # C-050 新增：冷门风险评分额外加权（≥0.5 时按比例放大）
+            # C-052 时间门禁：urs 乘子仅对 pred_ts_valid=1（真赛前预测口径）生效，
+            # 赛后回填场次的 urs 缺少 ml 维（计算口径与 serve 不同源），跳过乘子；
+            # C-053 写入侧根治后 pred_ts_valid 与 ml_is_replay 正交：锚定后回放场
+            # ts 合规(valid=1)但 is_replay=1（当前模型赛后回放补算），同样跳过乘子；
+            # is_upset +0.5 保留——其依据为赛前赔率+真实赛果，不依赖回填预测
+            score_pair = upset_score_map.get(mid)
+            if score_pair and score_pair[0] is not None:
+                urs = float(score_pair[0])
+                pred_valid = int(score_pair[2]) if len(score_pair) > 2 else 1
+                ml_replay = int(score_pair[3]) if len(score_pair) > 3 else 0
+                if pred_valid and not ml_replay and urs >= 0.5:
+                    # 冷门风险评分 ≥0.5 时按 (1 + 0.3 × (urs - 0.5)) 放大权重
+                    weights[idx] *= (1.0 + 0.3 * (urs - 0.5))
+                elif not pred_valid:
+                    posthoc_count += 1
+                elif ml_replay:
+                    replay_count += 1
+                # 爆冷标志额外 +0.5 权重（赔率口径，赛前可验证）
+                if score_pair[1]:
+                    weights[idx] += 0.5
+            hit_count += 1
+            hit_ids.append(mid)
+            if verbose:
+                print(f"  [ANOMALY] 命中: {mid} type={atype} -> weight={weights[idx]}")
+
+    # 写入 knowledge_hit.jsonl（来源日志，project_memory 硬约束）
+    if hit_ids:
+        try:
+            from pathlib import Path as _P
+            from datetime import datetime as _dt
+            log_dir = _P(__file__).resolve().parent.parent / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_path = log_dir / "knowledge_hit.jsonl"
+            with open(log_path, 'a', encoding='utf-8') as f:
+                f.write(json.dumps({
+                    "ts": _dt.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    "source": "anomaly_samples",
+                    "league": "global",
+                    "entry_id": ",".join(hit_ids[:20]),
+                    "hit_count": hit_count,
+                    "weight_used": float(anomaly_weight),
+                    "double_weight_used": float(double_error_weight),
+                    "source_matches": len(anomaly_ids),
+                    "note": f"anomaly加权 命中{hit_count}场 双重错误{double_count}场"
+                }, ensure_ascii=False) + "\n")
+        except Exception as _e:
+            if verbose:
+                print(f"[ANOMALY-WARN] knowledge_hit.jsonl 写入失败: {_e}")
+
+    if verbose:
+        print(f"\n[ANOMALY] 样本权重统计:")
+        print(f"  正常样本: {len(weights[weights == 1.0])}")
+        print(f"  异常样本(权重{anomaly_weight}): {hit_count - double_count}")
+        print(f"  双重/三重错误(权重≥{double_error_weight}): {double_count}")
+        if posthoc_count:
+            print(f"  其中赛后回填预测场次(跳过urs乘子,C-052): {posthoc_count}")
+        if replay_count:
+            print(f"  其中赛后回放补算场次(锚点ts合规但is_replay=1,跳过urs乘子,C-053): {replay_count}")
+        print(f"  平均权重: {weights.mean():.4f}")
+
     return weights
 
 # === B3: L3 样本权重加载器（C-20260908-010，knowledge_iteration.py --approve 闭环） ===
+# L3 样本量门禁（C-20260918-007）：source_matches 过少时按比例缩放建议权重增量，
+# 达到 L3_MIN_SAMPLE 场才给满；避免单轮极小样本（如 5 场）全量加权导致过拟合。
+L3_MIN_SAMPLE = 10
+
 def apply_l3_sample_weights(df, base_weights=None, verbose=True):
     """读知识库 L3 sample_weights（status=active），按 source_matches 对样本加权。
 
     B3 闭环语义：knowledge_iteration.py 扫描复盘数据 → 写 pending 建议 →
     人工 --approve 转 active → 本函数在下轮重训时自动应用 suggested_weight。
     匹配键：df['match_id']（= matches.match_id，与 source_matches 完全同源，
-    无需队名归一）。命中行权重 ×= suggested_weight（默认 1.2）。
+    无需队名归）。命中行权重 ×= suggested_weight（默认 1.2）。
+
+    C-20260918-030 改造：本函数独立计算 L3 权重（base_weights 应传 None），
+    与 anomaly/B4 加权由主流程 np.maximum 取 max 去重叠加（不再 ×= 累乘）。
     """
     weights = np.ones(len(df)) if base_weights is None else np.asarray(base_weights, dtype=float).copy()
 
     try:
-        from knowledge_base_schema import load_entries
+        from knowledge_base_schema import load_entries, record_kb_hit
         active = []
         for _lg in ("英超", "西甲", "意甲", "德甲", "法甲", "global"):
             for e in load_entries(_lg, "sample_weights"):
@@ -318,49 +416,61 @@ def apply_l3_sample_weights(df, base_weights=None, verbose=True):
         src = set(e.get("source_matches") or [])
         if not src:
             continue
-        _w = float(e["suggested_weight"])
+        _suggested = float(e["suggested_weight"])
+        _src_n = len(src)
+        _scale = min(1.0, _src_n / L3_MIN_SAMPLE)
+        _w = 1.0 + (_suggested - 1.0) * _scale
         mask = [str(m) in src for m in df_ids]
         n = int(sum(mask))
         if n:
             weights[mask] *= _w
-            print(f"  [L3] {_lg} '{e.get('id')}': {n} 场命中 → 权重×{_w}")
+            print(f"  [L3] {_lg} '{e.get('id')}': {n} 场命中 → 权重×{_w:.3f}（源{_src_n}场，缩放{_scale:.2f}）")
+            record_kb_hit("sample_weights", _lg, e.get("id"), n, _w, _src_n,
+                          f"L3加权 建议{_suggested}→缩放{_w:.3f}")
     if verbose:
         nz = int((weights > 0).sum())
         print(f"  [L3] 加权完成: 命中样本 {nz} 场, 平均权重 {weights.mean():.3f}")
     return weights
 
-# === B4: 人工修正场次加权（C-20260908-013，衔接 B4 中期样本权重调整） ===
-def apply_human_correction_weights(df, base_weights=None, correction_weight=1.2, verbose=True):
-    """读 human_corrections（status=open），按 match_id 对修正场次加权。
+# === B4: 自动归因错误修正加权（C-20260918-031 改造：1.2→2.0 + status=auto 不衰减） ===
+def apply_human_correction_weights(df, base_weights=None, correction_weight=2.0, verbose=True):
+    """读 human_corrections（status in {open, auto}），按 match_id 对修正场次加权。
 
-    B4 中期层：人工确认的修正场次（如『模型局限性归因』→『阵容异动归因』）
-    在重训时以 correction_weight 加权；命中后 mark_correction_applied
-    （applied_count+1 → status=applied），幂等降级安全。
+    C-20260918-031 改造（方案A：自动归因错误修正）：
+      - 权重 1.2 → 2.0（原 1.2 被 anomaly 3.0/4.0 的 max 去重后基本被覆盖，太弱）
+      - 读 status='open' OR 'auto'（auto 来自 auto_scan_and_import_corrections 自动扫描）
+      - 不再 mark_correction_applied（auto 状态不衰减，保留供多轮重训，避免人工干预断流）
+      - 来源日志记录 source=human_corrections_auto
+      - 废弃人工 --disagree 流程，保留 human_corrections.json 作为归因档案
+
+    C-20260918-030 改造：本函数独立计算 B4 权重（base_weights 应传 None），
+    与 anomaly/L3 加权由主流程 np.maximum 取 max 去重叠加（不再 ×= 累乘）。
     """
     weights = np.ones(len(df)) if base_weights is None else np.asarray(base_weights, dtype=float).copy()
 
     try:
-        from knowledge_base_schema import load_human_corrections, mark_correction_applied
+        from knowledge_base_schema import load_human_corrections, record_kb_hit
     except Exception as _e:
-        print(f"  [CORR-WARN] 知识库读取失败，跳过人工修正加权: {_e}")
+        print(f"  [CORR-WARN] 知识库读取失败，跳过 B4 自动归因错误修正加权: {_e}")
         return weights
 
-    open_ids = [str(it.get("match_id")) for it in load_human_corrections()
-                if it.get("status") == "open" and it.get("match_id")]
-    if not open_ids:
+    # C-20260918-031：读 status='open'（历史）OR 'auto'（自动扫描）
+    corrections_ids = [str(it.get("match_id")) for it in load_human_corrections()
+                       if it.get("status") in ("open", "auto") and it.get("match_id")]
+    if not corrections_ids:
         if verbose:
-            print("  [CORR] 无 open 人工修正条目，跳过加权")
+            print("  [CORR] 无 open/auto 修正条目，跳过 B4 自动归因错误修正加权")
         return weights
 
     df_ids = df["match_id"].astype(str).values
-    mask = [m in open_ids for m in df_ids]
+    mask = [m in corrections_ids for m in df_ids]
     n = int(sum(mask))
     if n:
         weights[mask] *= correction_weight
-        print(f"  [CORR] 人工修正场次命中: {n} 场 → 权重×{correction_weight}")
-        for mid in df_ids:
-            if mid in open_ids:
-                mark_correction_applied(mid)
+        print(f"  [CORR] B4 自动归因错误修正命中: {n} 场 → 权重×{correction_weight}")
+        record_kb_hit("human_corrections", "global", ",".join(corrections_ids), n,
+                      correction_weight, len(corrections_ids), "B4自动归因错误修正")
+        # C-20260918-031：不调用 mark_correction_applied，auto 状态保留供多轮重训
     if verbose:
         print(f"  [CORR] 加权完成: 平均权重 {weights.mean():.3f}")
     return weights
@@ -867,7 +977,7 @@ def evaluate_with_time_series_split(X, y, feature_names, n_splits=5, sample_weig
 
 
 # ============================================================
-# 阶段 A: 统一引擎一致性评估（unified_engine_integration_plan §7 L112-L145）
+# 阶段 A: 统一引擎一致性评估（已归档：原 unified_engine_integration_plan §7 L112-L145）
 # λ 反推 + 验证集「引擎 WDL 边际 vs 分类器概率」RPS + 比分矩阵一致性
 # ============================================================
 def _unified_engine_eval_enabled():
@@ -917,7 +1027,7 @@ def _dc_wdl_from_lambda(lambda_home, lambda_away, rho=-0.30, max_goals=7):
 def infer_lambda_from_wdl(wdl_probs: dict, total_goals: float = 2.8, rho: float = -0.30):
     """从 WDL 概率 + 总进球约束数值反演 λ_home/λ_away。
 
-    约束方程组（unified_engine_integration_plan §7 阶段 A）：
+    约束方程组（已归档：原 unified_engine_integration_plan §7 阶段 A）：
       ① total_goals ≈ λ_home + λ_away
       ② P(win)/P(lose) ≈ 由 λ_home/λ_away 决定的 Poisson 边际比（引擎 Dixon-Coles 口径）
     软约束 ③ P(draw) 拟合（辅助，帮助 RPS 达标）
@@ -1098,7 +1208,7 @@ def evaluate_unified_engine(y_true_wdl, y_pred_wdl, df_meta, feature_names):
 
 
 # ============================================================
-# 阶段 B: λ 回归头（unified_engine_integration_plan §7 L148-L158）
+# 阶段 B: λ 回归头（已归档：原 unified_engine_integration_plan §7 L148-L158）
 # ML 特征 → λ_home/λ_away → Dixon-Coles 引擎 → 四维导出（完整闭环）
 # ============================================================
 
@@ -1253,7 +1363,7 @@ def _lambda_pair_predict(trained, X_va):
 
 
 def train_lambda_head(X, df_meta, n_splits=5, train_final=True, validation_split=0.2):
-    """阶段 B: λ 回归头训练（unified_engine_integration_plan §7 L148-L158）。
+    """阶段 B: λ 回归头训练（已归档：原 unified_engine_integration_plan §7 L148-L158）。
 
     结构: XGBoost + LightGBM 双模型族 × λ_home/λ_away（4 个单输出 Poisson 回归），
     损失 = Poisson NLL（λ - goals·logλ + log(goals!)，XGB reg:poisson / LGB poisson 原生实现），
@@ -1620,14 +1730,37 @@ def main(incremental=False, version=None):
         'feature_names': X.columns.tolist()[:10] + ['...'] if X.shape[1] > 10 else X.columns.tolist()
     })
     
-    print("\n3. 构建异常样本加权...")
-    sample_weights = create_sample_weights(df)
-    
-    print("\n3.5 应用 L3 样本权重（知识库 active 条目，B3 闭环）...")
-    sample_weights = apply_l3_sample_weights(df, sample_weights)
-
-    print("\n3.6 应用人工修正场次加权（B4 中期样本权重调整）...")
-    sample_weights = apply_human_correction_weights(df, sample_weights)
+    print("\n3. 构建异常样本加权（C-030：三套独立 + max 去重叠加）...")
+    # C-20260918-030 改造：三套加权独立计算，主流程取 max 去重叠加
+    # 同一样本若被 anomaly/L3/B4 多套命中，取 max(anomaly_w, l3_w, corr_w)，
+    # 避免对同一样本重复加权导致权重爆炸（保留三套机制独立性）
+    # C-20260918-031：训练前自动触发 B4 归因错误修正扫描（刷新 human_corrections.json status='auto' 条目）
+    try:
+        from knowledge_base_schema import auto_scan_and_import_corrections
+        print("  [AUTO-CORR-PRE] 训练前自动扫描归因错误修正...")
+        auto_scan_and_import_corrections(verbose=True)
+    except Exception as _e:
+        print(f"  [AUTO-CORR-PRE-WARN] 自动扫描失败，跳过（不阻断训练）: {_e}")
+    anomaly_w = create_sample_weights(df)  # 异常样本（绝对权重 3.0/4.0）
+    print("\n3.5 独立计算 L3 样本权重（知识库 active 条目，B3 闭环）...")
+    l3_w = apply_l3_sample_weights(df)  # L3（相对增量，从 1.0 起算）
+    print("\n3.6 独立计算 B4 自动归因错误修正加权（C-20260918-031：1.2→2.0 + status=auto 不衰减）...")
+    corr_w = apply_human_correction_weights(df)  # B4（相对增量，从 1.0 起算，权重 2.0）
+    # 三套取 max 去重叠加
+    sample_weights = np.maximum(np.maximum(anomaly_w, l3_w), corr_w)
+    # 记录来源（哪些套命中）
+    anomaly_hit = anomaly_w > 1.0
+    l3_hit = l3_w > 1.0
+    corr_hit = corr_w > 1.0
+    any_hit = anomaly_hit | l3_hit | corr_hit
+    multi_hit = (anomaly_hit.astype(int) + l3_hit.astype(int) + corr_hit.astype(int)) > 1
+    print(f"\n[WEIGHT-MAX] 三套去重叠加完成:")
+    print(f"  anomaly 命中: {int(anomaly_hit.sum())} 场")
+    print(f"  L3 命中: {int(l3_hit.sum())} 场")
+    print(f"  B4 自动归因修正命中: {int(corr_hit.sum())} 场")
+    print(f"  任意命中: {int(any_hit.sum())} 场")
+    print(f"  多套重叠(取max): {int(multi_hit.sum())} 场")
+    print(f"  平均权重: {sample_weights.mean():.4f}")
     
     print("\n4. 滚动窗口验证...")
     xgb_cv_results, lgb_cv_results = evaluate_with_time_series_split(X, y, X.columns.tolist(), n_splits=5, sample_weights=sample_weights)
@@ -2012,7 +2145,7 @@ def main(incremental=False, version=None):
         logger.log_evaluation('分层评估(blend)', {'overall': strat_report['overall']})
         print_stratified_report(strat_report)
 
-    # === 阶段 A: 统一引擎一致性评估（unified_engine_integration_plan §7 L112-L145）===
+    # === 阶段 A: 统一引擎一致性评估（已归档：原 unified_engine_integration_plan §7 L112-L145）===
     # config.yaml unified_engine.enabled=false → final_report 仅写 enabled:false，不执行引擎评估
     if not _unified_engine_eval_enabled():
         final_report['unified_engine'] = {
@@ -2079,57 +2212,16 @@ def main(incremental=False, version=None):
         json.dump(final_report, f, ensure_ascii=False, indent=2)
     print(f"   最终评估报告: {report_path}")
 
-    # === D1: MLflow 实验追踪（可选）===
-    # 每个 C- 编号实验对应一条 run：记录 params/metrics/artifacts。
-    # mlflow 未安装或记录失败时静默跳过，绝不因追踪失败中断训练流程。
-    if MLFLOW_AVAILABLE:
-        try:
-            run_name = f"train_{timestamp}"
-            with mlflow.start_run(run_name=run_name):
-                # ---- 参数记录（关键超参数，取自 final_report / 现有变量）----
-                mlflow.log_param('experiment', 'D1_MLflow_Tracking')
-                # P1-E: 可复现快照绑定（git commit / 数据源版本 / 特征集版本 hash）
-                # 复用共享工具 mlflow_repro.py，避免双训练入口口径不一致。
-                from mlflow_repro import log_repro_snapshot
-                log_repro_snapshot(BASE_DIR, X.columns.tolist(),
-                                   artifact_dir=OUTPUT_DIR, artifact_suffix=timestamp)
-                mlflow.log_param('version', version if version else 'None')
-                mlflow.log_param('incremental', bool(incremental))
-                mlflow.log_param('total_matches', int(len(df)))
-                mlflow.log_param('feature_dim', int(X.shape[1]))
-                mlflow.log_param('validation_split', float(validation_split))
-                mlflow.log_param('optuna_params_used', bool(USE_OPTUNA_BEST_PARAMS))
-                mlflow.log_param('draw_threshold_factor', float(DRAW_THRESHOLD_FACTOR))
-                mlflow.log_param('draw_calibrator_factor', float(DRAW_CALIBRATOR_FACTOR))
-                # XGBoost / LightGBM 超参数（final_report 中的 optuna 最优参数）
-                for _tag in ('xgb_optuna_best', 'lgb_optuna_best'):
-                    _best = final_report.get(_tag)
-                    if _best:
-                        for _k, _v in _best.items():
-                            if isinstance(_v, (int, float, str, bool)):
-                                mlflow.log_param(f'{_tag}_{_k}', _v)
-                # ---- 指标记录（final_report.recommended：准确率/RPS/LogLoss/平局召回等）----
-                for mname, mdata in final_report.get('models', {}).items():
-                    rec = mdata.get('recommended', {})
-                    for _k in ('accuracy', 'rps', 'draw_recall', 'logloss_after_calibration',
-                               'draw_precision', 'f1_macro', 'home_recall', 'away_recall',
-                               'ece_original', 'ece_after_calibration'):
-                        if rec.get(_k) is not None:
-                            mlflow.log_metric(f'{mname}_{_k}', float(rec[_k]))
-                # 原始（未校准）验证集指标
-                for _tag, _m in (('xgb', xgb_metrics), ('lgb', lgb_metrics)):
-                    if _m:
-                        mlflow.log_metric(f'{_tag}_val_accuracy', float(_m.get('accuracy', 0)))
-                        mlflow.log_metric(f'{_tag}_val_log_loss', float(_m.get('log_loss', 0)))
-                        mlflow.log_metric(f'{_tag}_val_brier', float(_m.get('brier', 0)))
-                        mlflow.log_metric(f'{_tag}_val_rps', float(_m.get('rps', 0)))
-                # ---- 产物记录：最终训练报告 JSON ----
-                mlflow.log_artifact(report_path)
-                mlflow.set_tag('mlflow.note.content', 'D1: MLflow 实验追踪 - final_training_report')
-                print(f"   [MLflow] 实验追踪完成: run={run_name} artifact={report_path}")
-        except Exception as e:
-            print(f"[MLflow] 实验追踪失败（不影响训练）: {e}")
-    
+    # === P1-E: 可复现快照（C-20260926-094 方案 B：去 MLflow，直接落盘 assets 单一权威路径）===
+    # 记录 git commit / 数据源版本（odds.db sha1）/ 特征集版本 hash，供训练审计与复现对齐。
+    try:
+        from mlflow_repro import save_repro_snapshot
+        save_repro_snapshot(BASE_DIR, X.columns.tolist(),
+                            artifact_dir=OUTPUT_DIR, artifact_suffix=timestamp)
+        print(f"   可复现快照: {os.path.join(OUTPUT_DIR, f'repro_snapshot_{timestamp}.json')}")
+    except Exception as e:
+        print(f"[repro] 快照落盘失败（不影响训练）: {e}")
+
     print("\n10. 保存模型为pkl格式...")
     saved_models = []
     if xgb_model:
@@ -2171,7 +2263,7 @@ def main(incremental=False, version=None):
         lgb_js = convert_lgb_to_js(lgb_model)
         save_model_to_js(lgb_js, 'LGB')
 
-    # === 阶段 B: λ 回归头训练 + JS 导出（unified_engine_integration_plan §7 L148-L158）===
+    # === 阶段 B: λ 回归头训练 + JS 导出（已归档：原 unified_engine_integration_plan §7 L148-L158）===
     # 仅 USE_UNIFIED_ENGINE 开启时执行（避免默认全量训练引入额外耗时/资产）
     if _unified_engine_eval_enabled():
         print("\n[UnifiedEngine-Monitor] 阶段B: λ 回归头训练 + JS 导出...")
@@ -2250,6 +2342,88 @@ def main(incremental=False, version=None):
             'calibration_enabled': calibration_enabled
         }
     })
+
+    # === 训练后钩子：特征重要性漂移检测（C-20260918-035）===
+    # 参照 C-20260918-031 B4 自动扫描同模式：try/except 守卫，失败仅告警不阻断训练
+    # 接入 scripts/feature_selection_optimization.py 的 save_importance_to_file + analyze_feature_drift
+    # 解决该脚本是入口型 CLI 由人工运行、2 个月未更新、漂移监控形同虚设的问题
+    try:
+        import sys as _sys
+        _scripts_dir = os.path.dirname(os.path.abspath(__file__))
+        if _scripts_dir not in _sys.path:
+            _sys.path.insert(0, _scripts_dir)
+        from feature_selection_optimization import save_importance_to_file, analyze_feature_drift
+        import pandas as _pd
+        from datetime import datetime as _dt
+
+        _feature_names = X_scaled_df.columns.tolist()
+        _rows = []
+        for _model, _mtype in ((xgb_model, 'xgboost'), (lgb_model, 'lightgbm')):
+            if _model is None:
+                continue
+            try:
+                _imp = getattr(_model, 'feature_importances_', None)
+                if _imp is None and _mtype == 'lightgbm' and hasattr(_model, 'feature_importance'):
+                    _imp = _model.feature_importance(importance_type='gain')
+            except Exception:
+                _imp = None
+            if _imp is None or len(_imp) != len(_feature_names):
+                continue
+            _df = _pd.DataFrame({
+                'feature_name': _feature_names,
+                'importance': _imp,
+                'importance_type': 'gain',
+                'model_type': _mtype,
+                'training_date': _dt.now().strftime('%Y-%m-%d %H:%M:%S'),
+            })
+            _df = _df.sort_values('importance', ascending=False)
+            _df['ranking'] = range(1, len(_df) + 1)
+            _total = _df['importance'].sum()
+            if _total > 0:
+                _df['importance'] = _df['importance'] / _total
+            _rows.append(_df)
+
+        if not _rows:
+            print("[特征重要性漂移检测] 跳过：无可用 feature_importances_")
+        else:
+            _combined = _pd.concat(_rows, ignore_index=True)
+            # XGB+LGB 同名特征 importance 均值合并为 combined 视图（与原主流程 L393 combined_df 同语义）
+            _pivot = _combined.pivot_table(index='feature_name', columns='model_type', values='importance', aggfunc='mean')
+            _pivot = _pivot.fillna(0)
+            _combined_vals = _pivot.mean(axis=1)
+            _combined_df = _pd.DataFrame({
+                'feature_name': _pivot.index,
+                'importance': _combined_vals.values,
+                'importance_type': 'combined',
+                'model_type': 'xgboost',
+                'training_date': _dt.now().strftime('%Y-%m-%d %H:%M:%S'),
+            })
+            _combined_df = _combined_df.sort_values('importance', ascending=False)
+            _combined_df['ranking'] = range(1, len(_combined_df) + 1)
+
+            save_importance_to_file(_combined_df)
+            # 漂移检测统一为唯一实现（C-20260918-037 P2 项）：废弃本脚本 analyze_feature_drift（重要性漂移），
+            # 改用 shap_feature_importance.detect_feature_drift（特征值漂移，基于 rolling mean/std 数据分布变化），
+            # JSON 仅作训练历史快照（save_importance_to_file 已写入），不再做重要性变化对比。
+            try:
+                from shap_feature_importance import detect_feature_drift as _detect_value_drift
+                _drift_results, _drifted_list = _detect_value_drift(X_scaled_df, window_size=50, threshold=0.1)
+                if _drifted_list:
+                    print(f"[特征值漂移检测] ⚠️ 检测到 {len(_drifted_list)} 个数据分布漂移特征（阈值 0.1）")
+                    for _fname in _drifted_list[:5]:
+                        print(f"  - {_fname}")
+                    if len(_drifted_list) > 5:
+                        print(f"  ... 另外 {len(_drifted_list) - 5} 个详见 shap 输出")
+                else:
+                    print("[特征值漂移检测] ✅ 无显著漂移")
+            except ImportError as _e:
+                print(f"[特征值漂移检测] 跳过：shap_feature_importance 模块不可用（{_e}）")
+            except Exception as _e:
+                print(f"[特征值漂移检测] 警告: {_e}（不阻断训练）")
+    except ImportError as _e:
+        print(f"[特征重要性历史快照] 跳过：feature_selection_optimization 模块不可用（{_e}）")
+    except Exception as _e:
+        print(f"[特征重要性历史快照] 警告: {_e}（不阻断训练）")
     
     print(f"\n训练日志已保存到: {logger.log_file}")
     print("日志摘要:")

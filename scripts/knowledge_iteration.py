@@ -3,7 +3,7 @@
 knowledge_iteration.py — 模块 B3：自动迭代逻辑（P1）
 
 ===============================================
-背景（模型改进实施方案 v1.0 §四/B3，对齐指南 §3.3 调整4）：
+背景（已归档：原模型改进实施方案 v1.0 §四/B3，对齐指南 §3.3 调整4）：
   自动迭代 = 从赛后复盘数据（post_match_review）自动识别「模型在哪类比赛上持续偏差」，
   生成优化建议报告 + 写入 L3 样本权重层（sample_weights.json），
   供重训时对该类样本加权。四种更新类型：
@@ -62,6 +62,8 @@ GLOBAL_MIN = 30       # 全局级更新：复盘 ≥30 场
 TRIGGER_WINDOW = 5    # 触发式更新：连续 N 场
 TRIGGER_RATE = 0.6    # 触发式更新：偏差率 >60%（未命中占比）
 DEFAULT_WEIGHT = 1.2  # 建议样本权重
+WEIGHT_STEP = 0.1     # 同一 (联赛×主因) 重复触发时的建议权重递增步长（C-20260924-069）
+WEIGHT_MAX = 2.0      # 建议权重上限（对齐 B4 自动修正 2.0，避免过度放大单批少样本场次）
 
 
 # ==================== 连接 ====================
@@ -110,8 +112,8 @@ def detect_triggers(
     triggers: List[Dict[str, Any]] = []
     for (lg, cause), rows in groups.items():
         rows.sort(key=lambda x: (x.get("match_date") or "", x.get("match_id") or ""))
-        # 滑动窗口：取该组最近 window 场（连续复盘场次）
-        for i in range(len(rows) - window + 1):
+        # C-20260924-069 修复：倒序滑动窗口取「最近」触发窗口（旧实现升序+首个命中 break 恒报最早错位窗口，建议引用陈旧场次）
+        for i in range(len(rows) - window, -1, -1):
             win = rows[i:i + window]
             miss = sum(1 for r in win if not r.get("wdl_correct"))
             if window > 0 and miss / window > rate:
@@ -152,11 +154,13 @@ def league_profile(reviews: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 # ==================== L3 建议条目（B1 schema，status=pending） ====================
-def _suggestion_exists(league: str, content_key: str) -> bool:
+def _find_suggestion(league: str, content: str) -> Optional[Dict[str, Any]]:
+    """按 content 前 12 字符（「联赛『主因』连续…」）定位同 (联赛×主因) 的旧建议条目。"""
+    key = content[:12]
     for e in load_entries(league, "sample_weights"):
-        if e.get("content", "").startswith(content_key):
-            return True
-    return False
+        if str(e.get("content", "")).startswith(key):
+            return e
+    return None
 
 
 def write_suggestion(
@@ -168,24 +172,64 @@ def write_suggestion(
 ) -> bool:
     """写 L3 sample_weights 建议条目（status=pending 待人工确认）。
 
-    按 content 前缀去重幂等。返回 True=新写入 / False=已存在跳过。
+    C-20260924-069：同一 (联赛×主因) 重复触发不再静默跳过，改为「升级」——
+      - 旧条目 pending：递增建议权重（+WEIGHT_STEP，封顶 WEIGHT_MAX）+ 合并 source_matches + 刷新 last_verified/content；
+      - 旧条目 active：人工已确认过一轮，新起一条 pending（更高权重）供人工复评，不悄悄改写 active；
+      - 无旧条目：新建 pending。
+    返回 True=新写入或已升级 / False=无实质变化（已封顶且来源与时间均未更新）。
     """
-    if _suggestion_exists(league, content.split("｜")[0][:12]):
-        return False
     entries = load_entries(league, "sample_weights")
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    entries.append({
-        "id": f"sw_{league}_{now[:10]}_{len(entries) + 1}",
-        "type": "sample_weight",
-        "content": content,
-        "confidence": 3,                       # 待人工确认（--approve 后 4）
-        "source_matches": source_matches,
-        "created_at": now,
-        "last_verified": last_date,
-        "expire_condition": "重训验证一次后复核，连续3个迭代周期未确认则过期",
-        "status": "pending",
-        "suggested_weight": weight,
-    })
+    existing = _find_suggestion(league, content)
+
+    if existing is None:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        entries.append({
+            "id": f"sw_{league}_{now[:10]}_{len(entries) + 1}",
+            "type": "sample_weight",
+            "content": content,
+            "confidence": 3,                   # 待人工确认（--approve 后 4）
+            "source_matches": source_matches,
+            "created_at": now,
+            "last_verified": last_date,
+            "expire_condition": "重训验证一次后复核，连续3个迭代周期未确认则过期",
+            "status": "pending",
+            "suggested_weight": weight,
+        })
+        save_entries(league, "sample_weights", entries)
+        return True
+
+    old_w = float(existing.get("suggested_weight") or DEFAULT_WEIGHT)
+    new_w = min(WEIGHT_MAX, old_w + WEIGHT_STEP)
+    merged_src = sorted(set(existing.get("source_matches") or []) | set(source_matches))
+
+    if existing.get("status") == "active":
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        entries.append({
+            "id": f"sw_{league}_{now[:10]}_{len(entries) + 1}",
+            "type": "sample_weight",
+            "content": content,
+            "confidence": 3,
+            "source_matches": merged_src,
+            "created_at": now,
+            "last_verified": last_date,
+            "expire_condition": "重训验证一次后复核，连续3个迭代周期未确认则过期",
+            "status": "pending",
+            "suggested_weight": new_w,
+        })
+        save_entries(league, "sample_weights", entries)
+        return True
+
+    changed = (
+        abs(new_w - old_w) > 1e-9
+        or set(merged_src) != set(existing.get("source_matches") or [])
+        or existing.get("last_verified") != last_date
+    )
+    if not changed:
+        return False
+    existing["suggested_weight"] = new_w
+    existing["source_matches"] = merged_src
+    existing["last_verified"] = last_date
+    existing["content"] = content
     save_entries(league, "sample_weights", entries)
     return True
 
@@ -267,7 +311,7 @@ def scan(league: Optional[str] = None, dry_run: bool = False) -> Dict[str, Any]:
                 written += 1
         for lg, p in sorted(prof.items(), key=lambda kv: kv[1]["miss_rate"], reverse=True):
             if p["n"] >= LEAGUE_MIN and p["miss_rate"] > 0.55:
-                content = "{}联赛复盘{}场命中率{:.0%}，主因分布{}，建议重训时按主因加权并做A/B门禁验证".format(
+                content = "{}联赛级样本加权：复盘{}场命中率{:.0%}，主因分布{}，建议重训时按主因加权并做A/B门禁验证".format(
                     lg, p["n"], p["hit_rate"], json.dumps(p["causes"], ensure_ascii=False))
                 if write_suggestion(lg, content, [], reviews[-1].get("match_date") or ""):
                     written += 1

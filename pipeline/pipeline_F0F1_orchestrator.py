@@ -45,7 +45,9 @@ SCRIPTS = {
     "collector":    ROOT / "collection" / "final_sofascore_collector.py",
     "D1_backfill":  ROOT / "import_data" / "sofascore_backfill_fields.py",
     "D2_audit":     ROOT / "analysis" / "sofascore_quality_audit.py",
-    "D3_features":  ROOT / "features" / "sofascore_pre_match_features.py",
+    # C-20260925-083（风险 H）: D3 默认走增量脚本（仅补缺场次，秒~分钟级）；
+    # 全量重建（~88min）需手动调用 sofascore_pre_match_features.py。
+    "D3_features":  ROOT / "features" / "incremental_sofascore_features.py",
     "E2_train":     SCRIPTS_DIR / "train_models.py",
 }
 
@@ -277,7 +279,7 @@ def main():
                  cwd=ROOT, timeout=TIMEOUTS["D2_audit"])
     results["D2_audit"] = r
 
-    # 7: D3 特征聚合
+    # 7: D3 特征聚合（增量：仅补缺失场次，幂等 INSERT OR REPLACE）
     r = run_step("D3_features", [py, str(SCRIPTS["D3_features"]), "--n-recent", "5"],
                  cwd=ROOT, timeout=TIMEOUTS["D3_features"])
     results["D3_features"] = r

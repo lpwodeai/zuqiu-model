@@ -139,28 +139,38 @@ def get_latest_snapshot(df: pd.DataFrame) -> pd.DataFrame:
 
 def normalize_probabilities(df: pd.DataFrame) -> pd.DataFrame:
     """
-    归一化让球赔率概率，确保每行 hcp_win/draw/lose 之和 = 1.0。
+    将让球赔率转换为去水隐含概率，确保每行 hcp_win/draw/lose 之和 = 1.0。
 
-    处理异常：全0行 → 均匀分布；NaN → 0
+    C-20260920-025 修复：原实现直接对"原始赔率"线性归一化（强队赔率低→概率被
+    压低，方向恰好相反）。正确口径：先取倒数 1/odds 得隐含概率，再按行归一化去水。
+
+    处理异常：赔率<=0 视为无效（贡献0）；全无效行 → 均匀分布；NaN → 0。
     """
     hcp_cols = HCP_COLS
+    eps = 1e-10
 
-    # 填充 NaN
+    # 填充 NaN 并将无效赔率（<=0）置为 NaN
     df[hcp_cols] = df[hcp_cols].fillna(0.0)
+    odds = df[hcp_cols].apply(pd.to_numeric, errors='coerce')
+    valid = odds > 0
 
-    # 归一化
-    row_sums = df[hcp_cols].sum(axis=1)
-    zero_mask = row_sums == 0
+    # 倒数得隐含概率（无效位置 0）
+    implied = pd.DataFrame(0.0, index=df.index, columns=hcp_cols)
+    for col in hcp_cols:
+        implied[col] = np.where(valid[col], 1.0 / np.clip(odds[col], eps, None), 0.0)
+
+    row_sums = implied.sum(axis=1)
+    zero_mask = row_sums <= 0
 
     if zero_mask.any():
-        print(f"[HCP] 警告: {zero_mask.sum()} 行概率全为0，使用均匀分布填充")
+        print(f"[HCP] 警告: {int(zero_mask.sum())} 行赔率全无效，使用均匀分布填充")
         for col in hcp_cols:
-            df.loc[zero_mask, col] = 1.0 / len(hcp_cols)
-        row_sums = df[hcp_cols].sum(axis=1)
+            implied.loc[zero_mask, col] = 1.0 / len(hcp_cols)
+        row_sums = implied.sum(axis=1)
 
-    # 归一化
+    # 归一化去水
     for col in hcp_cols:
-        df[col] = df[col] / row_sums
+        df[col] = implied[col] / row_sums
 
     # 验证
     new_sums = df[hcp_cols].sum(axis=1)
@@ -192,6 +202,8 @@ def extract_hcp_features(df: pd.DataFrame) -> pd.DataFrame:
     features['hcp_prob_lose'] = probs[:, 2]
 
     # ---- 衍生特征 (12维) ----
+    # C-20260920-025：所有衍生特征只基于去水隐含概率 probs（修复后 df 的赔率列
+    # 已是概率，无法再取原始赔率）；以下口径与 serving 端严格一致。
     # 上盘优势
     features['hcp_home_strength'] = probs[:, 0] - probs[:, 2]
 
@@ -206,18 +218,14 @@ def extract_hcp_features(df: pd.DataFrame) -> pd.DataFrame:
     log_probs = np.log(np.clip(probs, eps, 1.0))
     features['hcp_entropy'] = -np.sum(probs * log_probs, axis=1)
 
-    # 隐含回报差: 1/hcp_win - 1/hcp_lose
-    raw_win = df['hcp_win'].values
-    raw_lose = df['hcp_lose'].values
-    features['hcp_expected_value'] = (1.0 / np.clip(raw_win, eps, None)) - (1.0 / np.clip(raw_lose, eps, None))
+    # 去水隐含概率差（原 1/raw_win - 1/raw_lose 的归一化等价形式）
+    features['hcp_expected_value'] = probs[:, 0] - probs[:, 2]
 
     # 概率标准差
     features['hcp_volatility'] = np.std(probs, axis=1)
 
-    # 市场偏好: (1/hcp_win) / sum(1/hcp_i)
-    inv_probs = 1.0 / np.clip(df[hcp_cols].values, eps, None)
-    inv_sum = inv_probs.sum(axis=1)
-    features['hcp_market_sentiment'] = inv_probs[:, 0] / inv_sum
+    # 市场偏好：上盘去水概率（原倒数占比的归一化等价形式）
+    features['hcp_market_sentiment'] = probs[:, 0]
 
     # 冷门比
     features['hcp_underdog_ratio'] = probs[:, 2] / np.clip(probs[:, 0], eps, None)
@@ -231,10 +239,8 @@ def extract_hcp_features(df: pd.DataFrame) -> pd.DataFrame:
     # 冷门风险
     features['hcp_upset_risk'] = probs[:, 1] + probs[:, 2]
 
-    # 赔率偏度
-    raw_all = df[hcp_cols].values
-    row_sums_raw = raw_all.sum(axis=1)
-    features['hcp_odds_skew'] = (raw_win - raw_lose) / np.clip(row_sums_raw, eps, None)
+    # 概率偏度：max - min
+    features['hcp_odds_skew'] = np.max(probs, axis=1) - np.min(probs, axis=1)
 
     # 添加 metadata 列
     features['matches_match_id'] = df['matches_match_id'].values

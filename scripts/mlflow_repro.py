@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-P1-E: MLflow 可复现快照绑定工具
+P1-E: 训练可复现快照工具（C-20260926-094 方案 B：去 MLflow 化，纯落盘 assets）
 
 统一采集三类可复现快照，供 train_models.py 与 advanced_model_trainer.py 两个训练入口复用，
 避免双入口各自实现导致记录口径不一致（对齐 D3「配置单一来源」/ A5「消除双写路径」的项目惯例）：
 
-  1. git commit     — 训练时代码版本
+  1. git commit     — 训练时代码版本（本机无 git 时为 'N/A'）
   2. 数据源版本     — odds.db 路径 / mtime / size / 内容 sha1（可关闭）
   3. 特征集版本     — 特征名顺序 + 维度 + sha1
 
 用法：
-    from mlflow_repro import log_repro_snapshot
-    log_repro_snapshot(BASE_DIR, feature_names, artifact_dir=OUTPUT_DIR, artifact_suffix=timestamp)
+    from mlflow_repro import save_repro_snapshot
+    save_repro_snapshot(BASE_DIR, feature_names, artifact_dir=OUTPUT_DIR, artifact_suffix=timestamp)
 
 注意：
-  - 只依赖标准库 + mlflow（mlflow 在调用方已确认 MLFLOW_AVAILABLE 时才调用）。
+  - 只依赖标准库（不再 import mlflow）。
   - 数据源 sha1 为 odds.db 全文件流式哈希（约 1.7GB），训练任务内一次性成本，可接受；
     如需关闭（如频繁重训），将 HASH_DATA_FILE 置为 False。
+  - 权威落点 = assets/repro_snapshot_<timestamp>.json（无 MLflow 影子副本）。
 """
 
 import os
@@ -89,23 +90,10 @@ def build_repro_snapshot(base_dir, feature_names):
     return snap
 
 
-def log_repro_snapshot(base_dir, feature_names, artifact_dir=None, artifact_suffix='repro'):
-    """向当前 mlflow run 写入可复现快照 params，并落盘/挂载 repro_snapshot JSON artifact。
-
-    返回快照 dict。artifact_dir 为 None 时仅记录 params 不落 artifact。
-    """
-    import mlflow
-
+def save_repro_snapshot(base_dir, feature_names, artifact_dir, artifact_suffix='repro'):
+    """落盘可复现快照 JSON 到 artifact_dir（assets），返回快照 dict。"""
     snap = build_repro_snapshot(base_dir, feature_names)
-
-    for key, val in snap.items():
-        if isinstance(val, (int, float, str, bool)):
-            mlflow.log_param(key, val)
-
-    if artifact_dir:
-        path = os.path.join(str(artifact_dir), f'repro_snapshot_{artifact_suffix}.json')
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(snap, f, ensure_ascii=False, indent=2)
-        mlflow.log_artifact(path)
-
+    path = os.path.join(str(artifact_dir), f'repro_snapshot_{artifact_suffix}.json')
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(snap, f, ensure_ascii=False, indent=2)
     return snap
