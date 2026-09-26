@@ -283,6 +283,7 @@
 | EXP-013 | 阶段切换时必须更新 prompt_template.md | 2026-07-23 | 保持上下文模板与当前阶段同步 |
 | EXP-014 | 数据变更必须先备份再操作 | 2026-07-24 | 防止数据丢失 |
 | EXP-015 | 多步骤任务必须用 TodoWrite 规划 | 2026-08-04 | 确保任务完整性 |
+| EXP-046 | **编辑工具会给带 BOM 的文件重复写 BOM，须落盘后复核字节头**（C-20260927-004）：change_log.md 文件头实测累积 **4 个** UTF-8 BOM（`EF BB BF × 4`，历史编辑工具重复写入）；用 Edit 工具修改该文件后 BOM 数又从 1 变 2——保存时工具无条件再写一个 BOM，多次编辑即堆叠。教训：①统计前导 BOM 必须用循环逐 3 字节计数，不能只抽查前 9 字节（本次误判为「三重」实为四重）；②对带 BOM 文件做任何编辑后，必须用字节头复核（`EF BB BF 23` 为单 BOM 正常态），发现堆叠用「剥除全部前导 BOM → 重写单个」归一；③各文档 BOM 惯例不同（change_log.md 有单 BOM、五大联赛全栈框架设计.md/project_memory.md 无 BOM），按各自原状维持，禁止顺手互相改造；④PS1 含中文必须 BOM 见 §10.3 第 5 条 | 2026-09-27 | 带 BOM 文档编辑后强制字节头复核；BOM 计数用循环不用抽样；单文件 BOM 惯例保持一致 |
 
 ---
 
@@ -661,12 +662,13 @@ change_log.md §5 统计表曾长期停留在 136 而实际记录已达 554（�
 
 ---
 
-**文档版本**: v1.51
+**文档版本**: v1.52
 **创建时间**: 2026-07-23
-**最后更新**: 2026-09-26（风险 M 修复 C-091：采集器日志 RotatingFileHandler 轮转 + 旧产物启动时自动清理，logs/ -82%）
+**最后更新**: 2026-09-27（tests/ 目录审计归档框架文档 §9.18 + change_log 四重 BOM 归一，C-20260927-003/004；新增 EXP-046）
 **更新频率**: 规则或经验变更时更新
 **维护人**: 模型优化团队
 **更新说明**:
+- **v1.52 (2026-09-27)**: ①tests/ 目录审计（第 9 次同型）结论归档《五大联赛全栈框架设计.md》新增 §9.18「测试与 CI 体系」、§13.4 风险表新增 2 行（C-20260927-003）：293 用例本机 281 过/12 跳/0 失败（365.69s），但 GitHub Actions 可取 4 次运行全红（run#6 唯一真实失败 ubuntu/Py3.12，日志 403 根因未取证）、pre-commit hook 未装、Node 6 脚本脱管（writer 测试 4 失败 schema 漂移）、npm test 空壳——自动门禁名存实亡登记为中-高风险。②change_log.md 文件头四重 BOM 归一为单 BOM（C-20260927-004），新增 EXP-046：编辑工具会给带 BOM 文件重复写 BOM，带 BOM 文档每次编辑后必须复核字节头，BOM 计数用循环逐 3 字节而非抽样。
 - **v1.51 (2026-09-26)**: 风险 M 修复（C-20260926-091）：logs/ 日志轮转与自动清理。①`final_sofascore_collector.setup_logging` 改固定文件 `sofascore_collector.log` + `RotatingFileHandler(maxBytes=5MB, backupCount=3)`（磁盘上限约 20MB，import logging.handlers）；②新增 `purge_old_collector_artifacts()`——每次启动自动清理：旧时间戳 log 保留最近 3 个、summary JSON 保留最近 10 个，try/except 全隔离；③`odds_data_spec.purge_old_training_logs()`——`TrainingLogger.__init__` 自动执行，training JSON mtime>30 天删除但最近 20 个保底（retrain_trigger_runner 只取最新，与风险O 兼容）；④清理模式不匹配 `sofascore_progress_*.json`（resume 依赖）与轮转 `.log.N` 文件，实测零误伤。结果：首次触发删除旧 log 524/旧 summary 144/超期 training 12；logs/ 由 1028 文件/77.81MB 降至 **349 文件/14.09MB（-82%）**，此后自动维护、无需计划任务。经验教训——日志清理优先「启动时挂钩 + 保留最近 N」而非依赖计划任务；glob 模式设计须用真实文件清单验证排除项（progress/轮转文件）；删除前做模式安全预览是防止误删 resume 状态的必要步骤。遗留：understat/xgscore/sporttery/pipeline 时间戳 log（约 10MB）待推广同一模式。
 - **v1.50 (2026-09-26)**: 风险 R 修复（C-20260926-090）：matches 26/27 match_id 统一为 SofaScore 全名口径。深度诊断推翻原登记方向（统一中文）与 DATA-014 的「预测轨简名」描述：matches 实际主流（25/26 全量、26/27 1940/1983）与采集轨 ps mid 完全一致（SofaScore 全名）；232 个 CN 行全部来自 populate（C-086 误用归一化中文名生成 match_id），另有 23 组 odds500 简名行 vs SofaScore 全名行双行。迁移（backup/migrate_risk_r.py，两轮，迁移前备份 backup/odds_backup_riskR_20260926.db）：233 组重复组保留 SofaScore 口径行（有 ps 优先），字段 merge 351 项、删 238 行；21 场 CN 独有改名；model_predictions 迁移 83 mid（UNIQUE 冲突保 timestamp=MIN/is_replay=MIN，符 C-053）、post_match_review 迁移 33 mid；补插 52 场 ps 孤儿（数据源 odds500_match，handicap 不写——matches CHECK 仅允许 sporttery 竞彩口径）。结果：matches 26/27 共 2012 场、CN 残留 0、重复 0、ps 孤儿 65→15（余 15 场 odds500 无记录：6 场历史漏场+9 场未来场）。根源修复：populate 的 match_id 改用 fbref_match_mapping.odds_match_id 原值，重跑 inserted=0 幂等。新增 DATA-015 规则；新登记风险 S（odds500_match 144 + odds500_stat 5 个 CN mid）。经验教训——跨源一致性应以采集器/ps 的实际写入口径为准，不能凭「归一化」直觉选方向；修复前必须先诊断清「谁是多数派、谁与健康历史一致」；matches.handicap 有 CHECK 约束仅允许 sporttery 源。
 - **v1.49 (2026-09-26)**: 风险 N 修复（C-20260926-089）：采集器 `mark_done` 仅对已结束比赛（status=finished/ended）标记，未开赛比赛不写库不标记，下次自动重试。删除 26/27 进度文件重采后，player_stats 覆盖率从 26.1% 提升至 40.6%（法甲因 Akamai 403 未采完）。新发现风险 R：26/27 赛季 matches.match_id 语言不一致（中文 232/英文 231），与采集器 SofaScore 英文名 match_id 不匹配，致 match_player_stats 孤儿率 23.9%（25/26 及之前仅 0~0.3%）。需统一 match_id 为归一化中文名。
