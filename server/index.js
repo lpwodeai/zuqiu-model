@@ -249,10 +249,19 @@ async function startServer() {
 
   // 定时任务只在主进程运行（cluster 模式下 worker 跳过）
   if (!process.env.CLUSTER_WORKER) {
-    trainScheduler.init().then(() => {
-      return trainScheduler.scheduleTraining();
-    }).then(() => {
-      console.log('✅ 训练调度服务已启动');
+    trainScheduler.init().then(async () => {
+      // C-20260926-109: 内嵌训练 cron 默认禁用——它（0 2 * * 1 周一02:00）与
+      // Windows 计划任务 FootballModelAutoTrain 触发时刻完全相同，并发会重复训练、
+      // 竞相导出 assets。训练统一收敛到计划任务链路；手动触发（triggerTraining）不受影响。
+      // 恢复方式：设置环境变量 TRAIN_CRON_ENABLED=true（.env 同样生效）
+      const cronEnabled = ['true', '1', 'yes'].includes(
+        (process.env.TRAIN_CRON_ENABLED || '').toLowerCase()
+      );
+      if (cronEnabled) {
+        await trainScheduler.scheduleTraining();
+      } else {
+        console.log('⏸️ 内嵌训练 cron 已禁用（TRAIN_CRON_ENABLED 未开启），训练由计划任务触发');
+      }
     }).catch((err) => {
       console.warn('⚠️ 训练调度服务启动失败:', err.message);
     });
