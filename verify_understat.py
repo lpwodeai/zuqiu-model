@@ -1,6 +1,7 @@
-import sqlite3
+import sqlite3, os
 
-c = sqlite3.connect(r'data/odds.db')
+_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'odds.db')
+c = sqlite3.connect(_DB)
 cur = c.cursor()
 
 print("=== Understat 西甲 26/27 数据查验 ===\n")

@@ -1,6 +1,7 @@
-import sqlite3
+import sqlite3, os
 
-c = sqlite3.connect(r'data/odds.db')
+_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'odds.db')
+c = sqlite3.connect(_DB)
 cur = c.cursor()
 
 print("=== 西甲 25/26 全赛季 Understat 数据最终查验 ===\n")

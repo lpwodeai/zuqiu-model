@@ -443,6 +443,11 @@ match_conditions:
     enabled: true
     # 气候均值数据源: LEAGUE_MONTH_CLIMATE (1991-2020 30年均值)
     data_source: climate_estimate
+    # C-20260925-082（风险 F）: 气候估算（is_estimate=True）是否允许乘 λ。
+    # 气候均值是「联赛×月份」常量，同月同联赛所有场乘数相同，非逐场信号，
+    # 且赔率已隐含季节性天气预期；默认 false 不乘 λ，气候数据仅用于报告展示。
+    # 仅当未来接入逐场实时天气（is_estimate=False）时才真正应用天气影响。
+    apply_climate_to_lambda: false
     # 未来接入实时天气 API 时切换为 live_weather
     # api_endpoint: ${WEATHER_API_ENDPOINT}
     # api_key: ${WEATHER_API_KEY}
@@ -461,6 +466,17 @@ match_conditions:
       wind: 18
       snow_temp: 1
       fog_temp: 5
+  # ============================================================
+  # C-20260925-081（风险 G 去重）: 伤病信号双通道分流
+  # 伤病信息已通过 pa_*（24维，含官方缺阵名单）进入 WDL 模型；T-006 v4
+  # 比分网格又用 wdl_probs 做重要性重加权（边际=WDL概率），若 Score 的 λ
+  # 再乘伤病因子即同一伤病信息两次进入比分输出（重复计数）。
+  #   Score λ = base × 天气（天气不在 WDL/pa_*，保留）
+  #   TG    λ = base × 伤病 × 核心 × 天气（TG 无 WDL/pa_* 通道，全保留）
+  # 开关优先级：环境变量 TRAE_MC_SCORE_INJURY(1/0) > 本文件配置
+  # ============================================================
+  score_injury_adjust: false   # Score λ 是否乘伤病/核心因子；false=去重生产口径
+  score_injury_shadow: true    # 影子双算：全量伤病 λ 的 Score 结果仅记录对照，不改生产
 
 # ============================================================
 # C-20260823-P0-4: 统一比分-胜平负预测引擎
@@ -483,6 +499,26 @@ unified_engine:
     objective: count:poisson  # Poisson 回归（而非平方误差）
     lambda_home_col: expected_home_goals
     lambda_away_col: expected_away_goals
+
+# ============================================================
+# C-20260921-036: TG（总进球）λ 滚动校准 —— 当前仅 Shadow，不改生产
+# 生产 TG 永远 factor=1.0；shadow 双算写 reports/tg_calib_shadow.jsonl，
+# 由 scripts/tg_calibration_shadow_eval.py 回放评测，达标后才开 enabled。
+# 开关优先级：环境变量 TRAE_TG_CALIB_SHADOW > shadow_enabled。
+# ============================================================
+tg_calibration:
+  enabled: false          # 生产校准注入总开关（A/B 门禁通过前保持 false）
+  shadow_enabled: true    # Shadow 双算（只写 JSONL，不影响发布值/落库）
+  window_days: 90         # 滚动先验窗口（严格 < 比赛日，同赛季隔离）
+  min_samples: 30         # 联赛层激活最小样本，不足走池化
+  factor_min: 0.7         # 只允许下调（市场系统性高估大球），禁止上修
+  factor_max: 1.0
+  pooled_fallback: true   # 单联赛冷启动时五联赛池化因子兜底
+  fallback_factor: 1.0    # 池化也不足 / 异常时不校准
+  factor_multiplier: 1.0  # 探索性消融乘子（×0.95 仅评测脚本 CLI 验证过，同集调参未上线）
+  # C-20260921-040: 融合权重 Shadow（C-039 验证 0.30 RPS p=0.000 Brier p=0.005 高桶 gap 0.164→0.085）
+  w_odds: 0.15              # 生产融合权重（Poisson 1-w_odds + TG赔率 w_odds），生产恒 0.15
+  shadow_w_odds: 0.30       # Shadow 实验权重（只写 JSONL，不影响发布值/落库）
 
 # ============================================================
 # P1-10: EV 决策引擎全局配置（第二层决策层，D3 运行时读取）

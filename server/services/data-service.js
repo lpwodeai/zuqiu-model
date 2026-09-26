@@ -16,7 +16,6 @@ class DataService {
   constructor() {
     this.dataPath = path.join(__dirname, '../../data');
     this.oddsPath = path.join(this.dataPath, 'odds');
-    this.teamsPath = path.join(this.dataPath, 'teams');
     this.matchesPath = path.join(this.dataPath, 'matches');
     
     this.ensureDirectories();
@@ -39,7 +38,7 @@ class DataService {
    * 确保数据目录存在
    */
   ensureDirectories() {
-    const dirs = [this.dataPath, this.oddsPath, this.teamsPath, this.matchesPath];
+    const dirs = [this.dataPath, this.oddsPath, this.matchesPath];
     dirs.forEach(dir => {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -509,8 +508,6 @@ calculateRound(dateStr) {
     switch (type) {
       case 'odds':
         return await this.importOdds(data);
-      case 'teams':
-        return await this.importTeams(data);
       case 'matches':
         return await this.importMatches(data);
       default:
@@ -535,23 +532,6 @@ calculateRound(dateStr) {
       count = 1;
     }
     return { count };
-  }
-
-  /**
-   * 导入球队数据
-   */
-  async importTeams(data) {
-    const filePath = path.join(this.teamsPath, 'all_teams.json');
-    let existingTeams = {};
-    
-    if (fs.existsSync(filePath)) {
-      existingTeams = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    }
-
-    Object.assign(existingTeams, data);
-    fs.writeFileSync(filePath, JSON.stringify(existingTeams, null, 2));
-
-    return { count: Object.keys(data).length };
   }
 
   /**
@@ -779,7 +759,6 @@ calculateRound(dateStr) {
   async getDataStatus() {
     const oddsFiles = fs.readdirSync(this.oddsPath).filter(f => f.endsWith('.json'));
     const matchesFiles = fs.readdirSync(this.matchesPath).filter(f => f.endsWith('.json'));
-    const teamsFile = fs.existsSync(path.join(this.teamsPath, 'all_teams.json'));
 
     let dbStats = { matches: 0, odds: 0 };
     try {
@@ -794,7 +773,6 @@ calculateRound(dateStr) {
     return {
       odds: { count: oddsFiles.length, lastUpdate: this.getLastUpdate(this.oddsPath) },
       matches: { count: matchesFiles.length + dbStats.matches, lastUpdate: this.getLastUpdate(this.matchesPath) },
-      teams: { exists: teamsFile },
       cache: { size: this.cache.size },
       database: { matches: dbStats.matches }
     };

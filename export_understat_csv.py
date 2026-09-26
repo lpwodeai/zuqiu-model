@@ -7,8 +7,9 @@ import sqlite3
 import sys
 from pathlib import Path
 
-DB = Path(r'data/odds.db')
-OUT_DIR = Path(r'data/understat_export')
+BASE_DIR = Path(__file__).resolve().parent
+DB = BASE_DIR / 'data' / 'odds.db'
+OUT_DIR = BASE_DIR / 'data' / 'understat_export'
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TABLES = [

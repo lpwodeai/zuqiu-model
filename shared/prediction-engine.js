@@ -128,7 +128,11 @@ class PredictionEngine {
    * @returns {Object} { attack: number, defence: number }
    */
   calcWeatherImpact(weather) {
-    // P0-修复: 优先使用数据驱动因子
+    // C-20260925-082（风险 F）: 兼容两种输入 schema：
+    //   1. Python 生产 schema: weather = {attack_impact, defence_impact, is_estimate, type, temp, ...}
+    //      （由 features/match_condition_features.py build_match_conditions 生成）
+    //   2. 旧演示 schema: weather = {temperature, humidity, ...}（model-engine-partial.js 演示数据）
+    // 优先使用数据驱动因子；扁平温度回退到硬编码类型映射；未知则 clear(无影响)。
     if (weather && typeof weather.attack_impact === 'number' && typeof weather.defence_impact === 'number') {
       return {
         attack: weather.attack_impact,
@@ -136,8 +140,13 @@ class PredictionEngine {
         _source: weather.is_estimate ? 'climate_estimate' : 'live_weather'
       };
     }
-    // 降级: 旧硬编码映射
-    const weatherType = weather?.type || 'clear';
+    // 降级: 天气类型 → 硬编码映射（兼容演示 schema 的 temperature 字段）
+    let weatherType = weather?.type;
+    if (!weatherType && typeof weather?.temperature === 'number') {
+      const t = weather.temperature;
+      weatherType = t <= 0 ? 'snow' : t < 5 ? 'fog' : t > 32 ? 'extreme_heat' : 'clear';
+    }
+    weatherType = weatherType || 'clear';
     const impact = WEATHER_IMPACT[weatherType] || WEATHER_IMPACT.clear;
     return { ...impact, _source: 'hardcoded' };
   }
@@ -158,8 +167,10 @@ class PredictionEngine {
     const neutral = options.neutral || false;
 
     // P0-修复: 优先使用 options.matchConditions 中的天气数据
+    // C-20260925-082: 兼容 Python 生产 schema（mc.weather 对象）与旧演示 schema
+    //   （mc 扁平含 temperature/humidity）。mc.weather 缺失时回退到 mc 本身。
     const mc = options.matchConditions || {};
-    const weatherData = mc.weather || options.weather;
+    const weatherData = mc.weather || mc || options.weather;
     
     const weatherImpact = this.calcWeatherImpact(weatherData);
     const surfaceImpact = this.calcSurfaceImpact(options.surface);
