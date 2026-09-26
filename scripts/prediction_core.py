@@ -161,7 +161,7 @@ def _tg_w_odds_config() -> tuple:
     """C-20260921-040: TG 融合权重配置。
 
     Returns:
-        (w_odds_prod, w_odds_shadow): 生产权重（恒 0.15）、Shadow 权重（config 可调，默认 0.30）
+        (w_odds_prod, w_odds_shadow): 生产权重（2026-09-26 起 0.30，C-102 评审通过）、Shadow 权重（config 可调，默认 0.30）
     """
     try:
         import yaml
@@ -171,12 +171,12 @@ def _tg_w_odds_config() -> tuple:
                 cfg = yaml.safe_load(f) or {}
             tg_cfg = cfg.get('tg_calibration') or {}
             return (
-                float(tg_cfg.get('w_odds', 0.15)),
+                float(tg_cfg.get('w_odds', 0.30)),
                 float(tg_cfg.get('shadow_w_odds', 0.30)),
             )
     except Exception:
         pass
-    return 0.15, 0.30
+    return 0.30, 0.30
 
 
 TG_W_ODDS_PROD, TG_W_ODDS_SHADOW = _tg_w_odds_config()
@@ -2020,8 +2020,8 @@ class TotalGoalsPredictor:
         C-20260921-036: tg_calibration_factor 为 λ_total 滚动缩放校准因子（默认 1.0）。
         生产路径永远传 1.0（复盘口径不变）；Shadow 路径传入分层校准因子，
         在进入 Poisson/DC 之前对 (λ_home, λ_away) 同比例缩放。
-        C-20260921-040: w_odds 为融合权重（默认 None→读 config 生产值 0.15）；
-        Shadow 路径传入 0.30（C-039 验证首个统计显著结果）。
+        C-20260921-040: w_odds 为融合权重（默认 None→读 config 生产值 0.30）；
+        2026-09-26 起生产 0.15→0.30（C-102 配对评测 n=182 三闸门全过 RPS p=0.002）。
         """
         tg_records = odds_data['tg_odds']['records']
 

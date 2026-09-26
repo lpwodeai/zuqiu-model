@@ -2071,10 +2071,12 @@ def collect_league(client: SofaScoreClient, league: str, season: str,
                    rounds_range: Optional[Tuple[int, int]],
                    limit: Optional[int], resume: bool, dry_run: bool,
                    progress: ProgressTracker, conn: sqlite3.Connection,
-                   logger: logging.Logger) -> List[Dict[str, Any]]:
+                   logger: logging.Logger,
+                   upcoming_window: Optional[int] = None) -> List[Dict[str, Any]]:
     """采集单联赛所有轮次的所有比赛。"""
     logger.info("=" * 60)
     logger.info(f"开始采集联赛: {league} | season={season} | rounds={rounds_range} | "
+                f"upcoming_window={upcoming_window} | "
                 f"limit={limit} | resume={resume} | dry_run={dry_run}")
     logger.info("=" * 60)
 
@@ -2090,12 +2092,37 @@ def collect_league(client: SofaScoreClient, league: str, season: str,
         all_rounds = [r for r in all_rounds if start <= r.get("round", 0) <= end]
         logger.info(f"[{league}] 过滤后保留轮次: {start}~{end}, 共 {len(all_rounds)} 轮")
 
-    # 3. 拉取每轮的比赛列表
+    # C-20260926-103: 日期窗口选轮——SofaScore 轮次号与自然日不严格对应
+    # （国际比赛日拆轮、延期比赛留在原轮），写死轮次号会导致赛程漏采。
+    # 按每轮事件开赛时间戳保留与 [今天00:00, 今天+N天24:00] 重叠的轮；
+    # 轮次按时间排序，遇到整轮晚于窗口即停止扫描后续轮。
+    win_start_ts = win_end_ts = None
+    if upcoming_window:
+        win_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        win_start_ts = win_start.timestamp()
+        win_end_ts = (win_start + timedelta(days=upcoming_window + 1)).timestamp()
+        logger.info(f"[{league}] 日期窗口选轮: 未来 {upcoming_window} 天（自 {win_start:%Y-%m-%d} 起）")
+
+    # 3. 拉取每轮的比赛列表（日期窗口模式下按开赛时间过滤）
     all_events: List[Dict[str, Any]] = []
+    kept_rounds = 0
     for r in all_rounds:
         round_num = r.get("round")
         events = fetch_round_events(client, league, season, round_num, logger)
+        if upcoming_window:
+            if not events:
+                continue  # 尚未发布赛程，不中断（个别轮空不代表后续轮空）
+            ts_list = [e.get("startTimestamp", 0) for e in events]
+            rmin, rmax = min(ts_list), max(ts_list)
+            if rmax < win_start_ts:
+                continue  # 整轮已结束
+            if rmin > win_end_ts:
+                logger.info(f"[{league}] R{round_num} 全部晚于窗口，停止扫描后续轮")
+                break
+            kept_rounds += 1
         all_events.extend(events)
+    if upcoming_window:
+        logger.info(f"[{league}] 日期窗口命中 {kept_rounds} 轮 / {len(all_events)} 场")
 
     total = len(all_events)
     logger.info(f"[{league}] 共扫描到 {total} 场比赛")
@@ -2166,7 +2193,8 @@ def collect_league(client: SofaScoreClient, league: str, season: str,
 
 def run_main(leagues: List[str], season: str, rounds_range: Optional[Tuple[int, int]],
              limit: Optional[int], resume: bool, dry_run: bool,
-             cookies: Optional[str] = None) -> None:
+             cookies: Optional[str] = None,
+             upcoming_window: Optional[int] = None) -> None:
     """主入口。"""
     logger = setup_logging(season)
     progress = ProgressTracker(season)
@@ -2194,6 +2222,7 @@ def run_main(leagues: List[str], season: str, rounds_range: Optional[Tuple[int, 
         "season": season,
         "leagues": leagues,
         "rounds_range": list(rounds_range) if rounds_range else None,
+        "upcoming_window": upcoming_window,
         "limit": limit,
         "resume": resume,
         "dry_run": dry_run,
@@ -2214,7 +2243,7 @@ def run_main(leagues: List[str], season: str, rounds_range: Optional[Tuple[int, 
 
             league_results = collect_league(
                 client, league, season, rounds_range, limit, resume, dry_run,
-                progress, conn, logger,
+                progress, conn, logger, upcoming_window=upcoming_window,
             )
             summary["league_results"][league] = league_results
             for r in league_results:
@@ -2276,6 +2305,9 @@ def main() -> None:
 
   # 仅采集不写库（验证数据可拉取）
   python final_sofascore_collector.py --leagues 西甲 --season 25/26 --dry-run --limit 3
+
+  # 日期窗口选轮（C-20260926-103）：自动采集未来 3 天涉及的全部轮次（轮次号无需手填）
+  python final_sofascore_collector.py --leagues all --season 26/27 --upcoming-window 3
         """,
     )
     parser.add_argument("--leagues", type=str, default="all",
@@ -2283,7 +2315,11 @@ def main() -> None:
     parser.add_argument("--season", type=str, default="25/26",
                         help="赛季（如 25/26, 24/25, 23/24）")
     parser.add_argument("--rounds", type=str, default=None,
-                        help="轮次范围（如 1-5 或 3）")
+                        help="轮次范围（如 1-5 或 3）；与 --upcoming-window 互斥")
+    parser.add_argument("--upcoming-window", type=int, default=None, metavar="DAYS",
+                        help="C-20260926-103: 按日期窗口自动选轮，"
+                             "采集自今天起 DAYS 天内开赛比赛所属的全部轮次（如 3）；"
+                             "与 --rounds 互斥")
     parser.add_argument("--limit", type=int, default=None,
                         help="每联赛最多采集场次（用于试跑）")
     parser.add_argument("--resume", action="store_true",
@@ -2394,6 +2430,14 @@ def main() -> None:
     # 解析轮次
     rounds_range = parse_rounds_range(args.rounds)
 
+    # C-20260926-103: --rounds 与 --upcoming-window 互斥
+    if rounds_range and args.upcoming_window:
+        print("❌ --rounds 与 --upcoming-window 互斥，请只指定一种选轮方式")
+        sys.exit(1)
+    if args.upcoming_window is not None and args.upcoming_window < 1:
+        print("❌ --upcoming-window 必须 >= 1（天）")
+        sys.exit(1)
+
     # 校验 curl_cffi
     if not _HAS_CURL_CFFI:
         print("⚠️  警告: curl_cffi 未安装，无法绕过 Akamai 反爬，可能全部 403。")
@@ -2402,7 +2446,8 @@ def main() -> None:
         if resp != "y":
             sys.exit(0)
 
-    run_main(leagues, args.season, rounds_range, args.limit, args.resume, args.dry_run, cookies=args.cookies)
+    run_main(leagues, args.season, rounds_range, args.limit, args.resume, args.dry_run,
+             cookies=args.cookies, upcoming_window=args.upcoming_window)
 
 
 if __name__ == "__main__":

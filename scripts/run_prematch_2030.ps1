@@ -23,7 +23,9 @@ function Invoke-Step {
 }
 
 # 0a. 赛前数据补采：SofaScore 赛程注册 + 球队实力特征重算（500.com 待采集器升级后加入）
-Invoke-Step -Name "0a_赛前数据补采" -Arguments @("collection\final_sofascore_collector.py", "--leagues", "all", "--season", "26/27", "--rounds", "5")
+# C-20260926-103: 用日期窗口自动选轮（--upcoming-window 3），替代写死的 --rounds 5；
+# SofaScore 轮次号与自然日不严格对应（国际比赛日拆轮/延期比赛留在原轮）。
+Invoke-Step -Name "0a_赛前数据补采" -Arguments @("collection\final_sofascore_collector.py", "--leagues", "all", "--season", "26/27", "--upcoming-window", "3")
 # 0a-1. 赛前官方首发/伤停采集（预测首发 XI + missingPlayers 刷新）
 Invoke-Step -Name "0a-1_赛前官方首发伤停采集" -Arguments @("collection\prematch_sofascore_lineups.py", "--date", $reportDate, "--days-ahead", "2")
 Invoke-Step -Name "0a-2_伤停同步入库" -Arguments @("scripts\player_injury_source.py", "--sync-sofascore")
