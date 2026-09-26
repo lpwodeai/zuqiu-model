@@ -20,6 +20,8 @@ __pycache__/
 logs/
 backup/
 backups/
+*.bak
+*.bak_*
 output/
 reports/
 mlruns/
