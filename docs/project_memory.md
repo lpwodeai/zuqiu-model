@@ -18,7 +18,7 @@
 
 ## 一、硬性规则
 
-### 1.1 数据规则 (DATA-001 ~ DATA-009)
+### 1.1 数据规则 (DATA-001 ~ DATA-020)
 
 | 规则ID | 规则内容 | 来源 |
 |--------|----------|------|
@@ -31,8 +31,21 @@
 | DATA-007 | 所有数据导入必须经过验证 | 2026-07-24 |
 | DATA-008 | 数据库变更必须记录到 change_log.md | 2026-07-24 |
 | DATA-009 | 数据泄露检查：特征不得使用赛后信息 | 2026-07-24 |
+| DATA-010 | 「当前缺阵」查询**禁止使用 player_injuries 累积表**（合并 10 赛季历史伤病行，expected_return 为空的旧行被永久误判缺阵，实测马拉加误判 32/比利亚雷亚尔 74 人）；必须查 match_missing_players 精确到比赛日（`substr(match_id,1,10)=目标日`）且 `reason!='转会'`；赛前采集走 `collection/prematch_sofascore_lineups.py`（SofaScore /event/{id}/lineups 单接口=预测首发+官方伤停，/injuries 端点不存在） | 2026-09-17 §3.191 |
+| DATA-011 | **赔率数据唯一 SSOT 为 `odds.db`**——禁止保留或新建手动 TXT 旁路（`data/{联赛}{赛季}赛季完整时序赔率.txt` 已全量删除，C-20260918-019/021）；预测脚本（`predict_today_14.py`/`generate_complete_report.py` 等）必须用 `scripts/load_odds_from_db.py` 的 `load_odds_from_db(match_id)` 从 `odds.db` 加载时序赔率，禁止读 TXT；26-27 赛季时序表 match_id 为中文格式（`{date}_{主队中文}_{客队中文}`），`match_id_en` 字段未填充，反查须用 `find_match_id_by_cn()` 中文短名模糊匹配 | 2026-09-18 C-020/021 |
+| DATA-012 | **队名归一化口径分治**——`team_name_mapping.normalize_team_name`（4 级模糊匹配：精确别名→子串→模糊→序列相似度）写入口径（与 sporttery_live_collector.normalize_team / wdl_history / score_history 一致，使用 TEAM_ALIASES 标准短名如「纽卡斯尔」「热刺」「毕尔巴鄂」「云达不莱梅」）；`feature_utils.normalize_team_name`（纯精确映射）适合对齐 score_history 内部变体名（如「云达不来梅」「布赖顿」），**不可用于跨表 LIKE 模糊匹配**（无法处理 500.com 全名 ↔ wdl_history 短名场景，实测 5 场被跳过）；`generate_unified_report.find_sporttery_match_id` / `find_any_sporttery_match_id` 已改用 `_normalize_team_for_wdl`（team_name_mapping 优先 + feature_utils fallback + 原名 fallback）桥接函数（C-20260918-052）；其他位置（feature_utils 8 处调用）保留原状（用于 score_history 内部口径对齐，不涉及跨表）；**禁止** 在 wdl_history LIKE 查询场景直接用 `feature_utils.normalize_team_name` | 2026-09-18 C-20260918-052 |
+| DATA-013 | **SofaScore 网络：本地 DNS 污染绕过方案**——`api.sofascore.com`/`www.sofascore.com` 本地 DNS 解析失败属网络层阻断（非 Akamai 反爬，curl_cffi 指纹模拟仍有效）；绕过：①DoH 取真实 IP（Fastly CDN，如 146.75.115.52）；②curl_cffi `impersonate="chrome"` + **URL 用 IP + `Host` 头 + `verify=False`** 直连（TLS SNI 为 IP 但 Fastly 按 Host 路由）；**已自动化为 `collection/doh_http_client.py`**（`DohSession`：直连优先 + DNS/连接异常自动降级 DoH，多 DoH 服务商容错 + 多 A 记录重试；CLI：`check`/`resolve`/`fetch [--force-doh]`），未开赛场次只需写 `fbref_match_mapping` 映射行（event_id + CN_TZ 日期 + 英文队名），再跑 `features/incremental_sofascore_features.py --since {date}` 聚合两队近 5 场历史数据生成 `sofascore_team_features` 行（无需赛后 lineups/statistics） | 2026-09-18 C-20260918-053 / 2026-09-19 C-20260919-001 |
+| DATA-014 | **match_id 双轨口径硬约束（跨表 JOIN 必须 fuzzy 桥接，禁止假设等号）**——①**预测轨**：`model_predictions.match_id` / `matches.match_id` 用 **UTC 日期 + 预测侧英文简名**（如 `2026-09-16_FC Barcelona_Real Racing Club`、`2026-09-17_La Coruna_Sevilla`、`2026-09-18_Malaga_Villarreal`）；②**采集轨**：`fbref_match_mapping.odds_match_id` / `match_player_stats.match_id` / `match_lineups.match_id` 用 **北京日期 + SofaScore 英文全名**（如 `2026-09-17_FC Barcelona_Real Racing Club`、`2026-09-17_Deportivo de A Coruña_Sevilla`、`2026-09-18_Málaga CF_Villarreal`）；跨日凌晨场两轨日期差 1 天、队名简/全（含重音符、FC/CF 后缀、Deportivo de A... 前缀）均可能不同；③**禁止 UPDATE `fbref_match_mapping.odds_match_id` 对齐预测轨**——会破坏与 stats/lineups 的关联；也禁止补同 event 别名行（多处 COUNT/枚举消费者会重复计数）；④跨轨关联唯一正确方式：按 event_id fuzzy 桥接（`attribution_engine.find_event_id_fuzzy`：match_id 解日期+主客名 → NFKD 去重音/小写/剔停用词与俱乐部后缀得 token → mapping 日期±1 窗口主客双 token 匹配，包含或 Jaccard≥0.3，**命中须唯一**）；`get_event_id` 精确失配已自动回退；复盘流水线目标扫描已接入且按 event_id 补取 league；⑤**同一 SofaScore event 只允许一份复盘**——`_find_reviewed_alias` 经 SOFA_TEAM_CN_MAP 转中文按日期+双队名查重，重复预测残留口径（如 9-16_La Coruna_Sevilla）跳过；⑥`_summary.md` 必须按目录日期全量重建（`_rebuild_dir_summary`），禁止用「本次处理场次」覆盖；⑦复盘报告的正式 match_id 口径以赛前报告 build_log 为准 | 2026-09-19 C-20260919-014 |
+| DATA-015 | **matches 表 match_id 已统一 SofaScore 全名口径（C-090 对 DATA-014 双轨的修正）**——①DATA-014 的「预测轨=matches 用英文简名」系对 26/27 初污染状态的描述而非设计：诊断证实 matches 25/26 全量及 26/27 主流（1940/1983）与采集轨 ps mid 完全一致（SofaScore 全名），简名行（odds500 风格 `La Coruna`/`Malaga`/`Hull`）与中文行（populate C-086 归一中文）均为污染源产生的重复行；②C-20260926-090 迁移后 matches 26/27 单一口径=**SofaScore 全名**（与 `match_player_stats`/`match_lineups`/`fbref_match_mapping.odds_match_id` 同号），CN 残留 0、同场重复 0、ps 孤儿 65→15；③**populate_matches_from_fbref.py 生成 match_id 必须用 `fbref_match_mapping.odds_match_id` 原值**（禁止归一化中文名——C-086 方向错误已纠正）；④DATA-014 的 event_id fuzzy 桥接**仍然有效**，用于关联存量赛前报告（旧简名/中文 mid）、odds500 生态（`odds500_match`/`odds500_stat` 仍含 144+5 个 CN mid，风险 S 待修）；⑤matches.handicap CHECK 约束仅允许 `handicap_source='sporttery'`（竞彩 goalLine 口径），任何补插/迁移禁止写入 odds500 亚盘 handicap | 2026-09-26 C-20260926-090 |
+| DATA-016 | **Akamai 指纹级 403 处置：curl_cffi → Playwright 页面导航自动后备（C-20260926-092）**——①现象：api.sofascore.com 对 curl_cffi（edge **与** chrome 两指纹）及用户 Edge 普通窗口均 403 challenge，Edge 无痕窗口与 Playwright headless `page.goto` 200；②根因：本轮风控纯凭客户端全套指纹（TLS JA3/HTTP2 SETTINGS/导航请求头/JS 传感器）判定，且 **Akamai 全程未下发任何 cookie**——手动导 cookie 路线无凭证可取（`document.cookie` 里只有分析类 cookie，HttpOnly 的 `_abck` 根本不存在）；Playwright 裸 `APIRequestContext` 同样 403（缺页面导航自动补全的 sec-ch-ua/sec-fetch 等头），**仅完整页面导航通过**；③处置：`final_sofascore_collector.py` 请求统一收口 `_send()`，curl_cffi 首次 403 challenge 时惰性启动 headless Chromium（en-US、先 goto www.sofascore.com 热身）以页面导航重发，`_pw_active=True` 后全部请求走浏览器；`close()` 自动清理全部资源；playwright 未装/启动失败时行为与旧版一致（仅告警）；④通道自然恢复后 curl_cffi 自动直连、零开销，无需回退开关；⑤教训：遇到 403 先做「指纹通道矩阵」实测（curl_cffi×edge/chrome、page.goto、APIRequestContext、浏览器无痕）再决定路线，不要直接让用户翻 cookie——无 cookie 下发时该路线是死胡同 | 2026-09-26 C-20260926-092 |
+| DATA-017 | **odds500 生态 match_id 已统一 SofaScore 全名口径（C-20260926-093，风险 S 关闭）**——①五表（`odds500_match`/`odds500_betting`/`odds500_ouzhi_summary`/`odds500_ouzhi_company`/`odds500_stat`）原 26/27 CN mid 全部清零（144 场升班马 + 2 个历史 ad-hoc 残留），行数零损失；②**写入侧硬约束**：`final_500_collector._EXTRA_CN_TO_EN` 新队/旧队一律映射 SofaScore 全名（勒芒`Le Mans`、考文垂`Coventry City`、桑坦德竞技`Real Racing Club`、埃沃斯堡`SV 07 Elversberg`、赫尔城`Hull City`、马拉加`Málaga CF`、拉科鲁尼亚`Deportivo de A Coruña`、帕德博恩`SC Paderborn 07`、沙尔克04`FC Schalke 04`）；**禁止**再引入 Understat 简名目标；③`collect_match`/`build_match_id` 拼 mid 前必须经 `resolve_sofa_mid()` 按日期 ±2 天 + 双队名归一反查 `fbref_match_mapping.odds_match_id`，唯一命中则日期/全名整体采用（消除 500 赛程 40 场日期漂移），零/多候选才退回映射拼接（适用于 SofaScore 事件尚未注册的德甲第 7 轮起 29 场）；④`_norm_team` 结果仍含中文时必须告警（每队一次），禁止静默产出 CN mid；⑤迁移审计物：`backup/migrate_risk_s.py`、`backup/risk_s_rename_plan.json`、迁移前备份 `backup/odds_backup_riskS_20260926.db` | 2026-09-26 C-20260926-093 |
+| DATA-018 | **平局决策阈值因子单一来源 = config.yaml（C-20260926-094，风险2关闭）+ MLflow 已停用（方案B）**——①`prediction_core.py` 删除硬编码 `WDL_DRAW_THRESHOLD_FACTOR=0.0`，新增 `get_draw_threshold_factor(league_cn)` 读 `config.yaml`（`draw_threshold_mode`/`draw_threshold_factor`/`draw_threshold_factor_league`），predict 决策两处（主决策+冷门调整后重决策）均调该函数，与 Node `prediction-service.js` 同源；中文联赛名→config 代码映射 `LEAGUE_CN_TO_CODE`（法甲FL1/英超PL/德甲BL1/意甲IT/西甲LaLiga）；**禁止**再在 Python 硬编码任何平局阈值因子；②**MLflow 方案B 已执行**：`train_models.py`/`advanced_model_trainer.py` 移除全部 `import mlflow`/`MLFLOW_AVAILABLE`/`mlflow.*` 调用；`scripts/mlflow_repro.py` 去 MLflow 依赖改 `save_repro_snapshot()`（纯标准库，仅落盘 `assets/repro_snapshot_<ts>.json`）；`mlruns/` 影子目录已删除（畸形 run：仅 artifacts/ 无 meta.yaml，MLflow API 实测 run not found，新版文件后端已维护模式）；`.gitignore` 补 `mlruns/`+`assets/`；**禁止**再引入 MLflow 追踪（如需实验追踪请重议方案 A 并显式 `set_tracking_uri`/`set_experiment`）；③**argmax 为生产既定决策（C-20260926-095 实测依据）**：15,135 场 OOF 搜索证实 Stacking 天然强反平局（LR meta 平局召回 0.6%/固定权重 0.9%），提召回≥0.28 需 LR F=1.42（损失 2.38pp）或固定 F=1.22（损失 2.10pp），故保持 argmax（acc 0.5236/RPS 0.2005）；单模型报告 F=1.45/1.50 禁止直接套 Stacking；若业务强制提召回，优先固定权重 F=1.22；联赛启用仅限西甲 1.37/意甲 1.43，法甲 1.44 禁启用 | 2026-09-26 C-20260926-094 / C-20260926-095 |
 
-### 1.2 特征规则 (FEAT-001 ~ FEAT-012)
+| DATA-019 | **Node 侧死依赖治理规则（C-20260926-096）**——①node_modules 非权威资产、不入库（.gitignore 第1行）、可 `npm ci` 重建；package.json 变更必须经 install/uninstall 同步 lock（lockfileVersion 3），禁止只改一侧；②已移除 4 个零引用死依赖：`sqlite3`（绑定缺失、服务全走 better-sqlite3）、`sql.js`（WASM，已被 better-sqlite3 替代）、`jsdom`（采集用 cheerio）、`bull`（仅 redis 直连）；最终 287.1MB/370 包/16 dependencies；③**`node-schedule` 为保留的功能依赖**——train-scheduler.js L164 `await import('node-schedule')` 动态加载，提供 cron `0 2 * * 1`（周一02:00）定时训练，禁止当作死依赖移除；④**审计方法论（教训）**：依赖审计不得只做静态 import 扫描，必须覆盖 `import()`/createRequire 等动态形态，并以真实服务启动日志复验（能力回退告警），确认无功能受损后方可定稿 | 2026-09-26 C-20260926-096 |
+
+| DATA-020 | **离线特征链路数据保真规则（C-20260926-097）**——①球员特征链路必须先跑 player_feature_engineer 再跑 integrate_player_features；球队无球员数据（如 id 98/99）映射为**结构性零=未知**，禁止伪造：winsorize/clip 不得把未知零抬为 p1 真实值（已用未知行掩码在 clip 后恢复未知侧及 diff 为零）；②多矩阵按位置 concat 前必须校验行数一致，不一致硬报错（防静默错位）；③pandas 读 CSV 浮点列必须加 `float_precision='round_trip'`（默认 C 解析器单次往返实测 478 个 1 ULP 漂移；禁止用 %.17g 规避——长串反而触发更多误差）；④离线脚本缺必需输入必须非零退出，禁止静默 return；精选清单按列交集取列防过期 KeyError；⑤§9.13 写 output/ 的脚本实测 6 个（data_quality/model_validation/generate_team_attributes 写 assets/） | 2026-09-26 C-20260926-097 |
+
+### 1.2 特征规则 (FEAT-001 ~ FEAT-014)
 
 | 规则ID | 规则内容 | 来源 |
 |--------|----------|------|
@@ -45,9 +58,11 @@
 | FEAT-007 | 运算符优先级检查：A&B\|C&D 必须加括号 | 2026-07-24 |
 | FEAT-008 | 特征重要性排序后保留Top-K特征 | 2026-07-23 |
 | FEAT-009 | 时序/比分赔率特征由 ts_odds 开关控制（build_all_features 默认 False），开启后接入 D-013 22维 + T-003.1 8维并做联赛 z-score 归一 | 2026-08-28 |
-| FEAT-010 | 时序赔率表（wdl/handicap/total_goals/score_history）对齐 matches 必须使用 build_match_alignment 三通道（直连+match_id_en+桥表），禁止自定义单通道 JOIN | 2026-08-28 |
+| FEAT-010 | 时序赔率表（wdl/handicap/total_goals/score_history）对齐 matches 必须使用 build_match_alignment 四通道（直连+match_id_en+桥表+中→英 canon/token，通道3 由 C-20260920-025 新增），禁止自定义单通道 JOIN | 2026-08-28 |
 | FEAT-011 | 多博彩公司赔率一致性特征由 consensus_odds 开关控制（build_all_features 默认 False，生产 True），接入 10 维（mkt_imp_{win,draw,lose} 3 + mkt_dev_{win,draw,lose} 3 + mkt_dev_abs + mkt_dispersion + mkt_company_count + mkt_return），生产启用后模型 198→208 维 | 2026-08-28 |
 | FEAT-012 | 情境化特征由 ctx_features 开关控制（build_all_features 默认 False），接入 14 维（休息天数3 + 赛程密度4 + 连续作战2 + 积分压力3 + 德比/新军经验2）；A/B 及降维复查均无 RPS 增益，生产维持 False 不启用 | 2026-08-28 |
+| FEAT-013 | PA 特征官方伤停校正仅对**未赛场次**（match_date >= 今天）生效，历史场次必须保持历史出场连续性推算（防时间穿越回灌）；官方缺阵名单查 match_missing_players（DATA-010 口径），XI 推算先剔除官方缺阵球员再从剩余池重排，availability/missing_impact 切换官方口径；未采集时静默降级纯推算 | 2026-09-17 §3.191 |
+| FEAT-014 | **赔率转概率必须先取倒数**：口径为 `1/odds → 按行归一化去水`，**禁止对原始赔率直接线性归一化**（强队赔率低会被赋低概率，方向恰反；C-20260920-025 已修正 hcp_features.normalize_probabilities 并重训 T-005 v3）。所有衍生特征只基于去水概率，**train/serve 必须同源同公式**（favorite_margin=1−max(p)、balance=\|p0−p2\|、upset_risk=p1+p2、odds_skew=max−min、draw_divergence=\|1/wdl平赔 − hcp去水走水概率\|）；serving 历史 43 维由 `hcp_features_v2.get_serving_feature_matrix()` 单例供给（中位数兜底顺序须与训练一致），训练截止常量构建期临时提升、finally 还原。中文历史键对齐走 `build_match_alignment` 四通道（通道3=中→英 canon/token 唯一候选）。**C-20260920-026 已关闭 T-004 遗留**：tg_features.normalize_probabilities 同模式修正，`train_tg_model --deploy` 首次产出 assets/t004_tg_lgb_model.pkl（bundle 含 feature_cols/medians，10,528 场×374 维）；多路对齐多对一必须去重（build 入口按 matches_match_id，sofa/lag 防御性去重）。注意：OLD/NEW/ZERO 三口径对照证实 T-004 基础 20 维被 312 维 Lag"架空"（指标三口径几乎相同），数学修复价值在口径正确性；若后续要让市场信号真正生效，须从特征结构层面另立任务 | 2026-09-20 C-20260920-025 / 026 |
 
 ### 1.3 模型规则 (MODEL-001 ~ MODEL-007)
 
@@ -127,8 +142,8 @@
 
 | 数据库 | 用途 | 路径 |
 |--------|------|------|
-| odds.db | 主数据库，存储比赛和赔率历史数据 | data/odds.db |
-| odds_timing.db | 时序赔率数据库，存储多时间点赔率 | data/odds_timing.db |
+| odds.db | 主数据库，存储比赛和赔率历史数据（含四张时序表 wdl_history/handicap_history/total_goals_history/score_history） | data/odds.db |
+| ~~odds_timing.db~~ | ~~时序赔率中转库~~（已删除 C-20260918-021） | 时序数据已全量并入 odds.db 四张 `*_history` 表 |
 | five_leagues.db | 比赛数据库，存储基本比赛信息 | data/five_leagues.db |
 | PostgreSQL | odds.db 的 PG 后端（P2-11 迁移，2026-08-29），批处理负载提速 | localhost:5432 odds（DB_BACKEND=pg 切换） |
 
@@ -138,15 +153,38 @@
 - 建表数值列：`db_utils.numeric_sql_type(conn)` 返回 `REAL`（SQLite）≈ `DOUBLE PRECISION`（PG）。
 - 连接：`db_utils.connect(backend=None, db_path=None)`，`DB_BACKEND=pg/sqlite` 环境变量切换，默认 SQLite 零风险。
 - 规则：**禁止**在新增脚本里直接 `df.to_sql` / `import sqlite3` 硬连（`five_leagues.db` 旧库兜底读除外）；占位符用 `?`（PG 端自动转 `%s`）。
+- **pg8000 唯一来源=vendor 目录 `pylibs/`（C-20260926-098）**：全局 site-packages 未安装 pg8000；pylibs/ 随仓库分发（.gitignore 未排除），三包依赖链 pg8000 1.31.5 → scramp 1.4.10（SCRAM 认证）→ asn1crypto 1.5.1；切 PG 前不得删除该目录。当前 DB_BACKEND 未设、5432 无监听，属备而不用；版本冻结无 requirements 记录，升级需先补来源。
 
-**odds_timing.db 表结构：**
-- matches: 比赛基本信息 (match_id, home_team, away_team, match_date, league)
-- wdl_timing: 胜平负时序赔率 (match_id, timestamp, win_a, draw, win_b)
-- handicap_timing: 让球时序赔率 (match_id, timestamp, handicap, hcp_win, hcp_draw, hcp_lose)
-- total_goals_timing: 总进球时序赔率 (match_id, timestamp, goals_0~goals_7_plus)
-- score_timing: 比分时序赔率 (match_id, timestamp, score, odds)
-- match_results: 开奖结果 (match_id, actual_score, actual_wdl, actual_handicap, actual_total_goals)
-- import_log: 导入日志
+**~~odds_timing.db 表结构~~（已删除 C-20260918-021，时序数据已并入 odds.db）：**
+- 原表 matches/wdl_timing/handicap_timing/total_goals_timing/score_timing/match_results/import_log 的数据已全量沉淀于 odds.db 的 matches/wdl_history/handicap_history/total_goals_history/score_history 四张时序表，中转库使命结束不再需要。
+- 预测脚本加载时序赔率须用 `scripts/load_odds_from_db.py`（DATA-011），禁止重建 TXT 旁路或中转库。
+- 队名归一化全链路统一调 `scripts/team_name_mapping.py` 的 `normalize_team_name()`（4 级匹配：精确别名→子串→模糊→序列相似度）（DATA-012，C-20260918-023）：①写入侧 `sporttery_live_collector.normalize_team` 先调 `normalize_team_name` 再 fallback `TEAM_NAME_MAP.get` 再 fallback 原名，确保 wdl_history 等 4 张时序表 match_id 用中文标准名；②查询侧 `load_odds_from_db.find_match_id_by_cn` 查询前先归一化 `home_cn/away_cn` + fallback 原始队名，解决 odds500_match 用「托特纳姆热刺」但 wdl_history 归一化为「热刺」的跨表失配；③历史数据修正用 `scripts/fix_match_id_normalize.py`（扫描 4 张时序表 DISTINCT match_id 拆分 `{date}_{home}_{away}` 调 `normalize_team_name` 生成新 match_id，先 DELETE 冲突行再 UPDATE，事务内执行）；禁止在采集器里用简单 `dict.get(name, name)` 无 fallback 的归一化。
+
+**model_predictions 行口径（C-20260921-034 固化）：**
+- 生产落库 prediction_type 含 WDL_*/HC_*/TG_*/Lambda_home/Lambda_away/Lambda_alert/**Score_top1/Score_top5**；唯一索引 UNIQUE(match_id, model_name, prediction_type)。
+- Score_top1.prediction=发布比分、probability=其概率；Score_top5.prediction=JSON 数组（Top10 报告的前 5 行）。
+- **复盘只读 Score_top1/Score_top5 发布行，禁止由 λ 现场重推**；读不到标「无发布记录」，命中统计按 None 剔除。
+- timestamp 一律本地（Asia/Shanghai）naive `%Y-%m-%d %H:%M:%S`，含 actual_* 行。
+
+**TG 校准 Shadow 口径（C-20260921-036 固化）：**
+- **生产 model_predictions 的 TG 行永远 factor=1.0**；λ 滚动校准（`tg_lambda_calibrator.get_calib_factor_hierarchical`）当前只做 shadow 双算，写 `reports/tg_calib_shadow.jsonl`（control/shadow 双份 8 档分布+factor+trace），不展示、不落库；开关 `TRAE_TG_CALIB_SHADOW`（env > config.yaml `tg_calibration.shadow_enabled`，默认开），config `tg_calibration.enabled=false` 在门禁通过前不得开启。
+- TG 落库守卫：TG_over/under/top1/top3 概率必须严格 ∈(0,1)，0.0/1.0/None/越界一律跳过（无有效赔率的「数据不足」降级场）；**存量 49 场 98 行 0.0/1.0 占位脏行已于 C-20260921-037 清洗删除**（审计清单 backup/tg_dirty_rows_deleted_C037.json，备份 backup/db_snapshots/odds_20260921_150658.db），历史查询不再需要 probability>0 过滤。
+- A/B 评测只读 model_predictions 发布 λ 与发布 TG 概率，**禁止现场重推**；`tg_calibration_shadow_eval.py` 已逐行对齐生产口径（unified engine + fuzzy 桥接 + 7+合并 + 0.85/0.15 融合），改动 predict() 后必须先验证 control 重放≈发布（保真偏差应 <0.01）。
+- 上线门禁（计划 §6）：全集 RPS 配对检验 p<0.05 且 RPSS>0、Brier≤0.250、ECE 与高桶 gap 收敛、分层无新极端失效、准确率无显著下滑；2026-09-21 首测 154 场方向正确但 p≈0.19~0.43 不显著，结论=保持 Shadow 累积样本。`factor_multiplier` 探索值（×0.95）属同集调参，锁定 1.0 不得进生产。
+- **C-038 Shin 去水拆解实验结论**：Shin (1993) 法 z≈0.05 方向正确（冷门↓热门↑→over25↓），但受 15% 融合权重限制，RPS/Brier Δ<0.0001 不显著、高桶 gap 0.164 零变化。**高桶 gap 未收敛的根因不在去水方法，而在 Poisson λ 系统性偏高（85% 权重主导）**。后续方向：要么提升赔率权重（0.15→0.25~0.30），要么加强 λ 校准幅度（isotonic/temperature scaling），需独立实验。
+- **C-039 融合权重 0.25 实验——首个统计显著结果**：154 场 A/B（去水固定 simple，唯一变量 W_ODDS 0.15→0.25），RPS 0.1400→0.1386（**p=0.000 显著**）、Brier 0.2400→0.2379（**p=0.005 显著**）、高桶 gap 0.164→0.134（收敛 30%）、Top1/Top3 +1.3%。**判定 WEIGHT_EFFECTIVE**——首个通过 RPS+Brier 双显著门禁的实验，可作为 Shadow 上线候选。高桶 gap 0.134 未归零仍有空间，可继续探索 0.30。
+- **C-040 融合权重 0.30 实验 + Shadow 接入**：0.30 全面优于 0.25——RPS 0.1380（p=0.000）、Brier 0.2369（p=0.006）、**高桶 gap 0.085（收敛 48%）**、Top1 22.1%。Shadow 接入完成：config `w_odds=0.15`(生产)/`shadow_w_odds=0.30`(影子)，predict() 新增 w_odds 参数替换硬编码 0.85/0.15，predict_unified 双算块写 `result['_shadow_tg_wodds']`，generate_unified_report 写 `reports/tg_wodds_shadow.jsonl`（match_id 去重）。生产值不变、enabled=false 不上线。
+- **C-041 联合实验结论（8 组对比）**：B7(factor+Shin+w=0.30) RPS=0.1367 Brier=0.2347 **均值最优**，但高桶 gap 0.201 **退化（过度校正）**且 Brier p=0.113 不显著。**B3(w=0.30 alone) 仍是最优上线候选**：双重显著（p=0.000/0.006）+高桶 gap 0.085 最优。factor+Shin 在 w=0.30 上有边际 RPS -0.0013 但引入方差致显著性下降。结论：Shadow 继续用 B3，后续可探索 isotonic/temperature scaling 替代 mean-ratio factor 避免方差引入。
+- **【强制执行】TG 优化路线定案（C-041 后固化，必须按此执行）**：
+  - **核心结论**：权重是核心杠杆（每 +0.05 权重 RPS 降 ~0.002），校准方法是边际微调（边际贡献仅 ~0.001 RPS）。B3（w=0.30）已捕获 90% 增益，剩余 10% 不值得冒方差引入 + 高桶退化风险。
+  - **P0（当前阶段）**：B3 Shadow 累积样本。C-040 已接入生产 Shadow 双算（`reports/tg_wodds_shadow.jsonl`），每日自动累积，数百场后重跑 `tg_weight_shadow_eval.py` 重判门禁。**在此期间不得改动 Shadow 配置**。
+  - **⚠️ C-20260926-099/100 订正（适用全部三条 shadow jsonl：t006_shadow_v5/tg_calib_shadow/tg_wodds_shadow，各 247 行）**：①**每日累积曾停滞，根因非模型而是计划任务**——`TraeCode_PrematchReport_2030` 被注册成裸 TimeTrigger（8/30 一次性，无每日重复），8/30 后永不触发；9/1–9/21 报告均为 9/23 晚手工批量补写（jsonl 停在 9/24 04:26）；**C-100 已重注册为每日 20:30 + 电池策略放宽 + StartWhenAvailable，ps1 加步骤追踪/失败传播，手工完整复验通过（7/8 步 OK）**；②**9/22–10/9 国际比赛日空档**（odds500_match 与 SofaScore 均 0 场），期间无 shadow 正常，10/10 联赛恢复自动续算；③**jsonl 只写不读**（eval 均现场重算）——配对评测闸门仍悬空，接线评测是首要待办；④遗留：无比赛日邮件步骤 FAIL 待优化、9/1 三场 status 漏回补。详见框架 §9.15 / §5.3。
+  - **C-20260926-101 追加**：用户确认不需要邮件推送，邮件步骤已从 run_prematch_2030.ps1 移除（每日只跑采集/特征/生成报告/闭环校验）；**send_report_email.py 与 email_config.json 保留闲置**，恢复只需加回一步。注意此前列为遗留的「无比赛日邮件 FAIL」随之自动消解。
+  - **C-20260926-102 追加**：Shadow jsonl 配对评测已接线——新增 `scripts/shadow_jsonl_eval.py`，消费三条 jsonl **赛前快照**（区别于 replay 型现场重算）JOIN odds.db（post_match_review 主、matches 补 TG），指标 import 同源、三闸门只出判定不自动切。首份基线 n=182（剔除：v5 缺 TG 八档 33、无赛果 32）：比分 v5 top1 10.99 vs v4 9.89、top5 48.9 vs 43.41（within 覆盖反降）；**λ 校准 p=0.263 不显著继续累积；w_odds 0.15→0.30：RPS p=0.002、Brier 0.2391、ECE 改善，三闸门全过 → 待人工评审是否切生产**。脚本暂手工跑、未挂计划任务。教训已记：paired_t_test 返回 (t,df,p)；命中率类指标箭头方向。
+  - **P1（可选，需用户发令）**：探索 0.35~0.40 权重。权重收益比校准方法大一个量级，是更值得探索的方向。但须在 B3 Shadow 门禁通过后、或与 B3 并行做独立离线实验（单一变量原则）。
+  - **P2（低优先，条件触发）**：isotonic/temperature scaling 替代 mean-ratio factor。**触发条件**：Shadow 累积数百场后 B3 高桶 gap 仍 >0.10 且有继续收敛需求时才做。无此条件不得启动。
+  - **【禁止】联合上线 factor+Shin**：C-041 已证伪——高桶 gap 0.201 退化 + Brier p=0.113 不显著。
+  - **【禁止】在 B3 Shadow 门禁通过前改动生产 `w_odds` 或 `tg_calibration.enabled`**：生产恒 w_odds=0.15、enabled=false。
 
 **odds.db 内 Understat 表结构（2026-08-22 新增，第三数据源）：**
 - understat_match_team_stats: 比赛级 xG（match_id, 主客队, 比分, xG, forecast 胜平负概率）
@@ -170,7 +208,7 @@
 1. 解析 txt/csv 文件，提取比赛和赔率数据
 2. 检查是否已存在（避免重复）
 3. 先清除旧数据，再插入新数据
-4. 同步到 odds_timing.db 和 odds.db
+4. 直接写入 odds.db 四张时序表（~~odds_timing.db~~ 中转库已删除 C-20260918-021）
 5. 写入 import_log 日志
 6. 验证数据完整性
 
@@ -226,7 +264,7 @@
 | EXP-034 | 比分赔率特征覆盖率仅23.0%（1209/5252场），根因：score_history表使用中文球队名（如"利物浦"），matches表使用英文球队名（如"Liverpool FC"），match_id格式不兼容；通过双向映射（TEAM_NAME_MAP + cn_to_en反向映射）生成多个候选match_id可提升覆盖率，但TEAM_NAME_MAP覆盖不全（当前约80队）导致仍有大量比赛无法匹配 | 2026-08-10 | 比分赔率特征覆盖率提升需要：①扩充TEAM_NAME_MAP至覆盖所有历史球队名称变体；②考虑模糊匹配（编辑距离/拼音相似度）；③记录未匹配案例用于针对性补充映射 |
 | EXP-035 | 非线性变换特征（29维）中包含大量与原始赔率特征高度相关的衍生特征（如log(赔率)、sqrt(赔率)与原始赔率线性相关），D-011特征选择会自然剔除这类冗余特征；实际保留的非线性特征维度取决于特征选择阈值，不强制保留可避免引入噪声 | 2026-08-10 | 非线性变换特征设计原则：①优先选择与原始特征非线性关系强的变换（如熵、基尼系数、交互项）；②简单数学变换（log/sqrt/平方）可能被D-011剔除，不应强制保留；③跨特征交互（如概率×凯利）比单特征变换更有价值 |
 | EXP-036 | 新特征模块集成到现有管线需遵循固定模式：①创建独立模块（如score_features.py）；②在feature_utils.py的build_all_features()添加include_xxx参数；③在feature_temporal.py的PRE_MATCH_FEATURE_CATALOG注册所有新特征（类别+时序类型+来源函数）；④在feature_selection_d011.py中决定是否强制保留（赔率衍生类强制保留，变换类不强制）；⑤在train_models_v2.py中启用开关并更新特征统计打印 | 2026-08-10 | 五步集成模式确保新特征：①通过泄露检测；②在D-011中正确分类；③在训练日志中可见；④可独立开关控制；⑤不破坏现有特征管线 |
-| EXP-037 | Understat 数据端点 getMatchData/{id} 与 getLeagueData/{slug}/{season} 需带 Referer + X-Requested-With 头，否则 404；未开赛比赛(isResult=false)无 rosters/shots 数据需自动跳过；xG/xA/xGChain/xGBuildup 与射门坐标(X/Y)是 Understat 独有字段，弥补 FBref/SofaScore 缺口 | 2026-08-22 | 采集 Understat 必须带双请求头、用 isResult 过滤未开赛、404 不重试；三张独立表存原始 xG 体系（比赛级/球员级/射门级） |
+| EXP-037 | Understat 数据端点 getMatchData/{id} 与 getLeagueData/{slug}/{season} 必须带 X-Requested-With: XMLHttpRequest 头，否则 404；Referer 头可省（C-20260921-045 实测确认，采集器仍保留 Referer 作兜底）；未开赛比赛(isResult=false)无 rosters/shots 数据需自动跳过；xG/xA/xGChain/xGBuildup 与射门坐标(X/Y)是 Understat 独有字段，弥补 FBref/SofaScore 缺口 | 2026-08-22（C-045 修正） | 采集 Understat 必须带 X-Requested-With 头、用 isResult 过滤未开赛、404 不重试；三张独立表存原始 xG 体系（比赛级/球员级/射门级） |
 | EXP-038 | build_team_features 主循环对每场比赛调用 `home_hist[home_hist['date'] < match_date]` 全量布尔过滤（主/客各1次 + 对手至多20次），造成 O(n·m) 的 DataFrame 反复分配，全量 14362 场耗时 480.7s；修复：复用 precompute_team_stats 已产出的「按日期升序 + RangeIndex」每队统计表，预提取每队日期 int64 数组构建 lookup，用 `np.searchsorted(side='left')` O(log n) 定位「date<md 最近一场」，并以 `range(len(df))` 替代 `iterrows`；因缓存经 merge 后为 RangeIndex 且严格升序，布尔前缀过滤与 `.iloc[:k]` 完全等价、语义无损 | 2026-08-30 | 特征构建性能优化：全量 build_team_features 480.7s→55.9s（88%提速）；正确性三重校验 0/166 + 0/500 + 0/500 零差异；时序「最近一场」查找优先 searchsorted 而非布尔过滤 |
 | EXP-039 | build_all_features 其余模块（Elo/D-013 时序赔率/比分赔率/赔率特征 build_odds_features/三通道对齐 build_match_alignment）的共性瓶颈是「逐行/逐组/逐场」循环与重复 DB 查询/大表 JOIN；统一替换为 numpy 向量化 + `np.searchsorted` O(log n) + 一次性批量加载 + 内存 set/dict 对齐。收益：Elo 29.34s→1.05s、比分赔率 59.65s→28.47s、赔率特征 63.69s→4.82s、D-013 4.58s，端到端 build_all_features 瓶颈消除 | 2026-08-30 | 特征构建二次优化：逐模块 profiling 定位 O(n·m)/iterrows，numpy 向量化 + searchsorted + 整表加载替换；逐字段三重校验零差异 |
 | EXP-040 | 总进球赔率特征 legacy bug：`_build_odds_features_legacy` 在末条 total_goals 快照 `goals_3..goals_7_plus` 含 NULL（未开赛/部分数据场次，仅存 under 市场 goals_0/1/2）时，`total_prob=sum(...)` 变 NaN 使归一化跳过，但 `under_25/over_25/tg_expected` 仍在 `if total_prob>0` 块外计算，产出未归一化垃圾值（如 tg_under_25_prob=8.98）；向量化版用 `valid=total>0` 守卫，`total=NaN→valid=False→返回 NaN` 后中位数填充，语义正确。影响范围仅 67 场 partial-NaN 行 + 无数据行中位数微移 | 2026-08-30 | 计算派生特征时，归一化守卫（分母>0）与派生值赋值必须在同一 if 块内，否则部分缺失数据会产出未归一化值；向量化时用 `np.where(matched & valid, ..., np.nan)` 统一守卫 |
@@ -234,6 +272,7 @@
 | EXP-042 | shadow 配对双跑（同一 match_id 记录 control/treatment 两臂、treatment 永不真实 serve）场景下，门禁必须用配对 McNemar（`ab_test_framework.analyze(paired=True)`）；复用线上 served 分流 z 检验会因 treatment served_n=0 恒报 insufficient-sample。线上真实分流场景沿用 paired=False 原口径不变（C-20260911-022） | 2026-09-11 | 离线 shadow/回放对照 = 配对样本 → 配对检验；线上分流 = 独立样本 → 两比例 z/Mann-Whitney；统计口径必须与实验设计匹配 |
 | EXP-043 | 500.com 强刷可能出现公司明细/投注表有真实数据，但 `odds500_ouzhi_summary.company_count` 和摘要赔率字段为 NULL；“采集命令完成”不能等同于摘要有效，必须同时校验 summary 核心字段、company 明细和 betting 数据。报告生成器还会排除已开赛场次，补采后不可直接用全量生成覆盖历史赛前报告 | 2026-09-13 | 500.com 48场强刷：company 明细均有30行、betting各1行，但 summary company_count 48/48 NULL；SofaScore 当日特征77/77有效；需修复摘要写入/解析和历史报告回写策略 |
 | EXP-044 | SofaScore 采集器字段映射误把 `accuratePass`（准确传球**数**，整数）映射到 `pass_completion_pct`（**百分比**，0-100）列，导致 `accurate_pass_sofa` 长期未赋值、`sofa_pass_sr_5g` 分子缺失触发 `PASS_SR_MIN` 门禁，报告误报「未采集」；修复：映射改 `accuratePass`→`accurate_pass_sofa` + 迁移脚本 `repair_pass_sr_mapping.py` 把误存值迁回并清空污染（C-20260915-005） | 2026-09-15 | 跨源字段映射必须核对「计数 vs 比例」语义；同一列被两个源以不同单位复用时（FBref 存百分比 / SofaScore 存计数）应拆分为独立列，避免单位污染 |
+| EXP-045 | P0-B 门禁平局高估 +81.3pp 根因**非模型校准而是历史退化数据伪影**：444 场 Score_grid（`t006_score_predictor_v5`，2016-2023 历史批量回填、`wdl_history` 赔率为空）退化为单一高分比分格（如 `5:5=0.874`），系更早版本算法（λ 无上限/无哨兵）IPF 乘性迭代坍缩；当前 `predict_score_distribution_v5`（λ≤2.775、无赔率走泊松兜底）已无法复现。修复：`predict_score_distribution_v5` 加健康哨兵（对角线>0.6 或单格>0.6 → 回退干净 DC 网格，阈值 0.6 远高于真实值上限零误伤）+ `clean_degenerate_score_grids.py` 备份删除 15984 行；门禁复跑 PASS（总 ECE 0.49%/ECE_draw 0.27%/分桶偏差 11.3pp，平局 25.42% vs 命中 25.18%）（C-20260924-072） | 2026-09-24 | 门禁类指标异常先区分「模型坏」vs「数据伪影」：444 条(3%)退化数据即可拖出 +81pp 假性高估；比分网格产出链路必须有退化哨兵（单格/对角线过载检测），历史回填数据需定期健康扫描 |
 
 ### 3.3 流程相关 (EXP-011 ~ EXP-015)
 
@@ -337,7 +376,7 @@
 > **最后更新**: 2026-09-15
 > **最新训练**: ✅ 20260908_004604（全量特征集 **254 维** selected_features，含 slim_odds+ts_odds+consensus+T-007 球员 lag 等）
 > **最新模型资产**: assets/lgb_model_20260908_004604.pkl, assets/xgb_model_20260908_004604.pkl, assets/scaler_20260908_004604.pkl, assets/selected_features_20260908_004604.pkl, assets/draw_calibrator_params_20260908_004604.json, assets/feature_bridge.json（训练↔服务端 254 维特征桥接，C-20260910-011）
-> **状态唯一权威**: P0~P2 优化项状态以 docs/模型优化评估报告_v2.0.md 为准（C-20260911-020 六文档职责收敛）
+> **状态唯一权威**: P0~P2 优化项状态以 docs/模型优化评估报告_v2.0.md 为准（**已删除 C-20260918-049**，替代位置见 五大联赛全栈框架设计.md §十二，C-20260911-020 六文档职责收敛）
 > **09-12 数据侧要点**: ①500.com 采集器已升级 curl_cffi + EdgeOne 手动 Cookie（C-20260912-001）；②亚盘刷新通道修复，26/27 完赛场结算盘口 74/74 = 100%（C-20260912-003）；③统一报告新增第十二章球员/阵容（pa_*）与第十四章积分/战意两通道（C-20260912-002）。详见 §6.3.4。
 
 ### 6.1 模型架构
@@ -377,8 +416,9 @@
 | 500.com 五表 | data/odds.db (表) | match 19,790 / summary 19,761 / company 542,546 行 | 16/17~25/26 十季 18,038 场 100% + 26/27 五联赛 1,752 场赛程全入库；采集器已升级 curl_cffi + EdgeOne Cookie（C-20260912-001） |
 | Sporttery 时序赔率 | data/odds.db (表) | wdl_history / handicap_history / total_goals_history / score_history | 覆盖 16/17~25/26 全部 10 季（已结束赛季 100% 完成），26/27 随赛程推进（sporttery_live_collector 定时采集） |
 | 26/27 赛季覆盖 | - | 184场(matches表，54 场完赛有比分) | 赛果采集滞后：完赛仅英超15/西甲19/法甲14/意甲4/德甲2；积分榜/战意通道带不完整保护（C-20260912-002） |
-| 赔率 TXT | data/{联赛}2026-2027赛季完整时序赔率.txt | - | 意甲4/英超5/西甲8/法甲4 场 |
+| 赔率 TXT（已删除） | ~~data/{联赛}2026-2027赛季完整时序赔率.txt~~ | - | 已于 C-20260918-021 全量删除，数据已入库 odds.db 四张时序表；预测脚本改走 `load_odds_from_db.py`（DATA-011） |
 | SofaScore 26/27 覆盖 | sofascore_team_features / match_player_stats 表 | 赛前特征已预生成 | 09-12 补采 19 场（巴伦西亚3+6队16），4 场赛前报告完整度 100%；后续轮次仍依赖赛后采集链路 |
+| SofaScore 赛前首发/伤停 | match_predicted_lineups / match_missing_players 表 | 374+134 行（09-18 实测） | 赛前采集链 `collection/prematch_sofascore_lineups.py`（管线步骤 0a-1 每日 20:30），官方伤停接入 PA 特征校正（FEAT-013），未来 122 场 PA 已重算回写 |
 | Understat 26/27 覆盖 | understat_match_team_stats 表 | 22场 | 法甲1/西甲20/英超1，待补采 |
 | 500.com 26/27 亚盘 | odds500_match 表 | 113/1,752 场有盘口 | 74 场完赛结算盘口 100% 补齐（意甲38/西甲28/英超19/法甲19/德甲9）；未开赛场次临近开赛前跑 `--refresh-odds` 补盘（C-20260912-003） |
 
@@ -408,12 +448,13 @@
 
 #### 6.3.3 自动化调度与生产运维状态（2026-09-11 实测）
 
-Windows 计划任务 5 项全部 Ready：
+Windows 计划任务（5 项 Ready + 1 项脚本就绪待注册）：
 
 | 任务 | 触发 | 内容 | 关键状态 |
 |------|------|------|----------|
 | T005v3_AutoRetrain | 每日 08:00 | 自动重训触发器守护（三重触发 + 性能门禁） | Ready |
 | SoccerModel_ConceptDrift | 每日 08:30 | P0-C 概念漂移检测（`concept_drift_gate.py`，仅告警禁止自动重训） | Ready，Last Result 0 |
+| SoccerModel_ReliabilityGate | 每日 09:00 | P0-B 可靠性图门禁（`reliability_gate.py`，ECE/Reliability Diagram/全维度分层，超阈值 exit 1；`setup_reliability_scheduler.py` 管理） | 脚本就绪，⏳ 待管理员注册（非提权报 Access denied） |
 | SoccerModel_PostMatchReview | 每小时 | P0-A 复盘闭环（`run_post_match_pipeline.py` A2→A6，--catch-up --limit 30） | Ready；post_match_review 77 条 |
 | SoccerModel_P0ELiveTrial | 每日 12:00 | P0-E 实盘验证六步编排（`run_daily_p0e.py`，--auto-commit） | Ready；台账 0/300（单日候选 0 属预期） |
 | SoccerModel_P1BShadow | 每日 13:00 | P1-B shadow 滚动吸收（`run_shadow_incremental.py --roll`；`setup_shadow_scheduler.py` 管理，`/ru SYSTEM` 非交互登录） | Ready；shadow ab_test_log 28,834 行（配对双跑样本） |
@@ -430,7 +471,9 @@ Windows 计划任务 5 项全部 Ready：
    完赛场（status=5）结算盘口全量覆盖并补比分/纠正状态；未开赛场仅在库内盘口为空时补齐。临近开赛每日/赛前数小时重复跑即可，幂等。
 5. **完整度口径防复发**：500.com 维度完整度 = 有行 **且** company_count>0/有公司明细；空壳占位行（company_count=0）计缺失（generate_unified_report.py L566-571）。
 6. **空壳 = 反爬拦截，不是源站无数据（2026-09-17 修正，C-20260917-001）**：投注页全 `-` / 必发成交为空 / company_count=0 → `anti_bot_blocked`（FAIL），必须刷新 Cookie 重采；**仅当源站真实业务无数据才判 `source_no_data`（WARN）**。二者不可混用。
-6. **SofaScore 评级覆盖率教训**：球员 `rating` 缺失被 `fillna(0)` 参与加权会把球队评分拉成 2.x 畸变（巴伦西亚 2.80 事件）。补采用 `scripts/backfill_valencia_ratings.py` / `backfill_recent_player_stats.py`（INSERT OR REPLACE 幂等），补后须删旧特征行重跑 `features/incremental_sofascore_features.py`；长期需在特征聚合前加 rating 覆盖率校验（<80% 告警）。
+7. **Cookie 新鲜度先核验再采集（2026-09-20，C-031）**：用户提供的 cookie 可能是旧会话——先看 `sdc_session` 毫秒时间戳判断导出时间；旧 cookie 返回 2122B Security Verification 页。新 token 约前 20~23 次请求真实成功。
+8. **EdgeOne 按 TLS 会话"抽签"，重建会话即重抽（2026-09-20，C-031）**：超过首批真实请求后，同 cookie、同请求头（XHR 头有无已对照排除）下，不同 `curl_cffi` 会话有的返回 987B JS 挑战页、有的放行；冷却/加大 delay 均无效。**解法：丢弃当前 Client、新建会话重新 TLS 握手重抽，直到放行**（19 场实际仅 1 次重建即全部通过）。该机制目前在临时驱动脚本中使用，未固化进采集器。
+9. **SofaScore 评级覆盖率教训**：球员 `rating` 缺失被 `fillna(0)` 参与加权会把球队评分拉成 2.x 畸变（巴伦西亚 2.80 事件）。补采用 `scripts/backfill_valencia_ratings.py` / `backfill_recent_player_stats.py`（INSERT OR REPLACE 幂等），补后须删旧特征行重跑 `features/incremental_sofascore_features.py`；长期需在特征聚合前加 rating 覆盖率校验（<80% 告警）。
 
 ### 6.4 已知限制
 
@@ -582,14 +625,78 @@ change_log.md §5 统计表曾长期停留在 136 而实际记录已达 554（�
 
 ---
 
-**文档版本**: v1.23
+## 十、主客反转排查时代（2026-09-19 补充，C-20260919-018）
+
+### 10.1 教训（EXP-019 主客系统性反转三根因）
+
+1. **Fallback 模板向量是方向污染高危点**: 未赛场走 fallback 时若以「df 最后一行」为模板仅覆盖部分特征，残留的赔率/Elo/概率会整体携带模板场方向；模板恰好是强客场即全批次反转。判别法——对照实验三向量：全零（模型先验）/仅已知特征/纯模板，三者中模板组方向与异常一致即坐实。正确做法：批量预测前显式注入待赛场虚拟行（`prime_fixtures`），让未赛场与已赛场走同一套特征构建，命中缓存必须 AND 精确主客对（OR 逻辑会误中无关场次）。
+2. **Elo 计算输入必须先去重再算**: matches 表同场比赛英文行+中文行（34 对）归一化收敛同键，直接遍历会双重计数（失利方被双罚）。快照构建固定流程：队名归一化 → (日期,主,客) 去重 → 计算 → 经 TEAM_ALIASES 展开为英文键+别名键（prediction_core 用英文 match 字段查询，快照主键必须英文）。
+3. **INSERT OR IGNORE 与「重跑修正」语义冲突**: 报告文件被覆盖但 DB 残留首次预测，造成报告与库不一致。需要覆盖的预测表一律用 ON CONFLICT … DO UPDATE 全字段 UPSERT。
+
+### 10.2 口径备忘
+
+- `feature_utils.load_match_data_odds(dedup=True)`：归一化后按 日期/主/客 去重，优先保留有 actual_score 的行；预测链默认走 dedup。
+- WDL 与让球头允许在平手均势场（市场 H/A 接近）存在方向分歧，属头间正常差异；硬矛盾判定只针对非平手盘（如 -0.5 强主场 WDL 却客胜）。
+- 修复后基线（2026-09-19 窗口 20 场）：WDL 14 主/6 客/0 平；子模型对明确热门与市场一致。
+
+### 10.3 防复发加固（C-20260919-019）
+
+1. **三个入口全覆盖 prime**：generate_unified_report / predict_today_14 / backfill_missing_prematch_reports；新增批量入口必须同样先 prime，否则等同把 C-018 隐患请回来。
+2. **Fallback 固定中性口径**：零向量 + 本场 sofa 覆盖；禁止任何「拿他场行作模板」写法。
+3. **方向哨兵口径**：n≥8 且单侧 ≥85% → 告警（两处入口已覆盖）。
+4. **Elo 快照每日自动重建**：`deploy_t005v2_final.py --elo-only`，已挂 run_prematch_2030.ps1 步骤 0c；快照为嵌套结构（顶层 5 键，内部 415 球队键），LGB Elo 特征不走此文件。
+5. **PS1 含中文必须存 UTF-8 BOM**：无 BOM 时 Windows PowerShell 按 GBK 误读会报解析错（run_prematch_2030 已修）。
+6. **同场多键归零**：无英文客名时管线用混合键（考文垂/桑坦德/埃沃斯堡），旧英文键污染行已删；日后遇重复键先归一化归并再删孤儿。
+7. **子模型概率入 sub_probs 必须是 Python float**（C-20260919-020）：XGBoost Booster.predict 给 numpy.float32，渲染端 isinstance(v,(int,float)) 会误判缺失（显示 —/4/5）；LGB 为 float64 不受影响。教训：模型输出接入展示字典前统一 float()，且"显示缺失"≠"没参与融合"。
+8. **复盘让球结算盘口线口径**（C-20260919-021）：matches.handicap 缺失率 39%，赛后管线须走 resolve_handicap_line（matches 数值 → odds500_match.handicap 同 match_id → 日期+归一化中文队名），兜底线回写 matches；写已存在复盘行只补 NULL 事实列。深盘串（三球/三球半=3.25、三球半=3.5、三球半/四球=3.75）已补入 HCP_STR_MAP。
+9. **XGB 显示「—」的可观测性与三套口径纪律**（C-20260919-022）：「—」有假性缺失（XGB Booster 输出 numpy.float32 非 float 子类→渲染失败，但实际已入融合；float() 根治，C-020）与真性缺失（pkl/scaler/特征两级取数/推理异常）之分；XGB 缺失三层哨兵（推理 error 日志/报告内联🚨/批次汇总）只告警不改概率。**EV 推荐方向可与 WDL 概率方向相反**（P冷门×高赔率>1 的小仓位价值提示，非改判），报告两处自动 ℹ️ 注释。铁律：模型输出/EV 规则/展示标签三套口径严格分离，禁止为"看起来一致"而覆盖任何一方。
+10. **【工作模式·2026-09-19 暂停→2026-09-21 恢复盘核】**：2026-09-19 用户曾要求暂停复盘，09-21 用户重新指示恢复复盘并修复让球/Understat 遗留问题（C-042~044）。复盘待办现状：①✅98 场缺 actual_hcp 已批量修复 89 场（C-044，248/267 有结果，19 场 matches.handicap=NULL 不在竞彩开售范围无法补）；②✅ Understat xG 匹配率 10/30→30/30（C-044 ±1 天时区偏移兼容）；③✅ sporttery_collector 赛前盘口存储修复（C-043）+ 2026-2027 赛季补采 228 场（C-044）；④⏳ Top5 比分改读 T-006（仍待办）；⑤✅ 历史赛季（2022-2026）NULL handicap 已批量补采 4145 行（C-20260922-046：Phase A 23/24 本地 raw 合并 1220 行 + Phase B 赛程-only 采集 24/25+25/26 共 100 月度分页 + Phase C 合并 2925 行），2022-2026 赛季 NULL 5885→1269，剩余为竞彩未开售场次（数据源天花板）；backfill_handicap_from_schedule.py 工具可复用于未来补采；⑥✅ Understat API 可用性已实测确认（C-20260921-045）：getLeagueData/getMatchData 在带 X-Requested-With 头时返回 200，原「404 网站改版」结论证伪，采集器无需重构。
+11. **子模型计数必须以 STACKING_META_MODELS 五键为准**（C-20260919-023）：sub_probs 运行时含 7 个概率源（五基模 + poisson/ssm 辅助参考源，后两者不参与融合、不进报告子模型表），任何"n/5"计数（model_used 标题、XGB 哨兵）直接 `len(sub_probs)` 会显示 7/5。教训：计数口径以架构常量为准，不要数整个工作字典。
+12. **特征管线修复协议**（C-20260920-025）：①发现 serving 异常先量化（同 holdout、同 pkl 的 Full/Zero 对照）再动手；②指标"越修越差"往往是跨口径污染（本次：serving 喂正确概率、模型训练在错误表示上），修复顺序固定为 修转换 → 重建矩阵 → 重训 → 再验证，禁止只修单边；③排查用逐层追踪（原始表→raw→latest→normalize→extract）定位错误首次出现环节；④树模型对非线性尺度鲁棒（旧错误表示仍 RPS 0.197），但走水检测依赖特征语义，数学错误直接致 AUC 0.52；⑤批量重生成必须覆盖 status 1/2/5（merged_discover + 强制 has_prediction=False + 全量重写 _summary）。
+13. **多路对齐与特征架空识别**（C-20260920-026）：①多路对齐（桥表+match_id_en+中→英）可能多对一，所有下游 merge/reindex 入口必须按目标键去重（本次丢 24 条），否则 pandas 索引赋值会 shape mismatch broadcast 报错；修复长期静默失效的增强器时，先核对 SQL 引用列真实存在（本次 sofascore 查询引用了不存在的 s.match_id_en）；②判断某组特征是否真正生效，用同一其余特征做 OLD/NEW/ZERO 三口径严格对照——若 ZERO 与另两者同水平，说明该组被其他特征"架空"，数学/语义修复仍必须做（口径正确性），但不得宣称指标增益，要让信号真正生效须从特征结构层面另立任务；③独立管线长期失修时，优先收敛到训练脚本提供的 serving 入口（predict_for_matches），禁止在管线内复制特征逻辑。
+14. **跨模块接口契约：取数前必须核实返回键真实存在**（C-20260920-027）：消费端 `x.get('某键')` 静默返回 None、下游再以 .get 兜底时，功能会"成功地空跑"且零报错——本次 WDL→比分重加权（C-20260823-019 引入）因 WDLPredictor 返回字典从未提供 `probabilities` 键，自上线起完全失效近一个月。规则：①新增跨模块数据传递，消费端对必需键做断言/哨兵（缺失即告警，禁止静默 None 兜底）；②判断"某功能是否生效"必须实跑核对产物（比分表成分、数值列），不能只凭代码里存在调用；③产出端与展示端键名口径必须按同一契约对齐（本次 TG 产出 `"7"`、展示查 `"7+"` 恒 0.0%；标题 Top10 实际只给 5 行），行数/标题以实际列表为准。
+15. **T-006 v5 接入冻结口径 + Top5 定档**（C-20260920-028）：报告比分榜**定档 Top5**（C-027 的 Top10 一天后按用户指示缩减，A/D 两修复保留）。v5 接入方案四项决策已冻结，编码不得擅自走样：①节奏=Shadow 并行后切换（离线复测→双算只对比不落库→切默认，v4 留一个版本周期，降级链 v5→v4→赔率隐含→数据不足）；②WDL 锚定**只认 §一 Stacking 生产概率**，比分轨禁止自行去水另造一套 WDL；③比分赔率信号保留（融合后**嵌套一轮 IPF** 修回边缘），MC 弃用；④recency 首期不做、不建快照，total 先验只取 TG 赔率隐含 E[g]。v5 路径绕过 A-002、λ_alert 继续挂 v5 的 λ；联赛 ρ 映射（E 项）接入时补写（原型未实现）。
+16. **v5 离线复测与 Shadow 工程模式**（C-20260920-029）：①**单份算法原则**：serving 层 `predict_score_v5` 落在 v5 模块内，离线复测脚本只能做薄封装复用它——复测结果与生产 shadow 才天然一致（本次重构后 72 场零偏差）；禁止复测脚本另写一份算法。②**Shadow 双算铁律**：新模型 shadow 必须在生产结果产出后调用、全程 try/except 隔离，只写独立产物（`reports/t006_shadow_v5.jsonl`），不展示、不落库、不改任何既有字段；开关默认开且可环境变量关闭（`TRAE_T006_SHADOW=0`）。③**失败也要记录**：shadow 的 v5 error 行（TG 缺失等）是真实覆盖率监控数据，不丢弃，但赛后评测脚本必须按 error/success 区分。④**复测解读纪律**：n=72 的小样本多数分层差异仅 1–3 场，必须结合分层方向（v5 赢高频低球、输冷门高球）与根因诊断（市场先验保守 vs 管线 bug）综合判断，禁止凭总体单点差异下"更优/更差"结论。
+17. **Train/Serve 同源的完整含义：同代码、同参数、同分布**（C-20260920-030）：①"公式同源"不止是思路一致——共享常量（`LEAGUE_RHO` 单一定义、训练脚本导入）、共享代码路径（OOF 与 serving 走同一条 λ→DC 链路），只共享思路过几个版本必漂移。②元模型特征必须覆盖其推理时会遇到的全部输入分布：OOF 的 DC 若只在联赛均值 λ（输出 35~55%）上训练，serving 的 80%+ 极端 DC 就是 OOD 外推；修复后 OOF 含 4500 场赔率 DC（含极端值），LR 学会在极端 DC 上自动降权（DC 80.4% 时融合主胜 49.4%→44.5%）。③无法消除的口径缺口用**标志特征**而非掩盖：2024-25 赛季无赔率采集 → 回退联赛均值 λ + `dc_odds_fallback=1` 作为第 16 维 meta 特征（serving 恒 0），让模型自己区分两分布；禁止静默兜底。④验收口径纪律：holdout（近期有赔率场）RPS 改善 0.0019、OOF 全量微劣 0.0005 并存时，以贴近生产分布的 holdout 为准；且先验证"极端输入行为受控"再谈指标。⑤红线：禁止改写基模输出（收缩/截断/硬阈值），要条件化处理就把条件量（分歧度、兜底标志）作为特征送入。
+
+---
+
+**文档版本**: v1.51
 **创建时间**: 2026-07-23
-**最后更新**: 2026-09-12（当前模型最新状态同步至 2026-09-12：500.com curl_cffi 破 EdgeOne + 手动 Cookie 流程、亚盘刷新修复后完赛结算盘口 74/74、统一报告第十二/十四章两通道、SofaScore 19 场补采，C-20260912-001~004）
+**最后更新**: 2026-09-26（风险 M 修复 C-091：采集器日志 RotatingFileHandler 轮转 + 旧产物启动时自动清理，logs/ -82%）
 **更新频率**: 规则或经验变更时更新
 **维护人**: 模型优化团队
 **更新说明**:
-- **v1.23 (2026-09-12)**: ①§7 当前模型最新状态更新至 2026-09-12：500.com 采集器 requests→curl_cffi（impersonate="chrome"）+ EdgeOne 三层 Cookie（含与 UA 绑定的 EO-Bot-Captcha-Token，每日人工 Edge 导出）恢复 500 数据可用，4 场赛前报告完整度 100%（C-20260912-001，详见《故障排查报告_数据采集_20260912》）；②新增 §6.3.4 EdgeOne 反爬与亚盘刷新运维 6 条（TLS 指纹本质、Cookie 凭证、风控节奏、--refresh-odds 用法、完整度口径、rating 覆盖率教训）；③亚盘 refresh_upcoming_odds 修复「先入库后完赛」结算盘丢失 bug，26/27 五联赛 113/1752 有盘口、74 场完赛 100% 结算（C-20260912-003）；④统一报告第十二章接入 24 维 pa_* 代理指标、第十四章新增积分榜/战意（compute_league_standings/classify_zhan_yi）+ 数据不完整保护（C-20260912-002）；⑤数据源表实测刷新（odds.db 1,669MB、500 match 19,790 行、sofascore 特征 18,363 行/98 字段、player_stats 730,128 行、matches 26/27 共 184 行/54 完赛）；⑥§6.4 新增 3 条已知限制（伤病代理指标、积分榜依赖赛果时效、未开盘亚盘）。
-- **v1.22 (2026-09-11)**: ①§7 当前模型最新状态同步至 2026-09-11：最新训练 20260908_004604（254 维，slim+ts+consensus+球员 lag 全量特征集）、训练↔服务端 CI 强制对齐 + feature_bridge 桥接（C-20260910-004/011）、统一引擎 DixonColes 全量投产（C-20260909-008）、P1-B 贝叶斯增量 shadow（τ=0.01 逐联赛、意甲 SIGNIFICANT-WIN p=0.0484、生产仍 serve control）；②新增 §6.3.3 自动化调度与生产运维状态（5 项计划任务表 + SYSTEM 账户/电池供电运维注意）；③数据源表更新（odds.db 1,666MB/14,521 场 league 空值 0、26/27 已 152 场、Sporttery 10 季全完成）；④新增 EXP-041（league 列漏写/match_type 兜底派生根因，C-20260911-023）与 EXP-042（shadow 配对 McNemar 口径，C-20260911-022）。P0~P2 状态以《模型优化评估报告_v2.0》为唯一权威（C-20260911-020）。
+- **v1.51 (2026-09-26)**: 风险 M 修复（C-20260926-091）：logs/ 日志轮转与自动清理。①`final_sofascore_collector.setup_logging` 改固定文件 `sofascore_collector.log` + `RotatingFileHandler(maxBytes=5MB, backupCount=3)`（磁盘上限约 20MB，import logging.handlers）；②新增 `purge_old_collector_artifacts()`——每次启动自动清理：旧时间戳 log 保留最近 3 个、summary JSON 保留最近 10 个，try/except 全隔离；③`odds_data_spec.purge_old_training_logs()`——`TrainingLogger.__init__` 自动执行，training JSON mtime>30 天删除但最近 20 个保底（retrain_trigger_runner 只取最新，与风险O 兼容）；④清理模式不匹配 `sofascore_progress_*.json`（resume 依赖）与轮转 `.log.N` 文件，实测零误伤。结果：首次触发删除旧 log 524/旧 summary 144/超期 training 12；logs/ 由 1028 文件/77.81MB 降至 **349 文件/14.09MB（-82%）**，此后自动维护、无需计划任务。经验教训——日志清理优先「启动时挂钩 + 保留最近 N」而非依赖计划任务；glob 模式设计须用真实文件清单验证排除项（progress/轮转文件）；删除前做模式安全预览是防止误删 resume 状态的必要步骤。遗留：understat/xgscore/sporttery/pipeline 时间戳 log（约 10MB）待推广同一模式。
+- **v1.50 (2026-09-26)**: 风险 R 修复（C-20260926-090）：matches 26/27 match_id 统一为 SofaScore 全名口径。深度诊断推翻原登记方向（统一中文）与 DATA-014 的「预测轨简名」描述：matches 实际主流（25/26 全量、26/27 1940/1983）与采集轨 ps mid 完全一致（SofaScore 全名）；232 个 CN 行全部来自 populate（C-086 误用归一化中文名生成 match_id），另有 23 组 odds500 简名行 vs SofaScore 全名行双行。迁移（backup/migrate_risk_r.py，两轮，迁移前备份 backup/odds_backup_riskR_20260926.db）：233 组重复组保留 SofaScore 口径行（有 ps 优先），字段 merge 351 项、删 238 行；21 场 CN 独有改名；model_predictions 迁移 83 mid（UNIQUE 冲突保 timestamp=MIN/is_replay=MIN，符 C-053）、post_match_review 迁移 33 mid；补插 52 场 ps 孤儿（数据源 odds500_match，handicap 不写——matches CHECK 仅允许 sporttery 竞彩口径）。结果：matches 26/27 共 2012 场、CN 残留 0、重复 0、ps 孤儿 65→15（余 15 场 odds500 无记录：6 场历史漏场+9 场未来场）。根源修复：populate 的 match_id 改用 fbref_match_mapping.odds_match_id 原值，重跑 inserted=0 幂等。新增 DATA-015 规则；新登记风险 S（odds500_match 144 + odds500_stat 5 个 CN mid）。经验教训——跨源一致性应以采集器/ps 的实际写入口径为准，不能凭「归一化」直觉选方向；修复前必须先诊断清「谁是多数派、谁与健康历史一致」；matches.handicap 有 CHECK 约束仅允许 sporttery 源。
+- **v1.49 (2026-09-26)**: 风险 N 修复（C-20260926-089）：采集器 `mark_done` 仅对已结束比赛（status=finished/ended）标记，未开赛比赛不写库不标记，下次自动重试。删除 26/27 进度文件重采后，player_stats 覆盖率从 26.1% 提升至 40.6%（法甲因 Akamai 403 未采完）。新发现风险 R：26/27 赛季 matches.match_id 语言不一致（中文 232/英文 231），与采集器 SofaScore 英文名 match_id 不匹配，致 match_player_stats 孤儿率 23.9%（25/26 及之前仅 0~0.3%）。需统一 match_id 为归一化中文名。
+- **v1.48 (2026-09-26)**: logs/ 目录专项审计（C-20260926-088），登记风险 M-Q。M（高，待修复）：logs/ 1156 文件/80.33MB，.log 占 85%，全项目无 RotatingFileHandler/maxBytes/backupCount，sofascore_collector 每次运行生成 ~1MB .log 无清理；N（中，待评估）：collector 对 partial（部分接口失败）仍 mark_done，该场永不重试可能致永久数据缺口；O/P/Q（低，接受）。日志无轮转是运维债务，长期会挤压同盘 DB 空间。
+- **v1.47 (2026-09-26)**: import_data 风险 K 续修复（C-20260925-087）：`populate_matches_from_fbref.py` 幂等性与一致性增强。①改用 `team_name_mapping.normalize_team_name` 归一化队名生成 match_id 与 home/away_team（fbref home_team_cn 实际存英文名，原直接用会与 matches 现有中文 match_id 跨源不一致）；②双键去重——match_id 相同 OR (date, 归一主队, 归一客队) 相同均跳过，杜绝同场重复插入；③fallback 对 `YY/YY` 格式补全为 `20YY-20YY+1`（原生成 `西甲22-23赛季` 非标准）；④批量修复历史 3012 条非标准 match_type。验证：重跑 inserted=0（幂等）、matches 无重复比赛、match_type 全标准。经验教训——数据导入脚本的去重键不能仅依赖生成的 ID（ID 可能因来源不同格式不一致），必须用业务主键（date+队名）做去重；fallback 逻辑要覆盖所有输入格式变体，不能假设输入格式统一。
+- **v1.46 (2026-09-26)**: import_data 审计风险 J/K/L 登记到框架文档 §4.1。风险 K 修复（C-20260925-086）：`populate_matches_from_fbref.py` 的 `LEAGUE_SEASON_MAP` 补充 26/27 赛季五联赛映射（原仅到 25/26，重跑会走 fallback 生成非标准 match_type）。风险 L（sofascore_backfill 无条件覆盖）评估为低风险接受——字段均从 stats_json 派生，stats_json 是唯一数据源，脚本已做 `if sofa_key in stats` 防御。至此 import_data 审计 4 项风险（J 已修复 C-085、K 已修复 C-086、L 接受）全部闭环。
+- **v1.45 (2026-09-25)**: import_data/ 目录审计 + 修复（C-20260925-085）。①`cleanup_matches.py` 匹配键修复：原用 `match_id NOT IN (odds_match_id)`，因 `matches.match_id`（中文队名）与 `fbref_match_mapping.odds_match_id`（英文队名）仅 35.3% 匹配，会误归档 64.7%。改用 `team_name_mapping.normalize_team_name` 归一双方队名后以 `(match_date, 归一主队, 归一客队)` 匹配（含主客对调兜底），匹配率 98.4%，仅 1.6% 待归档；默认 `dry-run` 仅预览，`--apply` 才执行。②僵尸脚本 `import_bundesliga.py`/`import_ligue1.py`（25-26 一次性 TXT 导入，odds_timing.db 空、源 TXT 已删）移入 `scripts/archive/`。框架文档 §3.8 原结论④「match_id 无漂移」修正为已修复。经验教训——文档「已排除」类结论必须用真实数据交集验证，不能仅凭命名同构推断；跨表 JOIN 键若命名相同但来源不同（中文 vs 英文），交集率才是判据；一次性数据脚本默认 dry-run 是防止误删的最后一道防线。
+- **v1.44 (2026-09-25)**: 风险 H 修复（C-20260925-083）：三个编排器 D3 步骤从全量 `sofascore_pre_match_features.py`（~88min，超时 15/25min 必杀）改为增量 `incremental_sofascore_features.py`（幂等 INSERT OR REPLACE，仅补缺场次，秒~分钟级），全量重建改为手动触发。风险 I 修复（C-20260925-084）：①新增 `features/__init__.py` 使 features 为正规包；②incremental 脚本裸导入统一为 `from features.x import`；③`_cn_fbref_map` 由实例级提升为类级单例缓存（`predict_unified` 每场新建实例，原每场全表扫描 fbref_match_mapping）。features 目录专项审计 5 项风险（E/F/G/H/I）全部修复完成。经验教训——编排器的「默认路径」必须与超时预算匹配：全量脚本若超时报错，应默认走增量而不是靠人工规避；只读映射表（赛季内不变）的缓存应提为类级/模块级单例，避免每请求重建。
+- **v1.43 (2026-09-25)**: 风险 F 修复（C-20260925-082）：天气气候估算不乘 λ。关键事实：`calc_weather_factor` 的 `is_estimate` 恒 True、`CONFIG_PATH` 从未使用，输出为「联赛×月份」气候均值——同月同联赛所有场乘数相同，是赛季性常量非逐场信号，且赔率已隐含市场天气预期。方案：新增 `_load_weather_config` 读 `match_conditions.weather.apply_climate_to_lambda`（默认 false），is_estimate 时 attack/defence_impact 强制 1.0，气候数据仅用于报告展示；JS 参考轨 `calcWeatherImpact` 兼容 Python schema 与扁平 temperature 演示 schema。经验教训——「定义了配置常量却从未读取」是死代码的明确信号；当一个因子对同组所有样本取相同值（季节常量）时，它不是特征而是偏置，且该偏置已被赔率吸收，应默认不参与 λ 调整，仅在拿到逐场实时数据时才启用。
+- **v1.42 (2026-09-25)**: 风险 G 修复（C-20260925-081）：伤病信号双通道去重，λ 双路分流——关键架构事实：T-006 v4 比分网格用 wdl_probs 做重要性重加权后**边际强制等于 WDL 概率**，故 Score λ 乘伤病因子与 pa_*（含官方缺阵名单，已入 WDL）构成重复计数；而 TG（85% Poisson(λ)+15% 大小球赔率）无 WDL/pa_* 通道，λ 伤病乘数是其唯一伤病信号。方案：Score λ 默认仅乘天气（天气不在 WDL/pa_*），TG λ 保留全量（伤病×核心×天气）；config 门禁 `match_conditions.score_injury_adjust`（env TRAE_MC_SCORE_INJURY 覆盖）+ shadow 双算写 `_shadow_score_injury`。经验教训：判断「重复特征」不能只看输入列表，必须沿输出通道核实融合算子——边际重加权会覆盖 λ 的边际效应，同一信号对不同输出（Score vs TG）的冗余性结论可以相反。
+- **v1.41 (2026-09-25)**: 风险 E 修复（C-20260925-080）：`calc_injury_factor` 核心球员池由全历史聚合改为赛前近 `n_recent` 场窗口（出场率=窗口出场/窗口场次，阈值 0.6），消除离队名宿（Messi/Piqué/Busquets 等）被识别为核心并误扣 λ 的问题；经验教训——「核心球员」类滚动身份特征必须带时间窗口与活跃判定，分母用窗口场次而非队史最大出场数。
+- **v1.40 (2026-09-25)**: features/ 目录专项审计（C-20260925-079）新增风险 E-I：E 伤病核心池全历史（高，已由 v1.41 修复）、F 天气恒气候均值且 JS 轨 schema 不匹配、G 伤病信号 pa_* 特征与 λ 乘数双通道重复计数、H D3 全量重建 88 分钟 vs 编排超时 15/25 分钟、I 包结构/导入风格/映射缓存。
+- **v1.39 (2026-09-24)**: 框架设计风险 B/C 治理（C-20260924-078）：①风险 B——`sofascore_pre_match_features.save_to_db` 由 `DROP TABLE`+`CREATE` 改为 `CREATE TABLE IF NOT EXISTS`+`ALTER TABLE ADD COLUMN` 对齐列+`INSERT OR REPLACE`，不再清空增量脚本写入的行；②风险 C——PA 特征缺失哨兵统一为 -1.0（生成端 fillna、增量 `_clean`/默认值、服务 fallback 初始化四处对齐），sofa_ 特征 0.0 保留为真实值；存量表迁移 74 主/94 客行全-0 PA→-1.0，合法 0 值保留。
+- **v1.38 (2026-09-24)**: match_condition 死特征接入预测链路（C-20260924-077）：`calc_injury_factor` SQL 修复（`team_name`→`team` + JOIN `fbref_match_mapping` 取 `match_date`，最近一场改 `MAX(match_date)` 取全场球员）+ `_cn_to_fbref_team` 队名映射（直查 fbref 英文 → 中文归一查缓存映射）；`prediction_core.predict_unified` 在 λ 计算后注入 `injury×keyPlayer×weather_atk×weather_def` 因子，对齐 JS `calcLambdaMatch` 语义，`try/except` 全隔离降级为 1.0；框架文档 §4.1 风险 A/D 已修复、B（全量/增量写冲突）/C（缺失值 0.0 vs -1.0 双口径）待治理。
+- **v1.37 (2026-09-20)**: §6.3.4 新增第 7/8 条——cookie 新鲜度先按 sdc_session 时间戳核验；EdgeOne 首批约 20~23 次真实请求后按 TLS 会话抽签发 987B 挑战页，重建会话重抽即可放行（C-031）。每日采集 19 场，预测版赛前数据口径。
+- **v1.36 (2026-09-20)**: §10.3 新增第 17 条——train/serve 同源完整含义（同代码/同参数/同分布、标志特征替代静默兜底；C-20260920-030）；meta-learner 重训（16 维），holdout RPS 0.2043→0.2024。
+- **v1.35 (2026-09-20)**: §10.3 新增第 16 条——v5 离线复测与 Shadow 工程模式（C-20260920-029）；reports/t006_v5_offline_retest.json + t006_shadow_v5.jsonl 建立。
+- **v1.34 (2026-09-20)**: §10.3 新增第 15 条——Top5 定档 + v5 接入冻结口径（C-20260920-028）；0919 全天 18 场重生成+_summary+UPSERT。
+- **v1.33 (2026-09-20)**: §10.3 新增第 14 条跨模块接口契约（取数前核实返回键、必需键哨兵、产出/展示键名对齐；C-20260920-027）；0919 全天 18 场报告重生成+_summary+UPSERT。
+- **v1.32 (2026-09-20)**: FEAT-014 更新——T-004 同模式修复完成（C-20260920-026）；§10.3 新增第 13 条（多路对齐多对一去重 + 特征架空识别）；assets/t004_tg_lgb_model.pkl 首次创建。
+- **v1.31 (2026-09-20)**: 新增 FEAT-014（赔率转概率先取倒数、train/serve 特征契约、四通道对齐），FEAT-010 升四通道；§10.3 新增第 12 条特征管线修复协议；T-005 v3 重训上线（C-20260920-025），T-004 同模式问题挂起待决策。
+- **v1.30 (2026-09-20)**: §10.3 新增第 11 条——n/5 计数以 STACKING_META_MODELS 五键为准（C-20260919-023）。
+- **v1.29 (2026-09-19)**: §10.3 新增第 10 条——用户指示暂停一切赛后复盘动作，主线转为预测模型优化与预测问题治理。
+- **v1.28 (2026-09-19)**: §10.3 新增第 9 条——XGB「—」真假性缺失判别、三层哨兵、三套口径分离铁律（C-20260919-022）。
+- **v1.27 (2026-09-19)**: §10.3 新增第 8 条——复盘让球结算盘口线三级解析与幂等补洞（C-20260919-021）。
+- **v1.26 (2026-09-19)**: §10.3 新增第 7 条——模型输出接入展示字典前统一 float()，显示缺失≠未参与融合（C-20260919-020）。
+- **v1.25 (2026-09-19)**: 新增 §10.3 防复发加固六条（C-20260919-019）；全栈框架设计 §6/§10.3/§13.4 同步。
+- **v1.24 (2026-09-19)**: 新增第十章「主客反转排查时代」：①EXP-019 三根因——fallback 模板向量污染（对照实验判别法→prime_fixtures 虚拟行+AND 精确命中）、Elo 双轨重复双重计数（归一化去重→TEAM_ALIASES 英文键展开重建，169 队/415 键，热刺 1448.92→1478.31）、INSERT OR IGNORE 致重跑不更新（改 ON CONFLICT DO UPDATE UPSERT）；②口径备忘——预测链 dedup 默认、平手均势场头间分歧不算硬矛盾；③窗口 20 场重生成后 WDL 14 主/6 客/0 平，子模型对明确热门与市场一致，报告+DB 均已更新（C-20260919-018）。
+- **v1.23 (2026-09-12)**: ①§7 当前模型最新状态更新至 2026-09-12：500.com 采集器 requests→curl_cffi（impersonate="chrome"）+ EdgeOne 三层 Cookie（含与 UA 绑定的 EO-Bot-Captcha-Token，每日人工 Edge 导出）恢复 500 数据可用，4 场赛前报告完整度 100%（C-20260912-001，详见《故障排查报告_数据采集_20260912》（已删除 C-20260918-049））；②新增 §6.3.4 EdgeOne 反爬与亚盘刷新运维 6 条（TLS 指纹本质、Cookie 凭证、风控节奏、--refresh-odds 用法、完整度口径、rating 覆盖率教训）；③亚盘 refresh_upcoming_odds 修复「先入库后完赛」结算盘丢失 bug，26/27 五联赛 113/1752 有盘口、74 场完赛 100% 结算（C-20260912-003）；④统一报告第十二章接入 24 维 pa_* 代理指标、第十四章新增积分榜/战意（compute_league_standings/classify_zhan_yi）+ 数据不完整保护（C-20260912-002）；⑤数据源表实测刷新（odds.db 1,669MB、500 match 19,790 行、sofascore 特征 18,363 行/98 字段、player_stats 730,128 行、matches 26/27 共 184 行/54 完赛）；⑥§6.4 新增 3 条已知限制（伤病代理指标、积分榜依赖赛果时效、未开盘亚盘）。
+- **v1.22 (2026-09-11)**: ①§7 当前模型最新状态同步至 2026-09-11：最新训练 20260908_004604（254 维，slim+ts+consensus+球员 lag 全量特征集）、训练↔服务端 CI 强制对齐 + feature_bridge 桥接（C-20260910-004/011）、统一引擎 DixonColes 全量投产（C-20260909-008）、P1-B 贝叶斯增量 shadow（τ=0.01 逐联赛、意甲 SIGNIFICANT-WIN p=0.0484、生产仍 serve control）；②新增 §6.3.3 自动化调度与生产运维状态（5 项计划任务表 + SYSTEM 账户/电池供电运维注意）；③数据源表更新（odds.db 1,666MB/14,521 场 league 空值 0、26/27 已 152 场、Sporttery 10 季全完成）；④新增 EXP-041（league 列漏写/match_type 兜底派生根因，C-20260911-023）与 EXP-042（shadow 配对 McNemar 口径，C-20260911-022）。P0~P2 状态以《模型优化评估报告_v2.0》为唯一权威（**已删除 C-20260918-049**，替代位置见 五大联赛全栈框架设计.md §十二，C-20260911-020）。
 - **v1.21 (2026-09-06)**: 新增第九章「实盘小注验证时代」：①预注册协议五条规则（TRIAL-001~005）——客胜热门段（away≤2.5）+ EV>0 + ¥20 平注 + 300 注停止，规则冻结防多重比较污染；②每日节奏三步骤（采竞彩→跑预测→生成投注单/结算）；③三源桥接 key 与 ±1 天日期容差（竞彩官方日 vs 当地日错位，14/14 场全匹配）；④概率口径声明（原始 WDL_away 不叠加 TempScaling，系统性高估属预注册接受项）；⑤评估准则以净盈亏为准绳（Jensen 效应）；⑥经验 EXP-016~018（竞彩采集器无 cookie 直连、首日 0 笔是规则正常运作、预测管线只覆盖 odds500 清单）。配套 C-20260906-001 + docs/live_trial_away_favorite_protocol.md。
 - **v1.20 (2026-09-04)**: 新增 §1.5 CALIB-009（C-20260904-002 edge 分桶单调回归修复）：①Mono-Pooled(on Temp) 单一单调保序使分桶恢复单调递增（0~3pp -13.4%→3~6pp -4.9%→6~10pp -3.1%→>10pp -1.5%，唯一单调方案）但**全桶仍负、ROI 未转正**，保序只能做「排序修复」不能做「水平修复」；②选择条件化 winner's curse 修正（Mono-Selected）证伪——整体 -6.28% 反而更差、分桶非单调、>10pp 桶高估升至 +17.5pp；③整体最优仍 Mono-Pooled(on raw) -3.65%、Mono-OVR 平召 0.92% 证实逐类保序坍缩（pooled 保平局召回是必要设计）。→ 概率层（校准/保序/择场/选择修正）四连证伪，**系统性高估根治唯一剩路 = 训练端 EV/ROI 目标改造**。
 - **v1.18 (2026-09-03)**: 新增 §1.5「概率校准与 EV 决策规则 CALIB-001~007」：①严格时序 OOF 11965 场 × TimeSeriesSplit(5) 折内 fit/折外 transform 的校准对比流程（C-20260903-006）；②Vector/Isotonic 对 Platt 后概率叠加会坍缩平局召回（<2.5%），禁止单用于 WDL 校准；③当前首选 TempScaling(on raw, NLL 最优)：T≈0.896~0.975 逐折递减，平局召回 27.16%（≥0.28 达标）、平注 ROI -3.71%（较基线 +1.70pp 最优）；④校准本身不能使 EV ROI 转正（仍 -3.71%），后续必须叠加 EV 择场 + 训练端 EV 目标 + edge 分桶修复三方面（CALIB-007）。EV ROI 负根因闭环：§3.105 分赛季拆解排除「老赛季赔率质量」、§3.106 校准选型确认「校准仅能压缩高估幅度、无法完全消除」。

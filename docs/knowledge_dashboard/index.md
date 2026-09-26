@@ -4,8 +4,8 @@
 
 ## 最新
 
-- [20260908_dashboard](20260908_dashboard.md)（最新）
+- [20260924_dashboard](20260924_dashboard.md)（最新）
 
 ## 历史
 
-- （暂无）
+- [20260908_dashboard](20260908_dashboard.md)

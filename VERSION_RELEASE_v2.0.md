@@ -92,7 +92,7 @@ v2.0 是五大联赛足球预测模型的重大优化版本，包含 T-005 v3 �
 
 | 文件 | 说明 |
 |------|------|
-| `docs/DEPLOYMENT_CONFIG_v2.0.md` | 部署配置清单（v2.0 新增） |
+| `docs/DEPLOYMENT_CONFIG_v2.0.md`（**已删除 C-20260918-049**，当前 v8.3+ 配置已过时） | 部署配置清单（v2.0 新增） |
 | `docs/optimization_log.md` | 优化日志（§4.1-§4.34） |
 | `docs/change_log.md` | 变更日志 |
 | `docs/DEPLOYMENT_GUIDE.md` | 部署指南 |
@@ -168,7 +168,7 @@ python -m pytest tests/ -v
 本版本包含 T-006 v4 从初始版本到全批量向量化的完整优化历程，以及 T-005 v3 生产模型的最终部署配置。详细变更记录见 `docs/change_log.md`。
 
 **v2.0 新增交付物**:
-- `docs/DEPLOYMENT_CONFIG_v2.0.md` — 部署配置清单
+- `docs/DEPLOYMENT_CONFIG_v2.0.md`（**已删除 C-20260918-049**，当前 v8.3+ 配置已过时） — 部署配置清单
 - `scripts/stress_test_v2.js` — 高并发负载测试脚本
 - `logs/stress_test_report_v2.json` — 负载测试报告
 - `VERSION_RELEASE_v2.0.md` — 版本发布清单（本文件）

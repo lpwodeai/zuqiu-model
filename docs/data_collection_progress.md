@@ -1,9 +1,21 @@
 # 五大联赛数据采集进度汇总
 
 > **创建时间**: 2026-08-25
-> **最后更新**: 2026-09-17
+> **最后更新**: 2026-09-21
 > **用途**: 统一标注三大数据源（500.com / SofaScore / Understat）+ Sporttery 竞彩赔率的采集完成情况与完整度，供预测管线与人工巡检参考
-> **关联文档**: docs/change_log.md §3.63/§3.70/§3.170~3.172/§3.190, docs/project_memory.md §6.3/§6.3.4, docs/archive/故障排查报告_数据采集_20260912.md, .trae/skills/local-football-scraper/SKILL.md
+> **关联文档**: docs/change_log.md §3.63/§3.70/§3.170~3.172/§3.190, docs/project_memory.md §6.3/§6.3.4, .trae/skills/local-football-scraper/SKILL.md
+> **已删除归档**: `docs/archive/故障排查报告_数据采集_20260912.md`（C-20260918-049 删除，完整排查过程见 change_log §3.170 + 本文件 §2.6）
+
+> **2026-09-17 更新摘要（C-20260917-032~034，赛前官方首发/伤停采集链）**：
+> 1. **新增赛前采集器 `collection/prematch_sofascore_lineups.py`**：SofaScore `/event/{id}/lineups` 赛前单接口同时拉取预测首发 11 人（含 avgRating/阵型）+ 官方 `missingPlayers`（伤病/停赛+预计复出日），写新表 `match_predicted_lineups`（UNIQUE(fbref_match_id,side,player_name)，幂等）+ 冷存储 `data/sofascore_raw/{联赛}/{event_id}/prematch_lineups.json`；官方伤停同步写入 `match_missing_players`（复用赛后写入链）。实测 09-18 窗口 21 场发现/18 有效/374 条预测首发/134 条官方伤停。
+> 2. **官方伤停接入 PA 特征校正**（`features/player_availability_features.py`）：仅对未赛场次（防时间穿越）查 match_missing_players 精确到比赛日的官方缺阵行重排 XI；**硬性口径：player_injuries 累积表不能做「当前缺阵」查询**（合并 10 赛季历史伤病行，expected_return 为空的旧行永久误判缺阵）。实测比利亚雷亚尔缺阵影响 0.244→0.082、马拉加可用性 0.80→0.909；未来 122 场 PA 特征已重算回写。
+> 3. **报告 §十二 渲染官方伤停行**（`scripts/generate_unified_report.py`）：免责声明双分支，有官方数据时明示"已用于校正下方可用性/缺阵影响等特征"。
+> 4. **管线接入**：`run_prematch_2030.ps1` 步骤 0a-1（采集 → `player_injury_source.py --sync-sofascore` → 特征重算），每日 20:30 自动执行。
+
+> **2026-09-21 更新摘要（C-20260921-036，TG 校准 Shadow + 落库守卫）**：
+> 1. **新增 TG Shadow 记录流**：每日赛前批次（`generate_unified_report.py`）在生产 TG 预测后自动双算「λ_total 滚动校准」版本，写 `reports/tg_calib_shadow.jsonl`（按 match_id 去重覆盖，含 control/shadow 双份 8 档分布、factor、联赛/池化 trace、λ）；**只写 JSONL，不展示、不落 model_predictions**，开关 `TRAE_TG_CALIB_SHADOW`（默认开）。该文件是赛后评测的唯一累积源，禁止手工编辑；当前基线样本为 2026-08-22~09-21 的 154 场干净回放（评测报告 `reports/tg_calib_shadow_124929/125105/125258.md`）。
+> 2. **TG 落库写入守卫生效**：`prediction_db_writer.py` 对 TG_over_2_5/TG_under_2_5/TG_top1/TG_top3 增加 `(0,1)` 严格概率校验，无有效赔率降级产出的 0.0 占位行今后**禁止入库**（warning 日志留痕）；**存量 49 场 98 行 0.0/1.0 占位脏行已于 C-20260921-037 清洗删除**（审计清单 `backup/tg_dirty_rows_deleted_C037.json`，全量备份 `backup/db_snapshots/odds_20260921_150658.db`），历史查询不再需要 `probability>0` 过滤。
+> 3. **采集侧无变更**：本次不涉及 500.com/SofaScore/Understat/Sporttery 采集逻辑与表结构。
 
 > **2026-09-17 更新摘要（C-20260917-001~003，实测口径）**：
 > 1. **500.com 反爬空壳误报修复**：新增 `anti_bot_blocked` 状态，空壳表格（全 `-` / company_count=0 / 必发成交为空）现判为 EdgeOne 反爬拦截（FAIL），不再误判为「源站无数据」（WARN）；采集端 + 报告端三层闭环：识别 → 三态展示 → 刷新 Cookie 重采恢复。
@@ -56,6 +68,7 @@
 |--------|------|----------|--------|------|
 | **500.com** | 投注分析 / 百家欧指 / 赛后技术统计 / 亚盘盘口 | odds.db `odds500_*` | collection/final_500_collector.py | 🟢 进行中（curl_cffi+EdgeOne Cookie，C-20260912-001） |
 | **SofaScore** | 球队级 46 维特征 + 球员级单场统计 + 阵容/事件 | odds.db `match_player_stats` / `sofascore_team_features` | collection/final_sofascore_collector.py | 🟢 已覆盖多赛季 |
+| **SofaScore 赛前首发/伤停** | 预测首发 XI + 官方 missingPlayers（赛前，开球前 ~1h 转确认） | odds.db `match_predicted_lineups` / `match_missing_players` | collection/prematch_sofascore_lineups.py（管线步骤 0a-1） | 🟢 26/27 滚动（C-20260917-032） |
 | **Understat** | xG 体系（比赛级/球员级/射门级） | odds.db `understat_*` 三张表 | collection/final_understat_collector.py | 🟢 五大联赛 10 赛季完整 |
 | **Sporttery 竞彩** | WDL/让球/总进球/比分时序赔率（WDL 特征核心输入） | odds.db `wdl_history` / `handicap_history` / `total_goals_history` / `score_history` | collection/supplement_sporttery_odds.py + scripts/sporttery_live_collector.py | 🟢 双通道对齐 98.3% |
 
@@ -165,7 +178,7 @@
 
 ### 2.6 2026-09-12 EdgeOne 反爬应对与亚盘刷新（C-20260912-001/003）
 
-> 完整排查过程见 `docs/archive/故障排查报告_数据采集_20260912.md`，运维细则见 project_memory.md §6.3.4。
+> 完整排查过程见 `docs/archive/故障排查报告_数据采集_20260912.md`（**已删除 C-20260918-049**，要点见本节下方 + change_log §3.170），运维细则见 project_memory.md §6.3.4。
 
 **反爬（已解决）**：500.com 部署腾讯云 EdgeOne 两层人机防护，`requests` 因 JA3 指纹被拦（采集结果为空壳行）。采集器已改用 `curl_cffi`（`Session(impersonate="chrome")`），配合人工导出的 Cookie 通过：
 - Cookie 文件默认 `data/cookies_500.json`（`--cookies` 可覆盖），需含 `__tst_status`、`EO_Bot_Ssid`、`EO-Bot-Captcha-Token`（真人勾选后写入，与 UA 绑定，JSON 内用 `__user_agent` 记录导出浏览器 UA）；
@@ -248,6 +261,17 @@ C:\Python314\python.exe collection\final_500_collector.py --refresh-odds --seaso
 |----------|----------|:------:|------|
 | 16/17 ~ 25/26 | 五大联赛全 | 🟢 ~95%+ | 10 赛季历史数据基本完整（18037 场） |
 | 26/27（进行中） | 五大联赛前几轮 | 🟡 赛前特征已预生成，赛后球员统计滚动补采 | 09-12 已补 19 场（16/16 成功）；后续轮次需赛后管线（`run_post_match_pipeline.py --catch-up`）按时触发，防 08-22~09-07 式大面积缺行重演 |
+
+### 3.6 赛前官方首发/伤停（match_predicted_lineups，C-20260917-032）
+
+| 指标 | 值 | 说明 |
+|------|:--:|------|
+| 数据接口 | SofaScore `/event/{id}/lineups` | 赛前单接口同时返回预测首发 11 人 + 官方 missingPlayers；开球前约 1h 自动转 confirmed；`/injuries` 端点不存在（404） |
+| 场次发现 | `fbref_match_mapping` 未来未赛场次 | fbref_match_url LIKE '%sofascore%' AND match_date≥起点 AND 未完赛；无需队名匹配 |
+| 新表 | `match_predicted_lineups` | UNIQUE(fbref_match_id, side, player_name)；字段含 confirmed/formation/position/shirt_number/is_starter/avg_rating |
+| 官方伤停联动 | `match_missing_players` | 复用 final_sofascore_collector.write_missing_players_to_db；**PA 特征消费端**（player_availability_features._load_official_out，仅未来场次） |
+| 冷存储 | `data/sofascore_raw/{联赛}/{event_id}/prematch_lineups.json` | 原始 JSON 存档 |
+| 09-18 实测 | 21 场发现 / 18 有效 / 374 条预测首发 / 134 条官方伤停 | 管线步骤 0a-1 每日 20:30 自动执行；重跑幂等 |
 
 ---
 
