@@ -276,11 +276,11 @@
   },
   "training_time_seconds": 813.14,
   "model_files": {
-    "ensemble": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\ensemble_model_20260718_215428.pkl",
-    "xgb": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\xgb_model_20260718_215428.pkl",
-    "lgb": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\lgb_model_20260718_215428.pkl",
-    "scaler": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\scaler_20260718_215428.pkl",
-    "selected_features": "g:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\selected_features_20260718_215428.pkl"
+    "ensemble": "f:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\ensemble_model_20260718_215428.pkl",
+    "xgb": "f:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\xgb_model_20260718_215428.pkl",
+    "lgb": "f:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\lgb_model_20260718_215428.pkl",
+    "scaler": "f:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\scaler_20260718_215428.pkl",
+    "selected_features": "f:/zuqiu/五大联赛专属模型/五大联赛专属模型/assets\\selected_features_20260718_215428.pkl"
   },
   "selected_features": [
     "home_win_rate",
