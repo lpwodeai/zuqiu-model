@@ -30,4 +30,8 @@ release_v2.0.zip
 tools/
 .trae/
 .pytest_cache/
-=
+
+# 运行时产物兜底（C-20260927-013）：对已追踪文件无效，仅拦截未来新增
+deployment/trigger_state.json
+docs/concept_drift/
+docs/reliability_gate/
