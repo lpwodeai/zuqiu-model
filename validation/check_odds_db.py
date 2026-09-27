@@ -18,6 +18,9 @@ for t in tables:
     print(f"  {t[0]}: {cnt} rows")
 
 # Check timing-related tables
+# 注（C-20260927-009 实测）：前 4 个 *_timing 旧表名已不存在（时序数据现存放于 odds.db 的
+# wdl_history/handicap_history/total_goals_history，即本列表后半段），对它们打印 "no such table"
+# 属预期输出，不代表数据丢失；末尾 3 个 *_history 检查仍有效。本脚本主体（42 表枚举）不受影响。
 for table_name in ['wdl_timing', 'handicap_timing', 'total_goals_timing', 'score_timing', 'match_mapping', 'wdl_history', 'handicap_history', 'total_goals_history']:
     try:
         cnt = c.execute(f"SELECT COUNT(*) FROM [{table_name}]").fetchone()[0]

@@ -90,15 +90,19 @@ print("6. odds_timing.db")
 print("=" * 60)
 db_timing = DATA / "odds_timing.db"
 if db_timing.exists():
-    conn3 = sqlite3.connect(str(db_timing))
-    c3 = conn3.cursor()
-    c3.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-    for r in c3.fetchall():
-        tbl = r[0]
-        c3.execute(f"SELECT COUNT(*) FROM [{tbl}]")
-        cnt = c3.fetchone()[0]
-        print(f"  {tbl}: {cnt} rows")
-    conn3.close()
+    if db_timing.stat().st_size == 0:
+        print("  ⚪ 0 字节（空库，属正常态）：odds_timing.db 是 data_store.ingest_odds_timing_txt "
+              "的按需 TXT 导入通道，未导入 TXT 时为空；时序赔率现数据位于 odds.db 的 *_history 表")
+    else:
+        conn3 = sqlite3.connect(str(db_timing))
+        c3 = conn3.cursor()
+        c3.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        for r in c3.fetchall():
+            tbl = r[0]
+            c3.execute(f"SELECT COUNT(*) FROM [{tbl}]")
+            cnt = c3.fetchone()[0]
+            print(f"  {tbl}: {cnt} rows")
+        conn3.close()
 else:
     print("  文件不存在")
 

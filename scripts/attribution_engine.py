@@ -46,7 +46,6 @@ from typing import Any, Dict, List, Optional
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 ODDS_DB = PROJECT_DIR / "data" / "odds.db"
-TIMING_DB = PROJECT_DIR / "data" / "odds_timing.db"
 
 sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 from team_name_mapping import normalize_team_name, TEAM_ALIASES  # noqa: E402

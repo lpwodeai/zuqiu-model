@@ -24,6 +24,9 @@ from scipy.optimize import minimize
 BASE = Path(__file__).resolve().parent.parent
 DATA = BASE / "data"
 ODDS_DB = DATA / "odds.db"
+# TIMING_DB 在 load_recent() 中真实使用（查 wdl_timing/handicap_timing/total_goals_timing 最新快照）。
+# odds_timing.db 为 data_store.ingest_odds_timing_txt 的按需 TXT 导入通道：空置时 load_recent()
+# 对空库静默返回 0 场（仅减少联动校验样本，不报错）；时序数据现网存量在 odds.db.*_history（C-20260927-009）
 TIMING_DB = DATA / "odds_timing.db"
 
 MAX_GOALS = 7

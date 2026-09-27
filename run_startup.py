@@ -165,11 +165,8 @@ def check_database(max_retries=3, retry_delay=1.0):
             'tables': ['matches', 'wdl_history', 'handicap_history', 'total_goals_history', 'score_history'],
             'league_column': 'match_type',  # odds.db 使用 match_type
         },
-        'odds_timing.db': {
-            'path': os.path.join(DATA_DIR, 'odds_timing.db'),
-            'tables': ['matches', 'wdl_timing', 'handicap_timing', 'total_goals_timing', 'score_timing', 'match_results'],
-            'league_column': 'league',  # odds_timing.db 使用 league
-        },
+        # 注：odds_timing.db 不列入启动必检——它是 data_store.ingest_odds_timing_txt 的按需
+        # TXT 导入通道，空置（0 字节）属正常态；时序赔率现网存量在 odds.db.*_history（C-20260927-009）
     }
     
     db_check_results = []

@@ -1,3 +1,8 @@
+# ⚠️ 状态说明（C-20260927-009 实测）：本脚本直连 data/odds_timing.db。该库是
+# data_store.ingest_odds_timing_txt 的按需 TXT 导入通道，当前为 0 字节空库（2026-09-25 清理后未再导入），
+# 因此本脚本会显示 Tables (0) 且 wdl_timing/match_results/match_mapping 报 no such table——
+# 这不是数据丢失；时序赔率现网存量位于 odds.db 的 *_history 表（wdl_history 等，12881 场实测）。
+# 核验时序数据请改用 validation/check_timing_schema.py（实测有效）或直接查 odds.db。
 import sqlite3
 import os
 from pathlib import Path
