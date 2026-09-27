@@ -136,7 +136,7 @@ v2.0 是五大联赛足球预测模型的重大优化版本，包含 T-005 v3 �
 ```bash
 # 1. 安装依赖
 npm install
-pip install numpy pandas scipy scikit-learn lightgbm xgboost optuna joblib
+pip install -r requirements.txt  # 依赖唯一事实来源（C-20260927-006），勿再手写包列表
 
 # 2. 启动服务
 pm2 start ecosystem.config.cjs --env production
