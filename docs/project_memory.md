@@ -663,12 +663,13 @@ change_log.md §5 统计表曾长期停留在 136 而实际记录已达 554（�
 
 ---
 
-**文档版本**: v1.53
+**文档版本**: v1.54
 **创建时间**: 2026-07-23
-**最后更新**: 2026-09-27（CI 红灯根因闭环 run#10 六矩阵全绿，C-20260927-005；新增 EXP-047）
+**最后更新**: 2026-09-27（requirements.txt 依赖治本，run#11 六矩阵全绿，C-20260927-006）
 **更新频率**: 规则或经验变更时更新
 **维护人**: 模型优化团队
 **更新说明**:
+- **v1.54 (2026-09-27)**: C-20260927-005 遗留治本项闭环（C-20260927-006）：新增根目录 `requirements.txt` 作为依赖唯一事实来源，CI 改 `pip install -r requirements.txt`，手写 pip 清单（两次漂移根源）永久取消；**run#11（292674f）六矩阵再全 success**。清单生产方法可复用：AST 扫全仓 565 个 .py 的 import → 用本机解释器 `importlib.util.find_spec` 逐包判定来源（site-packages=真第三方、仓库内 .py stem/目录名=本地模块、pylibs/=vendored 排除）→ 再按**导入层级与测试链路**分层：13 个核心必装进 CI，9 个重型可选（torch/playwright 等，核实为函数内延迟导入或独立脚本）写注释区不进 CI；不锁版本、本机实测版本入注释基线；requirements.txt 必须 0 BOM（pip 会把 BOM 算进首包名）。
 - **v1.53 (2026-09-27)**: CI 红灯根因排查闭环（C-20260927-005）：GitHub Actions 自 8/12 起 #3~#8 连续 failure 的两层根因——①workflow pip 清单漏装 requests/beautifulsoup4（final_500_collector 顶层 import，dd9f43b 只补 requests 漏掉 bs4）；②team_name_mapping.py 的 `Optional[str]` 注解未 import，Py3.14 PEP 649 延迟求值掩盖、3.11/3.12 NameError（8 用例）。修复：pip 补 beautifulsoup4、strategy 改 fail-fast:false、补 typing import（84277f7+3c7d67f），**run#10 六矩阵（ubuntu/windows×3.11/3.12/3.14）全 success**。新增 EXP-047：本机新版 Python 全绿 ≠ CI 旧版本全绿，typing 注解必须查 import（AST 扫描 602 文件仅 1 处），CI 保留最低版本矩阵+fail-fast:false，Actions 日志重定向须剥离认证头。
 - **v1.52 (2026-09-27)**: ①tests/ 目录审计（第 9 次同型）结论归档《五大联赛全栈框架设计.md》新增 §9.18「测试与 CI 体系」、§13.4 风险表新增 2 行（C-20260927-003）：293 用例本机 281 过/12 跳/0 失败（365.69s），但 GitHub Actions 可取 4 次运行全红（run#6 唯一真实失败 ubuntu/Py3.12，日志 403 根因未取证）、pre-commit hook 未装、Node 6 脚本脱管（writer 测试 4 失败 schema 漂移）、npm test 空壳——自动门禁名存实亡登记为中-高风险。②change_log.md 文件头四重 BOM 归一为单 BOM（C-20260927-004），新增 EXP-046：编辑工具会给带 BOM 文件重复写 BOM，带 BOM 文档每次编辑后必须复核字节头，BOM 计数用循环逐 3 字节而非抽样。
 - **v1.51 (2026-09-26)**: 风险 M 修复（C-20260926-091）：logs/ 日志轮转与自动清理。①`final_sofascore_collector.setup_logging` 改固定文件 `sofascore_collector.log` + `RotatingFileHandler(maxBytes=5MB, backupCount=3)`（磁盘上限约 20MB，import logging.handlers）；②新增 `purge_old_collector_artifacts()`——每次启动自动清理：旧时间戳 log 保留最近 3 个、summary JSON 保留最近 10 个，try/except 全隔离；③`odds_data_spec.purge_old_training_logs()`——`TrainingLogger.__init__` 自动执行，training JSON mtime>30 天删除但最近 20 个保底（retrain_trigger_runner 只取最新，与风险O 兼容）；④清理模式不匹配 `sofascore_progress_*.json`（resume 依赖）与轮转 `.log.N` 文件，实测零误伤。结果：首次触发删除旧 log 524/旧 summary 144/超期 training 12；logs/ 由 1028 文件/77.81MB 降至 **349 文件/14.09MB（-82%）**，此后自动维护、无需计划任务。经验教训——日志清理优先「启动时挂钩 + 保留最近 N」而非依赖计划任务；glob 模式设计须用真实文件清单验证排除项（progress/轮转文件）；删除前做模式安全预览是防止误删 resume 状态的必要步骤。遗留：understat/xgscore/sporttery/pipeline 时间戳 log（约 10MB）待推广同一模式。
