@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import sys
-sys.path.insert(0, r'f:\zuqiu\五大联赛专属模型\五大联赛专属模型')
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from db_utils import connect, read_sql
 
 c = connect()
