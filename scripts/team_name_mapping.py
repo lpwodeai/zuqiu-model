@@ -2,6 +2,7 @@ import sqlite3
 import difflib
 import re
 from pathlib import Path
+from typing import Optional
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MAIN_DB_PATH = BASE_DIR / "data" / "five_leagues.db"
