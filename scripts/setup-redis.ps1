@@ -255,7 +255,8 @@ Write-Host "    监控: $RedisCli -p $RedisPort MONITOR"
 Write-Host "    日志: $RedisDir\redis.log"
 Write-Host ""
 Write-Host "  重启预测服务以连接 Redis:" -ForegroundColor Cyan
-Write-Host "    .\tools\nssm.exe restart FiveLeagues"
+Write-Host "    裸进程现状: 停掉占用 3000 的 node 后重新 node server/index.js"
+Write-Host "    PM2 接管后: pm2 restart all"
 Write-Host ""
 
 # 返回连接状态
