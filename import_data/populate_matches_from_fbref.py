@@ -134,10 +134,10 @@ def populate():
         try:
             cur.execute("""
                 INSERT INTO matches
-                    (match_id, home_team, away_team, match_date, match_type,
+                    (match_id, home_team, away_team, match_date, match_type, league,
                      actual_score, actual_wdl, actual_total_goals, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (match_id, home_cn, away_cn, match_date, match_type,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (match_id, home_cn, away_cn, match_date, match_type, league,
                   actual_score, actual_wdl, actual_total, now, now))
             inserted += 1
             existing_ids.add(match_id)

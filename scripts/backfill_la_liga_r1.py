@@ -161,11 +161,11 @@ def backfill_odds_db(matches):
         try:
             c.execute(
                 """INSERT OR IGNORE INTO matches
-                   (match_id, match_type, home_team, away_team, match_date,
+                   (match_id, match_type, league, home_team, away_team, match_date,
                     handicap, actual_wdl, actual_handicap, actual_score, actual_total_goals,
                     created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (match_id, "西甲2026-2027赛季", m["home"], m["away"], m["date"],
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (match_id, "西甲2026-2027赛季", "西甲", m["home"], m["away"], m["date"],
                  m.get("handicap"), m["wdl"], m.get("handicap_result"),
                  m["score"], m["total_goals"], now, now)
             )
