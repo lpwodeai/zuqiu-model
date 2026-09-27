@@ -284,6 +284,7 @@
 | EXP-014 | 数据变更必须先备份再操作 | 2026-07-24 | 防止数据丢失 |
 | EXP-015 | 多步骤任务必须用 TodoWrite 规划 | 2026-08-04 | 确保任务完整性 |
 | EXP-046 | **编辑工具会给带 BOM 的文件重复写 BOM，须落盘后复核字节头**（C-20260927-004）：change_log.md 文件头实测累积 **4 个** UTF-8 BOM（`EF BB BF × 4`，历史编辑工具重复写入）；用 Edit 工具修改该文件后 BOM 数又从 1 变 2——保存时工具无条件再写一个 BOM，多次编辑即堆叠。教训：①统计前导 BOM 必须用循环逐 3 字节计数，不能只抽查前 9 字节（本次误判为「三重」实为四重）；②对带 BOM 文件做任何编辑后，必须用字节头复核（`EF BB BF 23` 为单 BOM 正常态），发现堆叠用「剥除全部前导 BOM → 重写单个」归一；③各文档 BOM 惯例不同（change_log.md 有单 BOM、五大联赛全栈框架设计.md/project_memory.md 无 BOM），按各自原状维持，禁止顺手互相改造；④PS1 含中文必须 BOM 见 §10.3 第 5 条 | 2026-09-27 | 带 BOM 文档编辑后强制字节头复核；BOM 计数用循环不用抽样；单文件 BOM 惯例保持一致 |
+| EXP-047 | **本机新版 Python 全绿不等于 CI 旧版本全绿：PEP 649 会掩盖注解 NameError**（C-20260927-005）：CI 红灯 run#3~#10 排查发现，`team_name_mapping.py:405` 用 `Optional[str]` 注解却未 `from typing import Optional`——**Python 3.14 因 PEP 649 默认对函数注解延迟求值，定义函数时不解析注解故不报 NameError；3.11/3.12 立即求值，import 模块即炸**。本机仅装 Py3.14、293 用例全绿，该问题长期不可见，直到 CI 关闭 fail-fast 跑全矩阵（3.11/3.12 四 job 全挂、3.14 两 job 全绿，跨 OS 一致）才暴露。教训：①凡用 typing 注解名（Optional/List/Dict/Union…）必须确认已 import，可用 AST 脚本扫「注解引用 typing 名但未绑定、且无 `from __future__ import annotations`」的文件（本次 602 个 .py 仅 1 处隐患）；②CI 矩阵必须保留与生产一致的最低 Python 版本且 `fail-fast: false`，否则单 job 失败会级联取消其他版本、掩盖真实分布；③Actions job 日志 API 302 重定向到 Azure blob 时必须剥离 Authorization 头，否则 Bearer 泄漏给 blob 端返回 401（urllib 需自定义 redirect handler） | 2026-09-27 | typing 注解必查 import；CI 多版本矩阵+fail-fast:false 不可只信本机新版；拉 Actions 日志重定向时剥离认证头 |
 
 ---
 
@@ -662,12 +663,13 @@ change_log.md §5 统计表曾长期停留在 136 而实际记录已达 554（�
 
 ---
 
-**文档版本**: v1.52
+**文档版本**: v1.53
 **创建时间**: 2026-07-23
-**最后更新**: 2026-09-27（tests/ 目录审计归档框架文档 §9.18 + change_log 四重 BOM 归一，C-20260927-003/004；新增 EXP-046）
+**最后更新**: 2026-09-27（CI 红灯根因闭环 run#10 六矩阵全绿，C-20260927-005；新增 EXP-047）
 **更新频率**: 规则或经验变更时更新
 **维护人**: 模型优化团队
 **更新说明**:
+- **v1.53 (2026-09-27)**: CI 红灯根因排查闭环（C-20260927-005）：GitHub Actions 自 8/12 起 #3~#8 连续 failure 的两层根因——①workflow pip 清单漏装 requests/beautifulsoup4（final_500_collector 顶层 import，dd9f43b 只补 requests 漏掉 bs4）；②team_name_mapping.py 的 `Optional[str]` 注解未 import，Py3.14 PEP 649 延迟求值掩盖、3.11/3.12 NameError（8 用例）。修复：pip 补 beautifulsoup4、strategy 改 fail-fast:false、补 typing import（84277f7+3c7d67f），**run#10 六矩阵（ubuntu/windows×3.11/3.12/3.14）全 success**。新增 EXP-047：本机新版 Python 全绿 ≠ CI 旧版本全绿，typing 注解必须查 import（AST 扫描 602 文件仅 1 处），CI 保留最低版本矩阵+fail-fast:false，Actions 日志重定向须剥离认证头。
 - **v1.52 (2026-09-27)**: ①tests/ 目录审计（第 9 次同型）结论归档《五大联赛全栈框架设计.md》新增 §9.18「测试与 CI 体系」、§13.4 风险表新增 2 行（C-20260927-003）：293 用例本机 281 过/12 跳/0 失败（365.69s），但 GitHub Actions 可取 4 次运行全红（run#6 唯一真实失败 ubuntu/Py3.12，日志 403 根因未取证）、pre-commit hook 未装、Node 6 脚本脱管（writer 测试 4 失败 schema 漂移）、npm test 空壳——自动门禁名存实亡登记为中-高风险。②change_log.md 文件头四重 BOM 归一为单 BOM（C-20260927-004），新增 EXP-046：编辑工具会给带 BOM 文件重复写 BOM，带 BOM 文档每次编辑后必须复核字节头，BOM 计数用循环逐 3 字节而非抽样。
 - **v1.51 (2026-09-26)**: 风险 M 修复（C-20260926-091）：logs/ 日志轮转与自动清理。①`final_sofascore_collector.setup_logging` 改固定文件 `sofascore_collector.log` + `RotatingFileHandler(maxBytes=5MB, backupCount=3)`（磁盘上限约 20MB，import logging.handlers）；②新增 `purge_old_collector_artifacts()`——每次启动自动清理：旧时间戳 log 保留最近 3 个、summary JSON 保留最近 10 个，try/except 全隔离；③`odds_data_spec.purge_old_training_logs()`——`TrainingLogger.__init__` 自动执行，training JSON mtime>30 天删除但最近 20 个保底（retrain_trigger_runner 只取最新，与风险O 兼容）；④清理模式不匹配 `sofascore_progress_*.json`（resume 依赖）与轮转 `.log.N` 文件，实测零误伤。结果：首次触发删除旧 log 524/旧 summary 144/超期 training 12；logs/ 由 1028 文件/77.81MB 降至 **349 文件/14.09MB（-82%）**，此后自动维护、无需计划任务。经验教训——日志清理优先「启动时挂钩 + 保留最近 N」而非依赖计划任务；glob 模式设计须用真实文件清单验证排除项（progress/轮转文件）；删除前做模式安全预览是防止误删 resume 状态的必要步骤。遗留：understat/xgscore/sporttery/pipeline 时间戳 log（约 10MB）待推广同一模式。
 - **v1.50 (2026-09-26)**: 风险 R 修复（C-20260926-090）：matches 26/27 match_id 统一为 SofaScore 全名口径。深度诊断推翻原登记方向（统一中文）与 DATA-014 的「预测轨简名」描述：matches 实际主流（25/26 全量、26/27 1940/1983）与采集轨 ps mid 完全一致（SofaScore 全名）；232 个 CN 行全部来自 populate（C-086 误用归一化中文名生成 match_id），另有 23 组 odds500 简名行 vs SofaScore 全名行双行。迁移（backup/migrate_risk_r.py，两轮，迁移前备份 backup/odds_backup_riskR_20260926.db）：233 组重复组保留 SofaScore 口径行（有 ps 优先），字段 merge 351 项、删 238 行；21 场 CN 独有改名；model_predictions 迁移 83 mid（UNIQUE 冲突保 timestamp=MIN/is_replay=MIN，符 C-053）、post_match_review 迁移 33 mid；补插 52 场 ps 孤儿（数据源 odds500_match，handicap 不写——matches CHECK 仅允许 sporttery 竞彩口径）。结果：matches 26/27 共 2012 场、CN 残留 0、重复 0、ps 孤儿 65→15（余 15 场 odds500 无记录：6 场历史漏场+9 场未来场）。根源修复：populate 的 match_id 改用 fbref_match_mapping.odds_match_id 原值，重跑 inserted=0 幂等。新增 DATA-015 规则；新登记风险 S（odds500_match 144 + odds500_stat 5 个 CN mid）。经验教训——跨源一致性应以采集器/ps 的实际写入口径为准，不能凭「归一化」直觉选方向；修复前必须先诊断清「谁是多数派、谁与健康历史一致」；matches.handicap 有 CHECK 约束仅允许 sporttery 源。
