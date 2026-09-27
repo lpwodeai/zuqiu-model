@@ -101,8 +101,18 @@ if [ ! -f ".env" ]; then
         echo -e "${YELLOW}[提示]${NC}   - 修改 JWT_SECRET 为强随机密钥"
         echo -e "${YELLOW}[提示]${NC}   - 修改 CLIENT_URL 为实际域名"
     else
-        print_error ".env 文件不存在，且无 .env.example 模板"
-        exit 1
+        # 无 .env.example（2026-09-27 仓库现状）：生成最小生产 .env，随机 JWT_SECRET
+        echo -e "${YELLOW}[提示]${NC} 未找到 .env.example，正在生成最小 .env ..."
+        GEN_SECRET="$(cat /proc/sys/kernel/random/uuid | tr -d '-')"
+        cat > .env <<EOF
+# 由 deploy.sh 自动生成（最小配置），请按实际环境修改
+NODE_ENV=production
+PORT=3000
+CLIENT_URL=https://your-domain.com
+JWT_SECRET=${GEN_SECRET}
+EOF
+        echo -e "${YELLOW}[提示]${NC} 已生成最小 .env（含随机 JWT_SECRET）"
+        echo -e "${YELLOW}[提示]${NC}   - 请修改 CLIENT_URL 为实际域名"
     fi
 else
     print_success ".env 配置文件已存在"
@@ -140,7 +150,7 @@ case $choice in
     2)
         echo ""
         echo "正在以开发环境模式启动..."
-        pm2 start ecosystem.config.js --env development
+        pm2 start ecosystem.config.cjs --env development
         ;;
     3)
         echo ""
@@ -151,7 +161,7 @@ case $choice in
     *)
         echo ""
         echo "正在以生产环境模式启动..."
-        pm2 start ecosystem.config.js --env production
+        pm2 start ecosystem.config.cjs --env production
         ;;
 esac
 
@@ -173,8 +183,8 @@ echo -e "    pm2 reload five-leagues 零停机重启"
 echo -e "    pm2 stop five-leagues   停止服务"
 echo ""
 echo -e "  ${YELLOW}生产环境注意事项:${NC}"
-echo -e "    1. 配置 Nginx 反向代理 (docs/DEPLOYMENT_GUIDE.md 第9节)"
-echo -e "    2. 配置 HTTPS 证书 (docs/DEPLOYMENT_GUIDE.md 第10节)"
+echo -e "    1. 配置 Nginx 反向代理（仅转发到 localhost:3000）"
+echo -e "    2. 配置 HTTPS 证书（如 Let's Encrypt: certbot --nginx）"
 echo -e "    3. 配置防火墙 (仅开放 80/443 端口)"
 echo -e "    4. 设置 PM2 开机自启: pm2 startup systemd && pm2 save"
 echo ""
