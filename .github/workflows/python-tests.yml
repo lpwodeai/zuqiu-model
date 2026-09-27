@@ -34,7 +34,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pandas numpy scikit-learn xgboost lightgbm psutil pyyaml pytest optuna requests beautifulsoup4
+        pip install -r requirements.txt  # 依赖唯一事实来源，新增第三方 import 必须同步该文件
 
     - name: Prepare runtime dirs
       run: |

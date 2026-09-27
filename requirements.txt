@@ -1,0 +1,53 @@
+# ============================================================
+# zuqiu-model Python 依赖清单（唯一事实来源）
+# ------------------------------------------------------------
+# 维护规则：代码新增第三方顶层 import 时，必须同步把 pip 包名加
+# 到本文件对应分区——CI 与新环境部署均以本文件为准，禁止再在
+# workflow / 脚本里手写 pip install 包列表（曾两次因清单漂移致
+# CI 红灯：requests、beautifulsoup4 漏装，见 change_log
+# C-20260927-005；本文件为其后的治本措施）。
+#
+# 版本策略：不锁定版本，安装最新兼容版（与历史 CI 行为一致）。
+# 本机验证基线（2026-09-27，Python 3.14.6）：
+#   numpy 2.4.6 / pandas 3.0.3 / scipy 1.18.0 / scikit-learn 1.9.0
+#   joblib 1.5.3 / xgboost 3.3.0 / lightgbm 4.6.0 / optuna 4.9.0
+#   psutil 7.2.2 / PyYAML 6.0.3 / requests 2.34.2
+#   beautifulsoup4 4.15.0 / pytest 9.1.1
+#
+# 注：pg8000 / scramp / asn1crypto 已 vendored 在 pylibs/，
+# 由 db_utils.py 运行时插入 sys.path，不在此列。
+# ============================================================
+
+# ---- 核心必装：训练 / 预测 / 测试主链路（CI 直接安装）----
+numpy
+pandas
+scipy
+scikit-learn
+joblib
+xgboost
+lightgbm
+optuna
+psutil
+PyYAML
+requests
+beautifulsoup4
+pytest
+
+# ============================================================
+# 可选 / 重型依赖（CI 测试链路不需要：均为函数内延迟导入或独立
+# 采集 / 实验脚本），按需手动安装：
+#
+#   pip install torch playwright curl_cffi cloudscraper html2text matplotlib openpyxl APScheduler shap
+#   playwright 装包后还需执行：playwright install chromium
+#
+# 清单与用途（import 名 -> 用途）：
+#   torch        神经网络实验 scripts/nn_vs_tree_wdl_experiment.py（体积约 200MB）
+#   playwright   采集器浏览器自动化（SofaScore / 竞彩 / FBref）
+#   curl_cffi    反爬 TLS 指纹 HTTP 客户端（采集器函数内导入）
+#   cloudscraper FBref 采集 scripts/fbref_fetch_full.py
+#   html2text    FBref HTML -> Markdown 解析
+#   matplotlib   报告 / 概念漂移与可靠性门禁图表
+#   openpyxl     Excel 导出（archive 脚本）
+#   APScheduler  定时训练调度 scripts/scheduled_learning.py
+#   shap         SHAP 特征贡献分析 scripts/shap_analyzer.py
+# ============================================================
