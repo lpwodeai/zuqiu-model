@@ -96,6 +96,46 @@ def _get_conn() -> sqlite3.Connection:
     return conn
 
 
+# C-20261017-132: catch-up 心跳（chain_watchdog 的 post_match 断供检测消费此文件）。
+# 背景：SofaScore JWT(sofa_captcha) 过期后每轮全部 403，计划任务仍 exit 0 空转
+# （2026-10-14 起复盘流事实断供 4 天无人感知），心跳让「零产出+采集失败」可被独立判定。
+POST_MATCH_HB = PROJECT_DIR / "logs" / "chain_status" / "post_match_runs.jsonl"
+
+
+class _FetchFailCounter(logging.Handler):
+    """统计本轮赛后采集失败日志条数——区分「比赛未结束（采集成功但无赛果）」与「采集断供」。"""
+
+    MARKERS = ("赛后采集失败", "赛后采集异常")
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.fetch_fail = 0
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            if any(k in record.getMessage() for k in self.MARKERS):
+                self.fetch_fail += 1
+        except Exception:  # noqa: BLE001 计数失败不影响任何业务
+            pass
+
+
+def _write_post_match_hb(stats: Dict[str, int], fetch_fail: int, dry_run: bool) -> None:
+    """追加一轮 catch-up 心跳（JSONL）；任何异常静默，心跳绝不影响复盘主流程。"""
+    try:
+        rec = {"ts": datetime.now().astimezone().isoformat(timespec="seconds"),
+               "mode": "catch-up", "dry_run": int(bool(dry_run)),
+               "fetch_fail": fetch_fail}
+        rec.update(stats)
+        POST_MATCH_HB.parent.mkdir(parents=True, exist_ok=True)
+        with POST_MATCH_HB.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        lines = POST_MATCH_HB.read_text(encoding="utf-8").splitlines()
+        if len(lines) > 1000:  # 简单轮转，每小时一条约 40 天容量
+            POST_MATCH_HB.write_text("\n".join(lines[-1000:]) + "\n", encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+
+
 # ==================== A2：目标场次扫描 ====================
 def wdl_from_score(home: int, away: int) -> str:
     """比分 -> 胜平负（对齐 model_predictions WDL_home/draw/away 行格式）。"""
@@ -611,6 +651,13 @@ def run_pipeline(
     catchup_days: int,
     logger: logging.Logger,
 ) -> None:
+    # C-20261017-132：catch-up 真实运行挂采集失败计数+心跳（dry-run 与非调度模式不写心跳）
+    _hb_on = (mode == "catch-up" and not dry_run)
+    _ff = _FetchFailCounter()
+    if _hb_on:
+        logger.addHandler(_ff)
+    stats: Dict[str, int] = {"total": 0, "new": 0, "existing": 0,
+                             "candidate": 0, "not_finished": 0, "errors": 0}
     conn = _get_conn()
     try:
         ensure_post_match_schema(conn)
@@ -623,10 +670,11 @@ def run_pipeline(
             targets = collect_target_matches(conn, match_date, match_id_filter)
         if not targets:
             logger.info("未找到目标场次（无匹配的 model_predictions）")
+            if _hb_on:
+                logger.removeHandler(_ff)
+                _write_post_match_hb(stats, _ff.fetch_fail, dry_run)
             return
 
-        stats: Dict[str, int] = {"total": 0, "new": 0, "existing": 0,
-                                 "candidate": 0, "not_finished": 0, "errors": 0}
         summaries_by_dir: Dict[Path, List[Dict[str, Any]]] = {}
         client = SofaScoreClient(logger=logger)
         try:
@@ -693,6 +741,11 @@ def run_pipeline(
     if stats["errors"]:
         print(f"  处理异常      : {stats['errors']}")
     print("=" * 70)
+
+    # C-20261017-132：catch-up 真实运行落心跳（watchdog 断供判定依据）
+    if _hb_on:
+        logger.removeHandler(_ff)
+        _write_post_match_hb(stats, _ff.fetch_fail, dry_run)
 
 
 # ==================== 归因重扫（C-20260930-002） ====================

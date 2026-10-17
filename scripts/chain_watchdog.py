@@ -14,6 +14,7 @@
   step_fail        致命白名单步骤 exit≠0（F2）                    fatal
   artifact_missing 注册场次>0 但明日报告无 _summary.md / 0 份报告（F4）fatal
   masked_by_regen  20:30 链失败而 23:30 兜底成功（陈旧数据掩盖）    fatal（单列）
+  post_match_outage 赛后链连续 4 轮零新复盘+采集失败且 DB 有积压   fatal（C-20261017-132）
   self_data_error  看门狗自身 DB 读取失败（不放行）                fatal + exit 2
   观察步骤失败 / 报告数与注册数偏差>0（两者均>0）                   仅看板
   0a-3 SKIP-* / 注册场次=0 空窗                                   正常态
@@ -46,6 +47,17 @@ OBSERVE_STEPS = (
     "2d_回退计数器汇总",
     "2e_窗口B就绪检查",
 )
+
+# ---- C-20261017-132: post_match 断供检测 ----
+# 心跳来源：run_post_match_pipeline.py --catch-up 每轮（每小时计划任务）追加
+# logs/chain_status/post_match_runs.jsonl，含 total/new/existing/not_finished/fetch_fail。
+POST_MATCH_HB_NAME = "post_match_runs.jsonl"
+PM_N_CONSECUTIVE = 4        # 连续坏轮数门限（≈4 小时）
+PM_RUN_SPAN_H = 30.0        # 最近 4 轮总跨度上限（StartWhenAvailable 跨关机容差）
+PM_HEARTBEAT_FRESH_H = 6.0  # 最近一轮心跳新鲜度；白天超此数=调度静默
+PM_SILENT_HOURS = range(9, 23)   # 调度静默只在白天判定（夜间关机为正常态）
+PM_BACKLOG_MIN = 3          # DB 侧已完赛日未复盘积压场道门限
+PM_BACKLOG_DAYS = 3         # 积压窗 [今天-3, 昨天]：昨日及更早=已给全天完赛宽限
 
 
 def chain_date_for_now(now: datetime, override: str | None) -> str:
@@ -93,6 +105,128 @@ def observe_failures(result: dict) -> list[str]:
         if s.get("step") in OBSERVE_STEPS and s.get("exit_code") not in chain_alert._OK_EXIT_VALUES:
             out.append(f"{s['step']} exit={s.get('exit_code')}")
     return out
+
+
+# ==================== C-20261017-132: post_match 断供检测 ====================
+
+def post_match_backlog(db_path: Path, now: datetime) -> list[str]:
+    """已到完赛日（match_id 日期 ∈ [今天-PM_BACKLOG_DAYS, 昨天]）的已预测未复盘场次。
+
+    防误报设计：①只看昨日及更早，给当日比赛全天完赛宽限（晚间未完赛不误报）；
+    ②matches 标 actual_score='无效场次' 的排除（C-20261016-105：无效场无复盘对象）；
+    ③跨键别名经 fbref_match_mapping 同 event 判重（英文键已由中文键复盘的不算积压）。
+    """
+    conn = sqlite3.connect(str(db_path))
+    try:
+        today = now.date()
+        since = (today - timedelta(days=PM_BACKLOG_DAYS)).isoformat()
+        yesterday = (today - timedelta(days=1)).isoformat()
+        rows = conn.execute(
+            """
+            SELECT DISTINCT mp.match_id
+            FROM (SELECT DISTINCT match_id FROM model_predictions
+                  WHERE model_name='generate_unified_report_v2.0'
+                    AND COALESCE(is_replay,0)=0) mp
+            LEFT JOIN matches m ON mp.match_id=m.match_id
+            WHERE substr(mp.match_id,1,10) BETWEEN ? AND ?
+              AND COALESCE(m.actual_score,'') <> '无效场次'
+              AND NOT EXISTS (SELECT 1 FROM post_match_review p
+                              WHERE p.match_id=mp.match_id)
+              AND NOT EXISTS (
+                    SELECT 1 FROM fbref_match_mapping f1
+                    JOIN fbref_match_mapping f2 ON f1.fbref_match_id=f2.fbref_match_id
+                    JOIN post_match_review p ON p.match_id=f2.odds_match_id
+                    WHERE f1.odds_match_id=mp.match_id)
+            ORDER BY mp.match_id
+            """,
+            (since, yesterday),
+        ).fetchall()
+        return [r[0] for r in rows]
+    finally:
+        conn.close()
+
+
+def load_post_match_runs(status_dir: Path, n: int) -> list[dict]:
+    """读心跳 JSONL 最后 n 行；坏行/缺文件返回空（不抛异常给调用方）。"""
+    p = status_dir / POST_MATCH_HB_NAME
+    if not p.exists():
+        return []
+    out = []
+    for line in p.read_text(encoding="utf-8").splitlines()[-n:]:
+        try:
+            rec = json.loads(line)
+            if isinstance(rec, dict) and not rec.get("dry_run"):
+                out.append(rec)
+        except (ValueError, TypeError):
+            continue
+    return out
+
+
+def check_post_match_outage(
+    status_dir: Path, db_path: Path, now: datetime
+) -> tuple[dict | None, str]:
+    """赛后链断供判定。返回 (致命告警 dict 或 None, 看板说明行)。
+
+    双信号必须同时成立才致命（falsify-first，宁漏报不误报）：
+      管线侧：最近 N 轮 catch-up 连续「有目标(total≥1)+零新复盘(new=0)+采集失败(fetch_fail≥1)」，
+              且 N 轮落在 PM_RUN_SPAN_H 内、最近一轮新鲜（另一个分支：白天调度静默）；
+      DB 侧：已完赛日未复盘积压 ≥ PM_BACKLOG_MIN 场（无赛程/已追平/无效场均不满足）。
+    """
+    today_s = now.strftime("%Y-%m-%d")
+    try:
+        backlog = post_match_backlog(db_path, now)
+    except Exception as e:  # DB 不可达不放行（同 self_data_error 语义）
+        return (dict(
+            key=f"{today_s}:post_match:self_data_error",
+            title="post_match 断供检测数据源异常",
+            body=f"积压场次查询失败：{type(e).__name__}: {e}",
+        ), "post_match：检测自身数据源异常")
+    nb = len(backlog)
+    base = f"post_match catch-up：近 {PM_BACKLOG_DAYS} 天已完赛日待复盘积压 {nb} 场"
+
+    runs = load_post_match_runs(status_dir, PM_N_CONSECUTIVE)
+    if not runs:
+        return None, base + "（暂无心跳，首轮 catch-up 后开始监测）"
+
+    newest = datetime.fromisoformat(runs[-1]["ts"])
+    age_h = (now - newest).total_seconds() / 3600.0
+    last = runs[-1]
+    note = (f"{base}；最近一轮 {newest.strftime('%m-%d %H:%M')} "
+            f"total={last.get('total')} new={last.get('new')} "
+            f"fetch_fail={last.get('fetch_fail')}")
+
+    if nb < PM_BACKLOG_MIN:
+        return None, note + "（积压低于门限，正常态）"
+
+    # 分支一：白天调度静默（夜间关机靠 StartWhenAvailable 补跑，不判）
+    if now.hour in PM_SILENT_HOURS and age_h > PM_HEARTBEAT_FRESH_H:
+        return (dict(
+            key=f"{today_s}:post_match:outage",
+            title="post_match 赛后链调度静默（积压未消化）",
+            body=f"{base}；最近 catch-up 心跳为 {newest.strftime('%Y-%m-%d %H:%M')}，"
+                 f"已 {age_h:.1f}h 无运行（>{PM_HEARTBEAT_FRESH_H:.0f}h）。"
+                 f"查计划任务 SoccerModel_PostMatchReview。积压样例："
+                 + "；".join(backlog[:5]),
+        ), note)
+
+    # 分支二：连续 N 轮零产出+采集失败（JWT 过期/接口断供的 exit=0 空转指纹）
+    if len(runs) >= PM_N_CONSECUTIVE:
+        last_n = runs[-PM_N_CONSECUTIVE:]
+        oldest = datetime.fromisoformat(last_n[0]["ts"])
+        span_h = (newest - oldest).total_seconds() / 3600.0
+        all_bad = all(r.get("total", 0) >= 1 and r.get("new", 0) == 0
+                      and r.get("fetch_fail", 0) >= 1 for r in last_n)
+        if age_h <= PM_HEARTBEAT_FRESH_H and span_h <= PM_RUN_SPAN_H and all_bad:
+            return (dict(
+                key=f"{today_s}:post_match:outage",
+                title="post_match 赛后链采集断供（连续零复盘+采集失败）",
+                body=f"最近 {PM_N_CONSECUTIVE} 轮 catch-up（{span_h:.1f}h 内）全部零新复盘且采集失败，"
+                     f"任务 exit=0 空转；{base}。典型成因：SofaScore JWT(sofa_captcha) 过期"
+                     f"（403 jwt:time-out-of-bounds），续期=start_edge_sofa.bat 人工过挑战重导 cookie；"
+                     f"积压样例：" + "；".join(backlog[:5]),
+            ), note + "（连续坏轮，已判断供）")
+
+    return None, note + "（未达断供门限）"
 
 
 def run(status_dir: Path, reports_dir: Path, db_path: Path,
@@ -183,6 +317,11 @@ def run(status_dir: Path, reports_dir: Path, db_path: Path,
                  "勿把兜底产物当正常链结果。",
         ))
 
+    # post_match 断供检测（C-20261017-132）：独立于赛前链心跳，读赛后链心跳+DB 积压
+    pm_fatal, pm_note = check_post_match_outage(status_dir, db_path, now)
+    if pm_fatal:
+        fatal.append(pm_fatal)
+
     # 发告警（raise_alert 内置同键去重）
     fired = []
     for item in fatal:
@@ -197,6 +336,7 @@ def run(status_dir: Path, reports_dir: Path, db_path: Path,
     ]
     if artifact_note:
         footer.append(f"- {artifact_note}")
+    footer.append(f"- {pm_note}")
     if observes:
         footer.append("- 观察项（不告警）: " + "；".join(observes))
     if fired:

@@ -1711,6 +1711,28 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
     else:
         rec_dir, rec_mp, rec_odds, rec_edge, rec_k = "—", None, None, None, None
     rec_type = recommendation_type(rec_edge)
+    # C-20261017-130: 子模型分歧闸（纯展示层，零模型改动，ev_engine 返回值不动）。
+    # 5 子模型 argmax 计票，多数（≥3）方向与 meta（wdl_pred）不一致（4:1/3:1:1 等）时，
+    # §一 推荐卡与 §6.2 EV 决策卡一律强制降级为「提示·分歧观望」，不出 VALUE 执行建议。
+    # 依据 C-20261004-007：分歧信任规则已被证伪（n=77，方向规则 RPS 0.1912 输纯市场
+    # 0.1831；δ*=0.06 信任规则仅噪声级微胜；w*=1.0），分歧场跟随模型无统计优势。
+    # pass-through 语义（C-20261017-130 定案，7 场景单测覆盖）：无 ≥3 多数票（如 2:2:1）
+    # 或可用子模型 <3 时不构成"meta 逆多数票"，一律不降级、按原推荐类型放行。
+    _vote_cnt = {"主胜": 0, "平局": 0, "客胜": 0}
+    for _vk, _vl in SUB_MODEL_LABELS:
+        _vp = sub_models.get(_vk)
+        if _vp and all(isinstance(_vp.get(k), (int, float)) for k in ("win", "draw", "lose")):
+            _vd = "主胜" if _vp["win"] >= max(_vp["draw"], _vp["lose"]) else (
+                "客胜" if _vp["lose"] >= _vp["draw"] else "平局")
+            _vote_cnt[_vd] += 1
+    _vote_total = sum(_vote_cnt.values())
+    _maj_dir = max(_vote_cnt, key=lambda d: _vote_cnt[d]) if _vote_total >= 1 else None
+    _maj_votes = _vote_cnt.get(_maj_dir, 0) if _maj_dir else 0
+    _meta_votes = _vote_cnt.get(wdl_pred, 0)
+    _meta_majority_disagree = bool(
+        _vote_total >= 3 and _maj_votes >= 3 and _maj_dir != wdl_pred)
+    if _meta_majority_disagree and rec_type not in ("NO_VALUE", "AVOID"):
+        rec_type = "DISAGREE_WATCH"
     rec_implied = (1 / rec_odds) if rec_odds and rec_odds > 1 else None
     suggested_stake = max(0.0, (rec_k or 0) * 0.25) if rec_k is not None else 0.0
 
@@ -1850,9 +1872,18 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
     A("")
     A("```")
     A("┌─────────────────────────────────────────────────────────────┐")
-    A("│  推荐类型: {}".format(rec_type))
-    if rec_type in ("NO_VALUE", "AVOID"):
+    if rec_type == "DISAGREE_WATCH":
+        A("│  推荐类型: 提示（子模型分歧，不建议执行）")
+        A("│  多数票方向: {}（{}{}，meta 反向给{}）".format(
+            _maj_dir, _maj_votes, ":" + str(_meta_votes) if _vote_total == 5 else "票:" + str(_meta_votes) + "票",
+            wdl_pred))
+        A("│  原 EV 信号: {} @ {} / edge {}{}% / 凯利 {}（已降级留痕）".format(
+            rec_dir, fnum(rec_odds),
+            "+" if (rec_edge or 0) > 0 else "", fnum((rec_edge or 0) * 100), fnum(rec_k, 3)))
+        A("│  建议仓位: 0%（分歧场观望）")
+    elif rec_type in ("NO_VALUE", "AVOID"):
         # P0-02: 无价值/规避时不再输出误导性「推荐方向」，明示观望
+        A("│  推荐类型: {}".format(rec_type))
         A("│  推荐方向: —（无投注价值，观望）")
         A("│  推荐赔率: —")
         A("│  模型概率: —")
@@ -1861,6 +1892,7 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
         A("│  凯利指数: —")
         A("│  建议仓位: 0%")
     else:
+        A("│  推荐类型: {}".format(rec_type))
         A("│  推荐方向: {}".format(rec_dir))
         A("│  推荐赔率: {}".format(fnum(rec_odds)))
         A("│  模型概率: {}".format(pct(rec_mp)))
@@ -1871,8 +1903,15 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
     A("└─────────────────────────────────────────────────────────────┘")
     A("```")
     A("")
+    # C-20261017-130: 分歧场降级附注（与 C-022 的「EV≠概率方向」注释互斥，降级卡不再谈仓位）
+    if rec_type == "DISAGREE_WATCH":
+        A("> 🚫 **分歧场降级（C-20261017-130）**：可用子模型 {} 个，**{} 票看{}、Stacking meta 反向给{}**（分歧度 std={:.4f}）；"
+          "C-20261004-007 已证伪「分歧时信任模型」规则（n=77：方向规则 RPS 0.1912 输纯市场 0.1831，"
+          "δ 信任规则仅噪声级微胜、w*=1.0）——**分歧场不建议按 VALUE 执行，本卡仅作观察留痕，建议仓位 0%**。".format(
+            _vote_total, _maj_votes, _maj_dir, wdl_pred, divergence_std))
+        A("")
     # C-20260919-022: 推荐方向与概率方向相反时直接解释，避免被误读为"模型预测反转"
-    if rec_type not in ("NO_VALUE", "AVOID") and rec_dir != wdl_pred and rec_mp is not None:
+    if rec_type not in ("NO_VALUE", "AVOID", "DISAGREE_WATCH") and rec_dir != wdl_pred and rec_mp is not None:
         A("> ℹ️ **推荐方向（{}）≠ 概率预测方向（{}）**：概率层回答「谁最可能赢」——{} 概率最高（{}）；".format(
             rec_dir, wdl_pred, wdl_pred, pct(max(hp or 0, dp or 0, ap or 0))))
         A("> EV 层回答「押谁的赔率划算」——{} 虽只给 {} 概率，但赔率 {}，概率×赔率={:.2f}>1，单位注金期望为正。这是**高赔率冷门的小仓位价值提示，不是模型改判 {} 会赢**；该冷门实际仍大概率不发生，建议仓位仅 {}%。".format(
@@ -1891,9 +1930,13 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
         _mkt_word = "低估{}方向（价值空间 {:+.1f}%）".format(rec_dir, (rec_edge or 0) * 100)
     else:
         _mkt_word = "对{}方向过热（价值空间 {:+.1f}%）".format(rec_dir, (rec_edge or 0) * 100)
+    if rec_type == "DISAGREE_WATCH":
+        _summary_tail = "子模型 {} 票看{}而 meta 反向给{}，分歧场已降级，不建议按 VALUE 执行".format(
+            _maj_votes, _maj_dir, wdl_pred)
+    else:
+        _summary_tail = "存在价值空间" if (rec_edge or 0) >= 0.02 else "无明显价值，建议观望"
     summary = "模型主看{}（概率{}），市场{}，{}。".format(
-        wdl_pred, pct(max(hp or 0, dp or 0, ap or 0)), _mkt_word,
-        "存在价值空间" if (rec_edge or 0) >= 0.02 else "无明显价值，建议观望")
+        wdl_pred, pct(max(hp or 0, dp or 0, ap or 0)), _mkt_word, _summary_tail)
     A("> " + summary)
     A("")
     # P1-02: 5 子模型原始输出 + 分歧度
@@ -2100,7 +2143,12 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
             A("│  最佳EV: {:.2f}%                                            │".format(ev_analysis.best_ev * 100))
             A("│  建议仓位: 0%（观望）                                       │")
         else:
-            label = "VALUE（有投注价值）" if ev_analysis.overall_decision == "VALUE" else "MARGINAL（微弱价值）"
+            # C-20261017-130: meta 与子模型多数票分歧时，EV 卡同步纯展示降级（ev_engine 对象不动）
+            if _meta_majority_disagree:
+                label = "提示（子模型分歧，不建议执行；原 {} 判定留痕）".format(
+                    "VALUE" if ev_analysis.overall_decision == "VALUE" else "MARGINAL")
+            else:
+                label = "VALUE（有投注价值）" if ev_analysis.overall_decision == "VALUE" else "MARGINAL（微弱价值）"
             if ev_analysis.best_direction == "home":
                 bp, bo = ev_analysis.home_analysis.p_model, ev_analysis.home_analysis.odds
             elif ev_analysis.best_direction == "draw":
@@ -2112,10 +2160,21 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
             A("│  模型概率: {:.1f}% | 建议赔率: {:.2f}".format(bp * 100, bo))
             A("│  价值空间: {:+.1f}%".format(ev_analysis.best_edge * 100))
             A("│  期望值: {:+.2f}%（每注1元）".format(ev_analysis.best_ev * 100))
-            A("│  建议仓位: {:.1f}%（1/4凯利）".format(ev_analysis.recommended_stake_pct * 100))
+            A("│  建议仓位: {:.1f}%（1/4凯利）".format(
+                0.0 if _meta_majority_disagree else ev_analysis.recommended_stake_pct * 100))
+            if _meta_majority_disagree:
+                A("│  分歧闸: 子模型 {} 票看{} / meta 反向给{}，强制观望".format(
+                    _maj_votes, _maj_dir, wdl_pred))
         A("└─────────────────────────────────────────────────────────────┘")
         A("```")
         A("")
+        # C-20261017-130: 分歧场 EV 卡降级附注
+        if _meta_majority_disagree and ev_analysis.overall_decision != "AVOID":
+            A("> 🚫 **分歧场降级（C-20261017-130）**：上表 EV 数字为 ev_engine 原始输出留痕，但子模型 {} 票看{}、"
+              "Stacking meta 反向给{}；C-20261004-007 已证伪「分歧时信任模型」规则（n=77：方向规则 RPS 0.1912 "
+              "输纯市场 0.1831，w*=1.0），**本卡降级为提示、建议仓位 0%，不按 VALUE 执行**。".format(
+                _maj_votes, _maj_dir, wdl_pred))
+            A("")
         # C-20260919-022: EV 决策方向与概率预测方向相反时，报告内自动解释（两套口径不互相覆盖）
         _EV_DIR_CN = {"home": "主胜", "draw": "平局", "away": "客胜"}
         if ev_analysis.overall_decision != "AVOID":
