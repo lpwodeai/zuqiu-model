@@ -62,7 +62,8 @@ from post_match_schema import (  # noqa: E402
     write_review_and_actuals,
     DEFAULT_MODEL_NAME,
 )
-from attribution_engine import AttributionEngine, get_event_id  # noqa: E402
+from post_match_cache import save_post_data  # noqa: E402  C-20261002-001 赛后明细落库
+from attribution_engine import AttributionEngine, get_event_id, resolve_matches_row  # noqa: E402
 sys.path.insert(0, str(PROJECT_DIR / "features"))
 from sofascore_pre_match_features import SOFA_TEAM_CN_MAP  # noqa: E402
 from confidence_review import baseline_level  # noqa: E402
@@ -121,14 +122,57 @@ def hcp_from_handicap(home: int, away: int, handicap: Optional[float]) -> Option
     return "下盘赢"
 
 
+def _is_asian_quarter_line(handicap: float) -> bool:
+    """检测亚盘 0.25 档盘口（非整数且非半球）。
+
+    竞彩让球胜平负官方盘（goalLine）必为整数（-1, +1, -2 等）。
+    亚盘 0.25 档（-0.25, +0.75 等）与半球（-0.5, +1.5）为非竞彩整数盘，
+    用其推导让球胜平负会产生口径错位（C-20261013-064）。
+    """
+    h = float(handicap)
+    return not h.is_integer()
+
+
+def hcp_result_label(home: int, away: int, handicap: Optional[float],
+                     actual_handicap_text: Optional[str] = None,
+                     logger: Optional[logging.Logger] = None) -> Optional[str]:
+    """让球结果判定（上盘赢/走水/下盘赢）。
+
+    优先级：① 竞彩官方赛果文本 actual_handicap（'(-1)平' 等，权威，不受 matches.handicap 亚盘污染影响）；
+            ② 盘口 handicap + 比分推导（hcp_from_handicap），但仅限竞彩整数盘——
+               亚盘 0.25 档/半球盘推导让球胜平负属于口径错位，禁止并告警。
+    说明：matches.handicap 在部分场次被写入亚盘 0.25 档盘口（§15.2 口径混用），
+    用其推导会让「1:0、让 -1」被误判为上盘赢；actual_handicap 才是竞彩整数盘官方赛果。
+    C-20261013-064：都灵(-0.25→实际竞彩-1应为让平)、莱万特(0→实际竞彩+1应为让胜) 两场实锤。
+    """
+    if actual_handicap_text:
+        ah = str(actual_handicap_text)
+        if "平" in ah or "走" in ah:
+            return "走水"
+        if "胜" in ah:
+            return "上盘赢"
+        if "负" in ah:
+            return "下盘赢"
+    # C-20261013-064：亚盘非整数盘禁止推导让球胜平负（口径错位）
+    if handicap is not None and _is_asian_quarter_line(handicap):
+        if logger:
+            logger.warning(
+                f"[hcp_result_label] 盘口 {handicap} 为亚盘非整数档，"
+                f"与竞彩让球胜平负（整数盘）口径不同，拒绝推导。比分 {home}:{away}，"
+                f"需补竞彩官方 goalLine + actual_handicap")
+        return None
+    return hcp_from_handicap(home, away, handicap)
+
+
 def resolve_handicap_line(
     conn: sqlite3.Connection, match_id: str, match_hcp: Any = None
 ) -> tuple:
     """解析让球盘口线（主队视角：负=让球/正=受让，与赛前报告 parse_hcp_line 同口径）。
 
-    取数优先级：① matches.handicap 数值（SSOT）；
-                ② odds500_match.handicap 中文串按 match_id 直接对齐；
-                ③ 按 比赛日+归一化主客中文队名 模糊对齐（match_id 口径失配兜底）。
+    取数优先级：① matches.handicap 数值（SSOT，竞彩整数 goalLine）。
+    C-20261013-066：禁用 odds500_match 兜底（原优先级②③）——亚盘口径盘口
+    用于推导竞彩让球胜平负会口径错位（C-20261013-064/065 系列），
+    matches.handicap 缺失时返回 (None, None)，由 actual_handicap 官方文本兜底。
     返回 (line 或 None, source 或 None)。
     """
     if match_hcp is not None:
@@ -136,34 +180,6 @@ def resolve_handicap_line(
             return float(match_hcp), "matches"
         except (TypeError, ValueError):
             pass
-
-    row = conn.execute(
-        "SELECT handicap FROM odds500_match WHERE match_id=? "
-        "AND handicap IS NOT NULL AND handicap<>'' LIMIT 1",
-        (match_id,),
-    ).fetchone()
-    if row:
-        line = parse_hcp_line(row["handicap"])
-        if line is not None:
-            return line, "odds500_match"
-
-    m = conn.execute(
-        "SELECT match_date, home_team, away_team FROM matches WHERE match_id=?",
-        (match_id,),
-    ).fetchone()
-    if m:
-        row = conn.execute(
-            "SELECT handicap FROM odds500_match "
-            "WHERE match_date=? AND home_team_cn=? AND away_team_cn=? "
-            "AND handicap IS NOT NULL AND handicap<>'' LIMIT 1",
-            (m["match_date"],
-             normalize_team_name(m["home_team"]),
-             normalize_team_name(m["away_team"])),
-        ).fetchone()
-        if row:
-            line = parse_hcp_line(row["handicap"])
-            if line is not None:
-                return line, "odds500_match_fuzzy"
     return None, None
 
 
@@ -278,6 +294,7 @@ def build_review(
     league: Optional[str],
     data: Dict[str, Any],
     handicap: Optional[float],
+    actual_handicap_text: Optional[str] = None,
 ) -> Dict[str, Any]:
     """由 SofaScore 赛后数据组装 post_match_review 行（赛果部分；归因/质量分由 A3/A6 回填）。"""
     home, away = int(data["home_score"]), int(data["away_score"])
@@ -290,23 +307,22 @@ def build_review(
         "actual_score": data["score"],
         "actual_half_score": data.get("half_score"),
         "actual_wdl": wdl_from_score(home, away),
-        "actual_hcp": hcp_from_handicap(home, away, handicap),
+        "actual_hcp": hcp_result_label(home, away, handicap, actual_handicap_text),
         "actual_tg": home + away,
     }
 
 
 def build_review_from_matches(
-    conn: sqlite3.Connection, match_id: str, hcp_line: Optional[float] = None
+    conn: sqlite3.Connection, match_id: str, hcp_line: Optional[float] = None,
+    event_id: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
-    """SofaScore 不可用时回退 matches 表已有赛果组装 review（无赛后明细，A3 降维运行）。"""
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT match_date, league, home_team, away_team, actual_wdl, actual_score, "
-        "actual_handicap, actual_total_goals, handicap FROM matches WHERE match_id=?",
-        (match_id,),
-    )
-    m = cur.fetchone()
-    if m is None or not m["actual_score"] or not m["actual_wdl"]:
+    """SofaScore 不可用时回退 matches 表已有赛果组装 review（无赛后明细，A3 降维运行）。
+
+    C-20261016-110b: 经 resolve_matches_row 取行（跨源键错位回退），避免英文键 review
+    场景下回退路径也失效导致该场直接不写复盘。
+    """
+    m = resolve_matches_row(conn, match_id, event_id=event_id)
+    if m is None or not m.get("actual_score") or not m.get("actual_wdl"):
         return None
     try:
         hs, aws = str(m["actual_score"]).split(":")
@@ -316,11 +332,12 @@ def build_review_from_matches(
     wdl = _WDL_NORM.get(str(m["actual_wdl"]))
     if not wdl:
         return None
-    # 让球结果统一按 handicap+比分推导（matches.actual_handicap 是 '(-1)负' 等让球胜平负口径，
-    # 与复盘表/报告要求的上盘赢/走水/下盘赢不一致）
+    # 让球结果优先取竞彩官方赛果 actual_handicap（'(-1)平' 等），缺失时按 handicap 盘口推导
     # C-20260919-021: matches.handicap 缺失时用外部解析的盘口线（odds500 兜底）
-    hcp = hcp_from_handicap(
-        home, away, hcp_line if hcp_line is not None else m["handicap"]
+    hcp = hcp_result_label(
+        home, away,
+        hcp_line if hcp_line is not None else m["handicap"],
+        m["actual_handicap"],
     )
     tg = m["actual_total_goals"] if m["actual_total_goals"] is not None else home + away
     return {
@@ -434,19 +451,33 @@ def process_one(
         except Exception as e:  # noqa: BLE001
             logger.warning(f"[{mid}] 赛后采集异常: {e}")
 
-    # ---- C-20260919-021: 统一解析让球盘口线（matches 缺失时 odds500_match 兜底）----
+    # C-20261002-001：赛后明细（stats/lineups/incidents）落库，供 A3/A4 缓存复用
+    if post_data is not None:
+        try:
+            save_post_data(conn, mid, target.get("event_id"), post_data)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"[{mid}] 赛后明细落库失败（不影响主流程）: {e}")
+
+    # ---- C-20261013-066: 盘口线仅取 matches.handicap（SSOT），odds500 兜底已禁用 ----
     hcp_line, hcp_src = resolve_handicap_line(conn, mid, target.get("handicap"))
     if hcp_line is not None:
         target["handicap"] = hcp_line
         if hcp_src != "matches":
             logger.info(f"[{mid}] 盘口线兜底: {hcp_line:+.2f}（来源 {hcp_src}）")
 
+    # ---- 让球结果优先取竞彩官方赛果 actual_handicap（'(-1)平' 等），子段为 matches 口径 ----
+    # C-20261016-110b: 经 resolve_matches_row 取（跨源键错位回退，英文键 review 不再落空）
+    ah_row = resolve_matches_row(conn, mid, event_id=target.get("event_id"))
+    actual_handicap_text = ah_row.get("actual_handicap") if ah_row else None
+
     review = None
     if post_data is not None:
-        review = build_review(mid, target.get("league"), post_data, hcp_line)
+        review = build_review(mid, target.get("league"), post_data, hcp_line,
+                              actual_handicap_text=actual_handicap_text)
     else:
         post_data = None  # 无赛后明细 → A3 降维运行
-        review = build_review_from_matches(conn, mid, hcp_line=hcp_line)
+        review = build_review_from_matches(conn, mid, hcp_line=hcp_line,
+                                           event_id=target.get("event_id"))
         if review is not None:
             logger.info(f"[{mid}] SofaScore 未采集到赛果，回退 matches 表赛果")
 
@@ -475,15 +506,21 @@ def process_one(
 
     # ---- A1 写复盘 + actual_* 四行（幂等） ----
     # C-20260919-021: 盘口线由 500 兜底得到时回写 matches.handicap，避免下次重复兜底
-    if hcp_line is not None and hcp_src and hcp_src != "matches":
+    # C-20260930-003: 回写须同步 handicap_source='sporttery'，否则 trg_guard_matches_handicap_upd
+    # 触发器（handicap NOT NULL 时 source 必须='sporttery'）会 RAISE ABORT，导致单场全链路中断。
+    # C-20261002-014: 兜底来源为 odds500 亚盘时禁止回写——matches.handicap 只存竞彩整数 goalLine，
+    # 亚盘 0.25 档盘口留在 odds500_match，否则又复现「亚盘值标 sporttery」污染（§15.2 根因之二）。
+    if (hcp_line is not None and hcp_src and hcp_src != "matches"
+            and float(hcp_line).is_integer()):
         cur = conn.cursor()
         cur.execute(
-            "UPDATE matches SET handicap=? WHERE match_id=? AND handicap IS NULL",
+            "UPDATE matches SET handicap=?, handicap_source='sporttery' "
+            "WHERE match_id=? AND handicap IS NULL",
             (hcp_line, mid),
         )
         if cur.rowcount > 0:
             conn.commit()
-            logger.info(f"[{mid}] 盘口线已回写 matches.handicap={hcp_line:+.2f}（{cur.rowcount} 行）")
+            logger.info(f"[{mid}] 盘口线已回写 matches.handicap={hcp_line:+.2f} (source=sporttery，{cur.rowcount} 行)")
     model_name = get_model_name(conn, mid)
     result = write_review_and_actuals(conn, review, model_name=model_name)
     res["status"] = "new" if result["review"] else "existing"
@@ -658,6 +695,136 @@ def run_pipeline(
     print("=" * 70)
 
 
+# ==================== 归因重扫（C-20260930-002） ====================
+def run_reattribute(
+    conn: sqlite3.Connection,
+    days: int,
+    limit: Optional[int],
+    match_id_filter: Optional[str],
+    dry_run: bool,
+    logger: logging.Logger,
+) -> None:
+    """历史复盘归因重扫（Fix B 配套机制）：A2→A3→A5→A4，冻结 data_quality_score。
+
+    - 选近 N 天 post_match_review 行（或 --match-id 单场），排除 human_reviewed=1；
+    - 必须带 post_data（完整 A2 采集）；无赛后明细则跳过，绝不降维覆盖既有归因；
+    - attribution_json 内容变化才 UPDATE（同步 A5 confidence_level），
+      并重生成该场 A4 复盘 md、重建涉及目录的 _summary.md；
+    - data_quality_score 冻结不重算（A6 门禁是赛前数据完整度，与归因规则版本无关）。
+    """
+    cur = conn.cursor()
+    if match_id_filter:
+        cur.execute(
+            "SELECT * FROM post_match_review WHERE match_id=? AND COALESCE(human_reviewed,0)=0",
+            (match_id_filter,),
+        )
+    else:
+        since = (date.today() - timedelta(days=days)).isoformat()
+        cur.execute(
+            "SELECT * FROM post_match_review WHERE match_date>=? "
+            "AND COALESCE(human_reviewed,0)=0 ORDER BY match_date DESC, match_id",
+            (since,),
+        )
+    rows = cur.fetchall()
+    if limit:
+        rows = rows[:limit]
+    if not rows:
+        logger.info("无待重扫复盘行（窗口内无行或均为人工审核行）")
+        return
+
+    logger.info(f"重扫目标 {len(rows)} 场（窗口={('单场 ' + match_id_filter) if match_id_filter else f'近{days}天'}，"
+                f"human_reviewed=1 已排除，{'dry-run' if dry_run else '写库'}）")
+    stats = {"total": len(rows), "changed": 0, "unchanged": 0,
+             "skipped_no_postdata": 0, "errors": 0}
+    touched_dirs: set = set()
+    client = SofaScoreClient(logger=logger)
+    try:
+        for row in rows:
+            mid = row["match_id"]
+            try:
+                event_id = get_event_id(conn, mid)
+                post_data = None
+                if event_id:
+                    try:
+                        post_data = collect_post_match(client, event_id, logger)
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning(f"[{mid}] A2 赛后采集异常: {e}")
+                # C-20261002-001：重扫采集成功即刷新缓存
+                if post_data is not None:
+                    try:
+                        save_post_data(conn, mid, event_id, post_data)
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning(f"[{mid}] 赛后明细落库失败（不影响重扫）: {e}")
+                if post_data is None:
+                    logger.info(f"[{mid}] 无 post_data（event_id={event_id}），跳过更新（不降级写回）")
+                    stats["skipped_no_postdata"] += 1
+                    continue
+                engine = AttributionEngine(conn_odds=conn)
+                try:
+                    attr = engine.run(mid, post_data=post_data)
+                finally:
+                    engine.close()
+                old = None
+                if row["attribution_json"]:
+                    try:
+                        old = json.loads(row["attribution_json"])
+                    except json.JSONDecodeError:
+                        old = None
+                if old == attr:
+                    logger.info(f"[{mid}] unchanged（归因内容一致，不写库不重渲）")
+                    stats["unchanged"] += 1
+                    continue
+                level = baseline_level({"attribution_json": attr})["level"]
+                old_primary = old.get("primary_cause") if old else None
+                tag = "[dry-run] 将变更" if dry_run else "changed"
+                logger.info(f"[{mid}] {tag}: primary {old_primary} -> {attr['primary_cause']}，"
+                            f"基线{level}级，DQS 冻结={row['data_quality_score']}")
+                stats["changed"] += 1
+                if dry_run:
+                    continue
+                cur.execute(
+                    "UPDATE post_match_review SET attribution_json=?, confidence_level=? "
+                    "WHERE match_id=?",
+                    (json.dumps(attr, ensure_ascii=False), level, mid),
+                )
+                conn.commit()
+                # A4 报告重生成：coverage/issues 现场计算，score/alert 用冻结值
+                row2 = _load_review_row(conn, mid)
+                pred = load_predictions(conn, mid)
+                fields = compute_review_fields(conn, row2, pred)
+                frozen = row2["data_quality_score"] if row2["data_quality_score"] is not None else 1.0
+                dq = compute_data_quality(conn, row2, pred, post_data=post_data)
+                dq["score"] = float(frozen)
+                dq["alert"] = float(frozen) < 0.7
+                report = build_report(row2, pred, fields, attr, dq, post_data=post_data)
+                mdate = str(row2["match_date"] or mid[:10]).replace("-", "")
+                out_dir = PROJECT_DIR / "docs" / "post_match" / mdate
+                out_dir.mkdir(parents=True, exist_ok=True)
+                fname = (f"{row2['league'] or '未知'}_{_safe_name(row2['home_team'])}_vs_"
+                         f"{_safe_name(row2['away_team'])}_复盘.md")
+                (out_dir / fname).write_text(report, encoding="utf-8")
+                touched_dirs.add(out_dir)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"[{mid}] 重扫异常: {type(e).__name__}: {e}")
+                stats["errors"] += 1
+    finally:
+        client.close()
+
+    if not dry_run:
+        for out_dir in touched_dirs:
+            _rebuild_dir_summary(conn, out_dir)
+
+    print("=" * 70)
+    print(f"归因重扫汇总（{'dry-run 不写库' if dry_run else '已写库+重渲报告'}，DQS 全程冻结）")
+    print(f"  目标场次        : {stats['total']}")
+    print(f"  归因变化        : {stats['changed']}")
+    print(f"  归因无变化      : {stats['unchanged']}")
+    print(f"  无post_data跳过 : {stats['skipped_no_postdata']}")
+    if stats["errors"]:
+        print(f"  处理异常        : {stats['errors']}")
+    print("=" * 70)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="复盘闭环全链路自动化（A2 采集 → A3 归因 → A6 门禁 → A5 分级 → A4 报告）",
@@ -674,21 +841,39 @@ def main() -> None:
 
   # 只扫不写（验证目标场次与全链路输出）
   python scripts/run_post_match_pipeline.py --catch-up --limit 3 --dry-run
+
+  # C-20260930-002 归因重扫：近 14 天复盘行用最新规则重算（人工审核行不动，DQS 冻结）
+  python scripts/run_post_match_pipeline.py --reattribute --days 14 --dry-run
+  python scripts/run_post_match_pipeline.py --reattribute --match-id "2026-09-20_AS Roma_Inter"
         """,
     )
     parser.add_argument("--date", type=str, default=None, metavar="YYYY-MM-DD",
                         help="批量处理日期（扫当日 model_predictions match_id 前缀）")
     parser.add_argument("--match-id", type=str, default=None, metavar="MATCH_ID",
-                        help="单场处理（优先级最高）")
+                        help="单场处理（优先级最高；与 --reattribute 组合可单场重扫）")
     parser.add_argument("--catch-up", action="store_true",
                         help="调度模式：扫近期已完赛且已预测但无复盘的场次")
     parser.add_argument("--catchup-days", type=int, default=DEFAULT_CATCHUP_DAYS,
                         help="--catch-up 回溯天数（默认 7）")
+    parser.add_argument("--reattribute", action="store_true",
+                        help="归因重扫模式：近 N 天已复盘行重新采集+归因+重渲（人工审核行排除，不重算 DQS）")
+    parser.add_argument("--days", type=int, default=7,
+                        help="--reattribute 回溯天数（默认 7）")
     parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT,
-                        help="--catch-up 单次最多处理场次（默认 30）")
+                        help="单次最多处理场次（默认 30）")
     parser.add_argument("--dry-run", action="store_true",
                         help="只扫+采集+计算，不写库不写文件")
     args = parser.parse_args()
+
+    if args.reattribute:
+        logger = setup_logging("post-match-pipeline")
+        conn = _get_conn()
+        try:
+            ensure_post_match_schema(conn)
+            run_reattribute(conn, args.days, args.limit, args.match_id, args.dry_run, logger)
+        finally:
+            conn.close()
+        return
 
     if args.match_id:
         mode, match_date, match_id_filter = "single", None, args.match_id
@@ -701,7 +886,7 @@ def main() -> None:
     elif args.catch_up:
         mode, match_date, match_id_filter = "catch-up", None, None
     else:
-        parser.error("必须提供 --date / --match-id / --catch-up 之一")
+        parser.error("必须提供 --date / --match-id / --catch-up / --reattribute 之一")
 
     logger = setup_logging("post-match-pipeline")
     run_pipeline(mode, match_date, match_id_filter, args.dry_run,

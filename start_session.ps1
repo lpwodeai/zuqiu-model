@@ -513,8 +513,47 @@ function Invoke-Stage2-Check {
         Write-Warn "热更新状态获取失败: $($_.Exception.Message)"
     }
 
+    # C-20260929-006：合并 test_model_admin.mjs 的 2 个 model-admin GET 端点
+    # 模型配置信息（球队数/Elo 计数/模型配置状态）
+    Write-Section "API 4: GET /api/model/info"
+    try {
+        $response = Invoke-RestMethod -Uri "http://localhost:3000/api/model/info" -Method GET -TimeoutSec 5
+        Write-Host ($response | ConvertTo-Json -Depth 3) -ForegroundColor DarkGray
+        Write-Pass "模型配置信息获取成功"
+    } catch {
+        Write-Warn "模型配置信息获取失败: $($_.Exception.Message)"
+    }
+
+    # 模型热更新历史
+    Write-Section "API 5: GET /api/model/reload/history?limit=5"
+    try {
+        $response = Invoke-RestMethod -Uri "http://localhost:3000/api/model/reload/history?limit=5" -Method GET -TimeoutSec 5
+        Write-Host ($response | ConvertTo-Json -Depth 3) -ForegroundColor DarkGray
+        Write-Pass "热更新历史获取成功"
+    } catch {
+        Write-Warn "热更新历史获取失败: $($_.Exception.Message)"
+    }
+
     # 预测测试
-    Write-Section "API 4: POST /api/predict (阿森纳 vs 利物浦)"
+    # C-20260929-017 L2：SQLite 健康体检（P2-11 预案信号识别，阈值见脚本头注）
+    Write-Section "DB 体检: python scripts/db_health_check.py"
+    try {
+        $script = Join-Path $PSScriptRoot "scripts\db_health_check.py"
+        $dbOut = & python $script 2>&1
+        $dbCode = $LASTEXITCODE
+        Write-Host ($dbOut -join "`n") -ForegroundColor DarkGray
+        if ($dbCode -eq 0) {
+            Write-Pass "DB 体检绿灯（SQLite 余量充足）"
+        } elseif ($dbCode -eq 1) {
+            Write-Warn "DB 体检黄牌——出现 SQLite 压力信号，关注趋势；黄/红牌持续时按框架文档 §3.4 P2-11 预案启动 PG 切换评估"
+        } else {
+            Write-Fail "DB 体检红牌——建议尽快评估 SQLite→PG 切换（框架文档 §3.4 预案）"
+        }
+    } catch {
+        Write-Warn "DB 体检执行失败: $($_.Exception.Message)"
+    }
+
+    Write-Section "API 6: POST /api/predict (阿森纳 vs 利物浦)"
     try {
         $body = @{ homeTeam = "阿森纳"; awayTeam = "利物浦" } | ConvertTo-Json
         $response = Invoke-RestMethod -Uri "http://localhost:3000/api/predict" -Method POST -Body $body -ContentType "application/json" -TimeoutSec 10

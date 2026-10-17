@@ -10,7 +10,7 @@ retrain_trigger_runner 三套触发器，消除并发、口径漂移、无单一
   2. run_training(trigger) -> run_id                    统一执行入口
   3. get_recent_runs(limit)                              查询（仪表盘用）
 
-状态表：five_leagues.db :: training_runs
+状态表：odds.db :: training_runs
 去抖规则：同 trigger 类型 24h 内不重复
 """
 
@@ -31,7 +31,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 ASSETS_DIR = PROJECT_ROOT / "assets"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
-DB_PATH = DATA_DIR / "five_leagues.db"
+DB_PATH = DATA_DIR / "odds.db"
 LOG_PATH = PROJECT_ROOT / "logs" / "training_orchestrator.log"
 
 # 去抖窗口
@@ -322,6 +322,27 @@ def run_training(trigger_source: str, context: dict = None,
         return {"run_id": None, "decision": decision,
                 "status": RunStatus.SKIPPED}
 
+    # C-102 重训前置 tripwire：新增队名污染 → 阻断训练（只阻断、不修数据）
+    # exit 0=干净放行 / 1=新增污染阻断 / 2=门自身错误（不阻断，运维告警）
+    try:
+        _g = subprocess.run(
+            [sys.executable, str(SCRIPTS_DIR / "team_pollution_gate.py"), "--quiet"],
+            capture_output=True, text=True, timeout=600, cwd=str(PROJECT_ROOT))
+        if _g.returncode == 1:
+            _detail = (_g.stdout.strip().splitlines() or [""])[-1][:500]
+            decision = {**decision, "should": False,
+                        "reason": (f"tripwire 阻断: 检出新增队名污染（team_pollution_gate "
+                                   f"exit=1）。带着污染重训=在脏对齐上训练；修复走 C-099 同款"
+                                   f"流程（备份+断言+覆盖率硬门+事务），本编排器永不自动修。 {_detail}")}
+            logger.error(f"训练被 tripwire 阻断: {decision['reason']}")
+            return {"run_id": None, "decision": decision,
+                    "status": RunStatus.SKIPPED}
+        if _g.returncode == 2:
+            logger.warning(f"tripwire 自身错误（exit=2，不阻断训练）: "
+                           f"{(_g.stdout or _g.stderr).strip()[:300]}")
+    except Exception as e:
+        logger.warning(f"tripwire 调用失败（不阻断训练）: {e}")
+
     training_type = decision["training_type"]
     run_id = _start_run(trigger_source, training_type)
 
@@ -539,7 +560,7 @@ def main():
 # ------------------------------------------------------------------
 def get_new_match_count_since(since_iso: str = None) -> dict:
     """
-    查询 five_leagues.db 中指定时间之后的新完赛场数。
+    查询 odds.db 中指定时间之后的新完赛场数。
 
     Args:
         since_iso: ISO 格式时间字符串，None 时用上次全量成功时间
@@ -563,25 +584,25 @@ def get_new_match_count_since(since_iso: str = None) -> dict:
     else:
         since_date = since_iso[:10]
 
-    # 读 matches 表
+    # 读 odds.db.matches 表（完赛口径 = actual_score IS NOT NULL，与 load_match_data_odds 一致）
     try:
-        conn = sqlite3.connect(str(DATA_DIR / "five_leagues.db"))
+        conn = sqlite3.connect(str(DB_PATH))
         cur = conn.cursor()
         cur.execute("""
             SELECT COUNT(*) FROM matches
-            WHERE date >= ? AND homeGoals IS NOT NULL AND awayGoals IS NOT NULL
+            WHERE match_date >= ? AND actual_score IS NOT NULL
         """, (since_date,))
         new_count = cur.fetchone()[0]
 
         cur.execute("""
             SELECT COUNT(*) FROM matches
-            WHERE homeGoals IS NOT NULL AND awayGoals IS NOT NULL
+            WHERE actual_score IS NOT NULL
         """)
         total = cur.fetchone()[0]
 
         cur.execute("""
-            SELECT MAX(date) FROM matches
-            WHERE homeGoals IS NOT NULL AND awayGoals IS NOT NULL
+            SELECT MAX(match_date) FROM matches
+            WHERE actual_score IS NOT NULL
         """)
         latest = cur.fetchone()[0]
         conn.close()
@@ -610,7 +631,7 @@ def check_resource_availability() -> dict:
         return {"ok": True, "reason": "psutil 未安装，跳过资源检查"}
 
     max_cpu = 80
-    max_mem = 85
+    max_mem = 92  # C-20261006-021：85→92。16GB 工作机日常驻留 86-96%（Edge/Trae/采集器），85 实测永不放行（9/21-10/06 连续跳过，夜间低谷 86.6%）
     max_disk = 90
 
     cpu = psutil.cpu_percent(interval=1)

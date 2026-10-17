@@ -22,6 +22,7 @@ SofaScore 球员级数据 → 赛前球队级特征聚合（T-007）
 from __future__ import annotations
 
 import argparse
+import sqlite3
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -73,7 +74,7 @@ SOFA_TEAM_CN_MAP: Dict[str, str] = {
     "Deportivo de A Coruña": "拉科鲁尼亚", "Real Racing Club": "桑坦德竞技",
     "Paris FC": "巴黎FC", "FC Schalke 04": "沙尔克04",
     "Hamburger SV": "汉堡", "SC Paderborn 07": "帕德博恩",
-    "SV 07 Elversberg": "埃尔弗斯贝格", "Hull City": "赫尔城",
+    "SV 07 Elversberg": "埃沃斯堡", "Hull City": "赫尔城",
     "Le Mans": "勒芒", "Troyes": "特鲁瓦", "Rayo Vallecano": "巴列卡诺",
     "Espanyol": "西班牙人", "Osasuna": "奥萨苏纳", "Sevilla": "塞维利亚",
     "Bologna": "博洛尼亚", "Sassuolo": "萨索洛", "Juventus": "尤文图斯",
@@ -380,7 +381,7 @@ def aggregate_team_history(
     # 将权重映射到每行球员统计
     team_stats["weight"] = team_stats["event_id"].map(match_weights)
 
-    # === 4. 聚合 22 维特征 ===
+    # === 4. 聚合 34 维特征（全队 23 + 位置 11，与 incremental_sofascore_features._SOFA_KEYS 同步）===
     w = team_stats["weight"]
 
     # (1) 评分：首发11人加权均值
@@ -515,7 +516,7 @@ def aggregate_team_history(
     # (21) 阵型一致性：近 N 场使用不同阵型数的倒数（1=完全一致，0.5=两种阵型）
     lu = lineups_by_team.get(team_name)
     if lu is None or lu.empty:
-        team_lineups = lineups_df.iloc[0:0]
+        team_lineups = pd.DataFrame(columns=["event_id", "formation"])
     else:
         team_lineups = lu[lu["event_id"].isin(event_ids)]
     formations = team_lineups.drop_duplicates(subset=["event_id", "formation"])[
@@ -621,12 +622,13 @@ def build_sofascore_pre_match_features(
     progress_every: int = 50,
 ) -> pd.DataFrame:
     """
-    主入口：为每场 SofaScore 比赛生成主客各 22 维赛前特征
+    主入口：为每场 SofaScore 比赛生成主客各 34 维赛前特征（权威口径：34 × 2 = 68 列，
+    与 incremental_sofascore_features._SOFA_KEYS 全队 23 + 位置 11 一致，勿再写 22×2=44）
 
     返回 DataFrame 列:
       event_id, match_id_cn, match_date, league,
       home_team_cn, away_team_cn,
-      sofa_rat_5g_home, sofa_rat_5g_away, ... (22 × 2 = 44 维特征)
+      sofa_rat_5g_home, sofa_rat_5g_away, ... (34 × 2 = 68 维特征)
     """
     print(f"[SofaScore特征] 加载数据...")
     matches_df = load_sofascore_matches(conn)

@@ -12,7 +12,10 @@ attribution_engine.py — 模块 A3：赛后归因引擎（8 维度纯规则，P
 
 8 维度与数据来源：
   1 数据缺失归因   : sofascore_team_features 关键特征缺失率 >20% + understat xG 缺失
-  2 赔率异动归因   : 竞彩 wdl_history 开盘→末条任一方向漂移 >5%（经 team_mapping 中英映射）
+  2 赔率异动归因   : 竞彩 wdl_history 开盘→末条任一方向漂移 >5%（经 team_mapping 中英映射）；
+                    C-20261014-085 起附 drift_indicative 标记（hit=漂移推向实际赢家 /
+                    rev=漂移背离实际赢家 / neutral=无明确推向），反指场次文案改判
+                    「市场临场信号反指，模型不跟随为正确行为」
   3 阵容异动归因   : match_lineups 基准首发 vs SofaScore 实际首发差异 >3 人
   4 运气偏差归因   : understat xG 与实际进球异常（xG>1.5 且进≤1 / xG<0.5 且进≥2）
   5 异常事件归因   : SofaScore incidents 有红牌/点球/乌龙
@@ -88,7 +91,126 @@ def _row_to_dict(cur: sqlite3.Cursor, row: tuple) -> Optional[Dict[str, Any]]:
 
 
 # ==================== 数据获取（维度数据源） ====================
-def get_match_basics(conn: sqlite3.Connection, match_id: str) -> Optional[Dict[str, Any]]:
+# ---- C-20261016-111：键错位回退命中计数器（只读仪表，零模型影响）----
+# 用途：① 量化"英文键 review 还在不在持续产生"（P2/P4 紧迫性仪表）；
+#       ② 未来"中文行也查不到"新死角的报警器；③ P2 生效后计数器归零 = 兜底层可安全移除的验收门。
+FALLBACK_LOG = PROJECT_DIR / "reports" / "resolve_matches_fallback.jsonl"
+_fallback_seen: set = set()
+
+
+def _log_fallback(match_id: str, level: int, detail: str = "") -> None:
+    """记录一次 resolve_matches_row 回退事件（进程内按 (level, match_id) 去重）。
+
+    level: 1=中文名+日期回退命中（线索来自 review_row）
+           2=中文名+日期回退命中（线索来自 event_id 的 fbref 映射）
+           3=三层均无匹配（新死角告警）
+    仅追加 JSONL，任何异常静默——仪表不得影响主链。
+    """
+    try:
+        key = (level, match_id)
+        if key in _fallback_seen:
+            return
+        _fallback_seen.add(key)
+        FALLBACK_LOG.parent.mkdir(parents=True, exist_ok=True)
+        rec = {
+            "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "day": datetime.now().strftime("%Y-%m-%d"),
+            "match_id": match_id,
+            "level": level,
+            "detail": detail,
+        }
+        with open(FALLBACK_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def resolve_matches_row(
+    conn: sqlite3.Connection,
+    match_id: str,
+    *,
+    event_id: Optional[str] = None,
+    review_row: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """按 match_id 取 matches 行；跨源键错位时回退查找（C-20261016-110b）。
+
+    背景：matches 表键格式混存（实测 18321 行中中文键 12812 / 英文键 5509），
+    post_match_review 由预测侧（500.com 英文键）写入，英文键 review 直查 matches 常 miss。
+    此前调用点直接 return None 致下游整体跳过（DQ 假阴性 / 归因归零 / 让球口径静默降级）。
+    回退链：
+      ① match_id 精确查；
+      ② 中文队名 + 日期（±1 天，兼容跨源日期口径错位）查 matches，线索优先取
+         review_row，其次 event_id 对应的 fbref_match_mapping（英文名经 SOFA_TEAM_CN_MAP 转中文）；
+      ③ 均无匹配返回 None（调用方自建兜底或跳过）。
+    返回 matches 行 dict（SELECT *，字段名与列同名）。
+    """
+    row = conn.execute("SELECT * FROM matches WHERE match_id=?", (match_id,)).fetchone()
+    if row is not None:
+        return dict(row)
+
+    home_cn = away_cn = date0 = None
+    clue = None
+    if review_row:
+        home_cn = review_row.get("home_team")
+        away_cn = review_row.get("away_team")
+        date0 = review_row.get("match_date")
+    if home_cn and away_cn:
+        clue = "review"
+    if not (home_cn and away_cn):
+        rr = conn.execute(
+            "SELECT home_team, away_team, match_date FROM post_match_review WHERE match_id=?",
+            (match_id,),
+        ).fetchone()
+        if rr is not None:
+            home_cn, away_cn, date0 = rr[0], rr[1], rr[2]
+            clue = "review"
+    if not (home_cn and away_cn) and event_id:
+        try:
+            mr = conn.execute(
+                "SELECT home_team_cn, away_team_cn, match_date FROM fbref_match_mapping "
+                "WHERE fbref_match_id=? LIMIT 1", (event_id,),
+            ).fetchone()
+            if mr is not None:
+                try:
+                    _feat = str(PROJECT_DIR / "features")
+                    if _feat not in sys.path:
+                        sys.path.insert(0, _feat)
+                    from sofascore_pre_match_features import SOFA_TEAM_CN_MAP as _MAP
+                except Exception:  # noqa: BLE001
+                    _MAP = {}
+                home_cn = _MAP.get(mr[0]) or mr[0]
+                away_cn = _MAP.get(mr[1]) or mr[1]
+                date0 = mr[2]
+                clue = "event_id"
+        except Exception:  # noqa: BLE001
+            pass
+
+    if home_cn and away_cn:
+        try:
+            _base = datetime.strptime(str(date0)[:10], "%Y-%m-%d")
+            _dts = [(_base + timedelta(days=k)).strftime("%Y-%m-%d") for k in (-1, 0, 1)]
+        except (ValueError, TypeError):
+            _dts = [str(date0)[:10]] if date0 else []
+        if _dts:
+            _ph = ",".join("?" * len(_dts))
+            row = conn.execute(
+                f"SELECT * FROM matches WHERE home_team=? AND away_team=? AND match_date IN ({_ph}) LIMIT 1",
+                (home_cn, away_cn, *_dts),
+            ).fetchone()
+            if row is not None:
+                _log_fallback(match_id, 1 if clue == "review" else 2,
+                              f"{home_cn}_{away_cn}@{date0}")
+                return dict(row)
+    _log_fallback(match_id, 3, "no matches row")
+    return None
+
+
+def get_match_basics(
+    conn: sqlite3.Connection,
+    match_id: str,
+    *,
+    event_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     """比赛基础信息：matches（英文队名/handicap）为主，post_match_review（A2 权威赛果）补强。
 
     - home_team/away_team 保留英文（understat/阵容比对/竞彩匹配需要英文）
@@ -98,18 +220,27 @@ def get_match_basics(conn: sqlite3.Connection, match_id: str) -> Optional[Dict[s
     """
     cur = conn.cursor()
     cur.execute(
-        "SELECT match_id, match_date, league, home_team, away_team, actual_score, actual_wdl, handicap "
-        "FROM matches WHERE match_id=?", (match_id,),
-    )
-    m = _row_to_dict(cur, cur.fetchone())
-    if m is None:
-        return None
-    cur.execute(
         "SELECT league, match_date, home_team, away_team, actual_score, actual_wdl "
         "FROM post_match_review WHERE match_id=?", (match_id,),
     )
     r = _row_to_dict(cur, cur.fetchone())
+    m = resolve_matches_row(conn, match_id, event_id=event_id, review_row=r)
+    if m is None:
+        if r is None:
+            return None
+        # 彻底无 matches 行：以 review 行自建 basics（handicap 缺省 None），下游不整体跳过
+        m = {
+            "match_id": match_id,
+            "match_date": r.get("match_date"),
+            "league": r.get("league"),
+            "home_team": r.get("home_team"),
+            "away_team": r.get("away_team"),
+            "actual_score": r.get("actual_score"),
+            "actual_wdl": r.get("actual_wdl"),
+            "handicap": None,
+        }
     out = dict(m)
+    out["match_id"] = match_id  # 回退路径下 m 可能来自中文键行，统一为请求侧 match_id
     if r:
         out["home_team_cn"] = r.get("home_team")
         out["away_team_cn"] = r.get("away_team")
@@ -318,10 +449,69 @@ def get_understat_xg(conn: sqlite3.Connection, basics: Dict[str, Any]) -> Option
                 if row:
                     break
     if row is None:
+        # C-20261016-110: Understat 无数据时先回退 SofaScore 赛后缓存（已挂链稳定、
+        # stats.expectedGoals 比赛级 xG，无需实时请求），再回退 xgscore.io
+        sofa = _sofascore_xg_fallback(conn, basics)
+        if sofa:
+            return sofa
         # C-20260922: Understat 无数据时 fallback 到 xgscore.io（try/except 全隔离）
-        return _xgscore_fallback(conn, basics)
+        xg = _xgscore_fallback(conn, basics)
+        if xg is not None:
+            xg["xg_source"] = "xgscore"
+        return xg
     return {"home_xg": float(row[0]), "away_xg": float(row[1]),
-            "home_goals": int(row[2]), "away_goals": int(row[3])}
+            "home_goals": int(row[2]), "away_goals": int(row[3]),
+            "xg_source": "understat"}
+
+
+def _sofascore_xg_fallback(conn: sqlite3.Connection, basics: Dict[str, Any]) -> Optional[Dict[str, float]]:
+    """C-20261016-110: xG 第二回退——sofascore_post_match_cache 的 stats.expectedGoals。
+
+    Understat 断供（C-20261014-081 型）期间的保险层：sofascore 赛后采集器挂链稳定，
+    缓存表已有 stats.home/away.expectedGoals 比赛级 xG。±1 天 + 英文归一队名匹配
+    （与竞彩日期口径错位兼容），try/except 全隔离失败返回 None。
+    """
+    try:
+        date = basics.get("match_date")
+        home = basics.get("home_team")
+        away = basics.get("away_team")
+        if not (date and home and away):
+            return None
+        from datetime import datetime as _dt, timedelta as _td
+        try:
+            base = _dt.strptime(date, "%Y-%m-%d")
+            dates = [(base + _td(days=k)).strftime("%Y-%m-%d") for k in (-1, 0, 1)]
+        except ValueError:
+            dates = [date]
+        home_norm = _norm_en_team(_cn_to_en_team(home) or home)
+        away_norm = _norm_en_team(_cn_to_en_team(away) or away)
+        ph = ",".join("?" * len(dates))
+        cur = conn.execute(
+            f"SELECT match_id, payload_json FROM sofascore_post_match_cache "
+            f"WHERE substr(match_id, 1, 10) IN ({ph})", dates)
+        for mid, pj in cur.fetchall():
+            parts = str(mid).split("_")
+            if len(parts) < 3:
+                continue
+            mh, ma = _norm_en_team(parts[1]), _norm_en_team(parts[2])
+            direct = (home_norm == mh and away_norm == ma)
+            flipped = (home_norm == ma and away_norm == mh)
+            if not (direct or flipped):
+                continue
+            d = json.loads(pj)
+            st = d.get("stats") or {}
+            hx = (st.get("home") or {}).get("expectedGoals")
+            ax = (st.get("away") or {}).get("expectedGoals")
+            if hx is None or ax is None:
+                continue
+            return {"home_xg": float(ax if flipped else hx),
+                    "away_xg": float(hx if flipped else ax),
+                    "home_goals": int(d.get("away_score") if flipped else d.get("home_score") or 0),
+                    "away_goals": int(d.get("home_score") if flipped else d.get("away_score") or 0),
+                    "xg_source": "sofascore"}
+        return None
+    except Exception:
+        return None
 
 
 def _xgscore_fallback(conn: sqlite3.Connection, basics: Dict[str, Any]) -> Optional[Dict[str, float]]:
@@ -420,7 +610,9 @@ def _find_odds_match_id(conn: sqlite3.Connection, match_id: str,
                         home_en: str, away_en: str) -> Optional[str]:
     """竞彩 wdl_history match_id（中文格式）匹配。
 
-    候选1：构造 {date}_{home_cn}_{away_cn}；候选2：遍历当日 DISTINCT match_id 双向归一化比对。
+    C-20260930-002：精确日期失败时按 d-1 / d / d+1 三日依次扫描（竞彩键日期
+    可能按开售日落在前一天，如罗马场同时存在 09-19/09-20 两个镜像键）。
+    命中顺序：精确日构造键 → 精确日模糊扫描 → 相邻日模糊扫描（先 d-1 后 d+1）。
     """
     date = match_id[:10]
     home_cn = _cn_team(conn, home_en)
@@ -430,18 +622,35 @@ def _find_odds_match_id(conn: sqlite3.Connection, match_id: str,
     cur.execute("SELECT 1 FROM wdl_history WHERE match_id=? LIMIT 1", (cand,))
     if cur.fetchone():
         return cand
-    cur.execute(
-        "SELECT DISTINCT match_id FROM wdl_history WHERE match_id LIKE ?", (f"{date}%",),
-    )
+
     h_norm, a_norm = normalize_team_name(home_cn), normalize_team_name(away_cn)
-    for mid in cur.fetchall():
-        parts = mid[0].split("_")
-        if len(parts) != 3 or parts[0] != date:
-            continue
-        mh, ma = parts[1], parts[2]
-        if (normalize_team_name(mh) == h_norm and normalize_team_name(ma) == a_norm) or \
-           (normalize_team_name(mh) == a_norm and normalize_team_name(ma) == h_norm):
-            return mid[0]
+
+    def _scan_day(day: str) -> Optional[str]:
+        cur.execute(
+            "SELECT DISTINCT match_id FROM wdl_history WHERE match_id LIKE ?", (f"{day}%",),
+        )
+        for mid in cur.fetchall():
+            parts = mid[0].split("_")
+            if len(parts) != 3 or parts[0] != day:
+                continue
+            mh, ma = parts[1], parts[2]
+            if (normalize_team_name(mh) == h_norm and normalize_team_name(ma) == a_norm) or \
+               (normalize_team_name(mh) == a_norm and normalize_team_name(ma) == h_norm):
+                return mid[0]
+        return None
+
+    # 精确日优先，再相邻日（d-1 → d+1）
+    hit = _scan_day(date)
+    if hit:
+        return hit
+    try:
+        d0 = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    for delta in (-1, 1):
+        hit = _scan_day((d0 + timedelta(days=delta)).isoformat())
+        if hit:
+            return hit
     return None
 
 
@@ -488,11 +697,78 @@ def get_market_draw_prob(odds_hist: Optional[Dict[str, Any]]) -> Optional[float]
     return inv[1] / sum(inv)  # [win_a, draw, win_b]
 
 
-def get_bucket_hit_rates(conn: sqlite3.Connection) -> Dict[str, float]:
+# C-20261014-085：漂移指示性标记值域
+DRIFT_INDICATIVE_HIT = "hit"       # 漂移推向实际赢家（顺指）
+DRIFT_INDICATIVE_REV = "rev"       # 漂移背离实际赢家（反指）
+DRIFT_INDICATIVE_NEUTRAL = "neutral"  # 无明确漂移方向 / 赛果缺失
+
+_WDL_LABELS = ("主胜", "平局", "客胜")  # wdl_history 列序 [win_a, draw, win_b]
+
+
+def _norm_implied(odds: List[Any]) -> Optional[List[float]]:
+    """[win_a, draw, win_b] 赔率 -> 去抽水隐含概率。"""
+    try:
+        inv = [1.0 / float(o) for o in odds if o and float(o) > 0]
+    except (ValueError, TypeError):
+        return None
+    if len(inv) != 3 or sum(inv) <= 0:
+        return None
+    s = sum(inv)
+    return [v / s for v in inv]
+
+
+def get_drift_indicative(odds_hist: Optional[Dict[str, Any]],
+                         actual_wdl: Optional[str]) -> Dict[str, Any]:
+    """C-20261014-085 维度2：漂移方向 vs 实际赛果的对应关系（顺指/反指/中性）。
+
+    判据：开盘/末条去抽水隐含概率差 argmax = 市场临场推向方向；
+      推向 == 实际赛果 -> hit（顺指）；推向 != 实际赛果 -> rev（反指）；
+      三向概率差均 <=0（无明确推向）或赛果缺失 -> neutral。
+    返回 {"drift_indicative": hit/rev/neutral, "drift_toward": 主胜/平局/客胜/None,
+          "drift_delta": 最大隐含概率增量}。
+    """
+    out = {"drift_indicative": DRIFT_INDICATIVE_NEUTRAL,
+           "drift_toward": None, "drift_delta": None}
+    if not odds_hist:
+        return out
+    open_p = _norm_implied(odds_hist.get("open"))
+    close_p = _norm_implied(odds_hist.get("close"))
+    if not open_p or not close_p:
+        return out
+    deltas = [close_p[i] - open_p[i] for i in range(3)]
+    idx = max(range(3), key=lambda i: deltas[i])
+    if deltas[idx] <= 0:
+        return out
+    toward = _WDL_LABELS[idx]
+    out["drift_toward"] = toward
+    out["drift_delta"] = round(deltas[idx], 4)
+    norm_actual = {"主胜": "主胜", "平局": "平局", "客胜": "客胜",
+                   "胜": "主胜", "平": "平局", "负": "客胜"}.get(actual_wdl or "")
+    if norm_actual is None:
+        return out
+    out["drift_indicative"] = (DRIFT_INDICATIVE_HIT if toward == norm_actual
+                               else DRIFT_INDICATIVE_REV)
+    return out
+
+
+# C-20261016-106: Platt 校准生效日（C-20261015-113 文件名 bug 修复）。
+# 此前的预测为未校准原始输出；分桶命中率按此日期切 pre/post 双窗，
+# 防止「未校准时代」旧样本污染新归因（每场复盘重复误报高估、人工翻老账）。
+PLATT_LIVE_DATE = "2026-10-15"
+
+
+def get_bucket_hit_rates(conn: sqlite3.Connection) -> Dict[str, Dict[str, float]]:
     """维度8：全库 WDL 概率分桶历史命中率（model_predictions + matches.actual_wdl）。
 
     分桶：40-50 / 50-60 / 60-70 / >=70；命中按 pred_wdl 与 actual_wdl 比对。
-    返回 {"WDL_home_0.60": 0.72, ...}，样本 <20 的桶不输出。
+    返回双窗结构：
+      {
+        "all":    {bkey: rate},   # 原口径（n>=20），向后兼容
+        "pre":    {bkey: rate},   # 校准前时代（预测时间 < PLATT_LIVE_DATE，n>=20）
+        "post":   {bkey: rate},   # 校准后时代（>= PLATT_LIVE_DATE，n>=10 才输出）
+        "pre_n":  {bkey: n},
+        "post_n": {bkey: n},      # 含 n<10 的桶，供「样本不足」判定
+      }
     """
     cur = conn.cursor()
     cur.execute(
@@ -502,7 +778,8 @@ def get_bucket_hit_rates(conn: sqlite3.Connection) -> Dict[str, float]:
                     WHEN 'WDL_home' THEN '主胜'
                     WHEN 'WDL_draw' THEN '平局'
                     WHEN 'WDL_away' THEN '客胜' END AS pred_wdl,
-               m.actual_wdl
+               m.actual_wdl,
+               substr(mp.timestamp, 1, 10) AS pred_date
         FROM model_predictions mp
         JOIN matches m ON mp.match_id = m.match_id
         WHERE mp.prediction_type IN ('WDL_home','WDL_draw','WDL_away')
@@ -510,7 +787,7 @@ def get_bucket_hit_rates(conn: sqlite3.Connection) -> Dict[str, float]:
         """
     )
     buckets: Dict[str, Dict[str, int]] = {}
-    for pt, prob, pred_wdl, actual_wdl in cur.fetchall():
+    for pt, prob, pred_wdl, actual_wdl, pred_date in cur.fetchall():
         try:
             p = float(prob)
         except (ValueError, TypeError):
@@ -520,14 +797,21 @@ def get_bucket_hit_rates(conn: sqlite3.Connection) -> Dict[str, float]:
         if hit is None:
             continue
         bucket = f"{pt}_{_bucket_key(p)}"
-        b = buckets.setdefault(bucket, {"n": 0, "hit": 0})
-        b["n"] += 1
-        b["hit"] += 1 if hit else 0
-    rates: Dict[str, float] = {}
+        era = "post" if (pred_date or "") >= PLATT_LIVE_DATE else "pre"
+        for scope in ("all", era):
+            k = f"{scope}|{bucket}"
+            b = buckets.setdefault(k, {"n": 0, "hit": 0})
+            b["n"] += 1
+            b["hit"] += 1 if hit else 0
+    out: Dict[str, Dict[str, Any]] = {"all": {}, "pre": {}, "post": {},
+                                      "all_n": {}, "pre_n": {}, "post_n": {}}
     for key, b in buckets.items():
-        if b["n"] >= 20:  # 最小样本
-            rates[key] = b["hit"] / b["n"]
-    return rates
+        scope, bkey = key.split("|", 1)
+        out[f"{scope}_n"][bkey] = b["n"]
+        min_n = 10 if scope == "post" else 20  # 校准后窗口样本少，阈值放宽但保留「样本不足」标记能力
+        if b["n"] >= min_n:
+            out[scope][bkey] = b["hit"] / b["n"]
+    return out
 
 
 def _bucket_key(p: float) -> str:
@@ -717,27 +1001,41 @@ class AttributionEngine:
         event_id = get_event_id(self.conn, match_id)
         attrs: List[Dict[str, Any]] = []
 
-        # ---- 维度1 数据缺失归因 ----
-        missing_rate = None
-        if event_id:
-            missing_rate = self._feature_missing_rate(event_id)
-            if missing_rate is not None and missing_rate > MISSING_FEATURE_THRESHOLD:
-                attrs.append({
-                    "type": "数据缺失归因", "weight": BASE_WEIGHTS["数据缺失归因"],
-                    "description": f"赛前关键特征缺失率 {missing_rate:.0%}（>20%），模型输入不完整",
-                    "evidence": {"feature_missing_rate": round(missing_rate, 4), "event_id": event_id},
-                })
-
-        # ---- 维度2 赔率异动归因 ----
+        # 维度2数据源先取：维度1兜底判据也需要竞彩快照数
         odds_hist = get_odds_timeline(self.conn, match_id, basics)
+
+        # ---- 维度1 数据缺失归因（C-20260930-002 Fix B：复合判据）----
+        # 权威源=赛前快照 prematch_data_quality；历史场走库检兜底；
+        # SofaScore 11 列缺失率作为子信号并入（不再是唯一口径）。
+        gap = self._prematch_quality_signals(match_id, basics, odds_hist, event_id)
+        if gap["data_gap"]:
+            attrs.append({
+                "type": "数据缺失归因", "weight": BASE_WEIGHTS["数据缺失归因"],
+                "description": "赛前数据缺失（{}）：{}".format(gap["source"], gap["description"]),
+                "evidence": {"source": gap["source"], "triggered": gap["triggered"],
+                             **gap["signals"]},
+            })
+
+        # ---- 维度2 赔率异动归因（C-20261014-085：顺指/反指双文案）----
         if odds_hist and odds_hist["drift_max"] > ODDS_DRIFT_THRESHOLD:
+            drift = get_drift_indicative(odds_hist, basics.get("actual_wdl"))
+            ind = drift["drift_indicative"]
+            if ind == DRIFT_INDICATIVE_REV:
+                drift_note = "市场临场信号反指（漂移推向失败方），模型不跟随为正确行为"
+            else:
+                # hit / neutral 沿用原文案
+                drift_note = "市场临场信息未反映在模型特征中"
             attrs.append({
                 "type": "赔率异动归因", "weight": BASE_WEIGHTS["赔率异动归因"],
                 "description": f"竞彩赔率赛前漂移最大 {odds_hist['drift_max']:.1%}（{odds_hist['drift_dir']} 方向），"
-                               f"市场临场信息未反映在模型特征中",
+                               f"{drift_note}",
+                "drift_indicative": ind,
                 "evidence": {"odds_match_id": odds_hist["odds_id"],
                              "open": odds_hist["open"], "close": odds_hist["close"],
-                             "drift_max": odds_hist["drift_max"], "snapshots": odds_hist["snapshots"]},
+                             "drift_max": odds_hist["drift_max"], "snapshots": odds_hist["snapshots"],
+                             "drift_indicative": ind,
+                             "drift_toward": drift["drift_toward"],
+                             "drift_delta": drift["drift_delta"]},
             })
 
         # ---- 维度3 阵容异动归因 ----
@@ -874,6 +1172,203 @@ class AttributionEngine:
         }
 
     # ---- 内部辅助 ----
+    # C-20260930-002 Fix B：维度1复合判据阈值
+    PDQ_COMPLETENESS_THRESHOLD = 80   # 赛前报告完整度 <80% 计缺失
+    _PDQ_SELECT = (
+        "SELECT generated_at,completeness,wdl_snapshots,wdl_not_offered,"
+        "sporttery_status,ouzhi_status,betting_status,betting_crawl_status,sofascore_status "
+        "FROM prematch_data_quality WHERE match_id=?"
+    )
+
+    def _find_500_fid(self, match_id: str) -> Optional[int]:
+        """odds500_match 英文 match_id -> fid（键格式与 build_log 一致）。"""
+        cur = self.conn.cursor()
+        cur.execute("SELECT fid FROM odds500_match WHERE match_id=? LIMIT 1", (match_id,))
+        row = cur.fetchone()
+        try:
+            return int(row[0]) if row and row[0] is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def _sporttery_other_offered(self, mdate: str, home_cn: str, away_cn: str) -> bool:
+        """让球/大小球/比分历史表是否有该场（±1 日）。
+
+        兜底路径识别「竞彩未开售 WDL」（业务缺位，非数据缺失）：WDL 表无行但
+        其余竞彩盘口有行——口径与 generate_unified_report.find_any_sporttery_match_id 一致。
+        """
+        h_norm, a_norm = normalize_team_name(home_cn), normalize_team_name(away_cn)
+        try:
+            d0 = datetime.strptime(mdate, "%Y-%m-%d").date()
+        except ValueError:
+            return False
+        days = [(d0 + timedelta(days=k)).isoformat() for k in (-1, 0, 1)]
+        cur = self.conn.cursor()
+        for table in ("handicap_history", "total_goals_history", "score_history"):
+            for day in days:
+                try:
+                    cur.execute(
+                        f"SELECT DISTINCT match_id FROM {table} WHERE match_id LIKE ?",
+                        (f"{day}%",),
+                    )
+                except sqlite3.OperationalError:
+                    continue
+                for (mid,) in cur.fetchall():
+                    parts = mid.split("_")
+                    if len(parts) != 3 or parts[0] != day:
+                        continue
+                    mh, ma = parts[1], parts[2]
+                    if (normalize_team_name(mh) == h_norm and normalize_team_name(ma) == a_norm) or \
+                       (normalize_team_name(mh) == a_norm and normalize_team_name(ma) == h_norm):
+                        return True
+        return False
+
+    def _prematch_quality_signals(self, match_id: str, basics: Dict[str, Any],
+                                  odds_hist: Optional[Dict[str, Any]],
+                                  event_id: Optional[str]) -> Dict[str, Any]:
+        """维度1「赛前数据缺失」复合判据（C-20260930-002 Fix B）。
+
+        ① 权威源 prematch_data_quality（报告渲染时落库的赛前快照，历史不覆盖）：
+           completeness<80% 或任一通道 FAIL（竞彩「未开售WDL」是业务缺位，不触发；
+           WARN 不触发）。取 kickoff 当日 23:59:59 前最后一条；无则取最新行兜底。
+        ② 历史兜底（快照表无行，2026-09-30 前的比赛）：实时库检
+           竞彩快照=0（1 条不算）/ 500 欧指空壳 / betting 缺失·非ok·空壳。
+           ⚠️ 兜底局限：检的是库内*当前*状态——历史场赛后若已补齐数据会漏报，
+           这正是 Fix A 赛前快照要消除的盲区。
+        ③ SofaScore 11 列缺失率检测保留为子信号，两条路径都参与 OR。
+        """
+        mdate = match_id[:10]
+        cur = self.conn.cursor()
+        row = None
+        try:
+            cur.execute(
+                self._PDQ_SELECT + " AND generated_at<=? ORDER BY generated_at DESC LIMIT 1",
+                (match_id, f"{mdate} 23:59:59"),
+            )
+            row = cur.fetchone()
+            if row is None:
+                cur.execute(self._PDQ_SELECT + " ORDER BY id DESC LIMIT 1", (match_id,))
+                row = cur.fetchone()
+        except sqlite3.OperationalError:
+            row = None  # 旧库无 prematch_data_quality 表 → 走兜底
+
+        signals: Dict[str, Any] = {}
+        triggered: List[str] = []
+        descs: List[str] = []
+        feature_rate = self._feature_missing_rate(event_id) if event_id else None
+        signals["feature_missing_rate"] = round(feature_rate, 4) if feature_rate is not None else None
+
+        if row is not None:
+            source = "prematch_data_quality"
+            (_gen, completeness, wdl_snaps, not_offered,
+             st_sport, st_ouzhi, st_bet, crawl_bet, st_sofa) = row
+            signals.update({
+                "generated_at": _gen, "completeness": completeness,
+                "wdl_snapshots": wdl_snaps, "wdl_not_offered": bool(not_offered),
+                "sporttery_status": st_sport, "ouzhi_status": st_ouzhi,
+                "betting_status": st_bet, "betting_crawl_status": crawl_bet,
+                "sofascore_status": st_sofa,
+            })
+            if completeness is not None and completeness < self.PDQ_COMPLETENESS_THRESHOLD:
+                triggered.append("completeness")
+                descs.append(f"赛前报告数据完整度仅 {completeness}%（<80%）")
+            channel_rules = (
+                ("ouzhi", st_ouzhi, "500.com 百家欧指通道 FAIL（未采集/空壳）"),
+                ("betting", st_bet, f"500.com 投注分析通道 FAIL（{crawl_bet or '状态未知'}）"),
+                ("sofascore", st_sofa, "SofaScore 赛前特征通道 FAIL"),
+            )
+            for key, status, desc in channel_rules:
+                if status == "FAIL":
+                    triggered.append(key)
+                    descs.append(desc)
+            # 竞彩：未开售 WDL 属业务缺位（WARN），不计缺失；只有真实 FAIL 才触发
+            if st_sport == "FAIL" and not not_offered:
+                triggered.append("sporttery")
+                descs.append("竞彩时序赔率通道 FAIL（无快照）")
+        else:
+            source = "fallback_db_check"
+            # ① 竞彩快照数（维度2 已匹配的中文键；0 才触发，1 条不触发）
+            snaps = int(odds_hist["snapshots"]) if odds_hist else 0
+            signals["wdl_snapshots"] = snaps
+            not_offered = False
+            if snaps == 0:
+                # 未开售 WDL（让球/大小/比分有行）是业务缺位，不计缺失
+                _h_cn = basics.get("home_team_cn") or _cn_team(self.conn, basics.get("home_team", ""))
+                _a_cn = basics.get("away_team_cn") or _cn_team(self.conn, basics.get("away_team", ""))
+                not_offered = self._sporttery_other_offered(mdate, _h_cn, _a_cn)
+                signals["wdl_not_offered"] = not_offered
+                if not not_offered:
+                    triggered.append("sporttery")
+                    descs.append("竞彩赛前时序无快照（开盘→即时漂移不可观测）")
+            # ② 500 欧指空壳：无 summary 行，或 company_count 空/0 且公司明细 0 行
+            fid = self._find_500_fid(match_id)
+            signals["fid"] = fid
+            ouzhi_shell = None
+            if fid is None:
+                ouzhi_shell = True  # 无 500 比赛映射，三通道均视为不可用
+                descs_ouzhi = "odds500_match 无该场映射"
+            else:
+                cur.execute(
+                    "SELECT company_count FROM odds500_ouzhi_summary WHERE fid=? LIMIT 1", (fid,))
+                sr = cur.fetchone()
+                cur.execute("SELECT COUNT(*) FROM odds500_ouzhi_company WHERE fid=?", (fid,))
+                company_n = int(cur.fetchone()[0])
+                cc = sr[0] if sr else None
+                try:
+                    cc_n = int(float(cc)) if cc not in (None, "") else 0
+                except (TypeError, ValueError):
+                    cc_n = 0
+                ouzhi_shell = (sr is None) or (cc_n == 0 and company_n == 0)
+                descs_ouzhi = f"空壳（company_count={cc!r}，公司明细 {company_n} 行）"
+            signals["ouzhi_shell"] = ouzhi_shell
+            if ouzhi_shell:
+                triggered.append("ouzhi")
+                descs.append(f"500.com 百家欧指{descs_ouzhi}")
+            # ③ betting：缺失 / crawl_status 非 ok / ok 但空壳
+            bet_status = None
+            bet_shell = None
+            if fid is None:
+                bet_shell = True
+            else:
+                cur.execute(
+                    "SELECT crawl_status,home_bf_volume,draw_bf_volume,away_bf_volume "
+                    "FROM odds500_betting WHERE fid=? LIMIT 1", (fid,),
+                )
+                br = cur.fetchone()
+                if br is None:
+                    bet_status, bet_shell = None, True
+                else:
+                    bet_status = br[0]
+                    if bet_status != "ok":
+                        bet_shell = True
+                    else:
+                        bet_shell = not any(
+                            str(v or "").strip() not in ("", "0", "None")
+                            for v in br[1:4]
+                        )
+            signals["betting_crawl_status"] = bet_status
+            signals["betting_shell"] = bet_shell
+            if bet_shell:
+                triggered.append("betting")
+                if bet_status is None:
+                    descs.append("500.com 投注分析无采集记录")
+                elif bet_status != "ok":
+                    descs.append(f"500.com 投注分析采集状态 {bet_status}（反爬/解析失败）")
+                else:
+                    descs.append("500.com 投注分析 ok 但字段空壳（疑似反爬）")
+
+        # ③ SofaScore 关键特征缺失率（原子信号，两路径通用）
+        if feature_rate is not None and feature_rate > MISSING_FEATURE_THRESHOLD:
+            triggered.append("features")
+            descs.append(f"SofaScore 赛前关键特征缺失率 {feature_rate:.0%}（>20%）")
+
+        return {
+            "source": source,
+            "data_gap": bool(triggered),
+            "triggered": triggered,
+            "signals": signals,
+            "description": "；".join(descs),
+        }
+
     def _feature_missing_rate(self, event_id: str) -> Optional[float]:
         """sofascore_team_features 关键特征缺失率。"""
         cur = self.conn.cursor()
@@ -909,18 +1404,35 @@ class AttributionEngine:
         evidences: Dict[str, Any] = {}
         descs: List[str] = []
 
-        # ① 概率档高估
+        # ① 概率档高估（C-20261016-106 双窗口径：优先校准后窗口；post 样本不足
+        #    时只展示 pre 旧账、不做高估判定——防止未校准时代样本污染新归因）
         argmax_pt = max(wdl_probs, key=wdl_probs.get)
         p_arg = wdl_probs[argmax_pt]
         bkey = f"{argmax_pt}_{_bucket_key(p_arg)}"
-        if bkey in hit_rates:
-            hit_rate = hit_rates[bkey]
-            if p_arg - hit_rate > CALIB_GAP_THRESHOLD:
-                evidences["bucket"] = bkey
-                evidences["model_prob"] = round(p_arg, 4)
-                evidences["bucket_hit_rate"] = round(hit_rate, 4)
-                descs.append(f"模型预测 {argmax_pt} 概率 {p_arg:.0%}，该概率档历史命中率仅 "
-                             f"{hit_rate:.0%}（高估 {p_arg - hit_rate:.0%}pp）")
+        post_rates, pre_rates = hit_rates.get("post", {}), hit_rates.get("pre", {})
+        post_n = hit_rates.get("post_n", {}).get(bkey, 0)
+        pre_n = hit_rates.get("pre_n", {}).get(bkey, 0)
+        evidences["bucket"] = bkey
+        evidences["model_prob"] = round(p_arg, 4)
+        if bkey in pre_rates:
+            evidences["bucket_hit_rate_pre"] = round(pre_rates[bkey], 4)
+            evidences["bucket_n_pre"] = pre_n
+        if bkey in post_rates:
+            # 校准后样本足够（n>=10）：用 post 窗判定，这才代表当前模型
+            post_rate = post_rates[bkey]
+            evidences["bucket_hit_rate_post"] = round(post_rate, 4)
+            evidences["bucket_n_post"] = post_n
+            if p_arg - post_rate > CALIB_GAP_THRESHOLD:
+                evidences["bucket_hit_rate"] = round(post_rate, 4)
+                descs.append(f"模型预测 {argmax_pt} 概率 {p_arg:.0%}，校准后该档命中率仅 "
+                             f"{post_rate:.0%}（n={post_n}，高估 {p_arg - post_rate:.0%}pp）")
+        elif bkey in pre_rates:
+            # 校准后样本不足：仅当旧口径「本来会误报高估」时输出免责说明（防污染账本），
+            # 否则保持沉默——不为每场 0.40 档比赛新增归因噪音
+            pre_rate = pre_rates[bkey]
+            if p_arg - pre_rate > CALIB_GAP_THRESHOLD:
+                descs.append(f"模型预测 {argmax_pt} 概率 {p_arg:.0%}；校准后样本不足（n={post_n}<10），"
+                             f"校准前时代同档命中率 {pre_rate:.0%}（n={pre_n}，未校准旧账，仅参考不判定）")
 
         # ② 平局过度自信（方向反转：模型平局系统性高于市场）
         market_draw = get_market_draw_prob(odds_hist)
@@ -958,18 +1470,14 @@ class AttributionEngine:
 
 # ==================== 主入口 ====================
 def _load_post_data(match_id: str, basics: Dict[str, Any], logger: logging.Logger) -> Optional[Dict[str, Any]]:
-    """--collect：自动采集 SofaScore 赛后明细（阵容/统计/事件）。"""
-    sys.path.insert(0, str(PROJECT_DIR / "collection"))
-    from final_sofascore_collector import SofaScoreClient, collect_post_match
-    event_id = get_event_id(_get_conn(), match_id)
-    if not event_id:
-        logger.warning("无 fbref_match_mapping 映射，无法采集赛后明细")
-        return None
-    client = SofaScoreClient(logger=logger)
+    """--collect：缓存优先读取 SofaScore 赛后明细（C-20261002-001 起 miss 时采集并落库）。"""
+    from post_match_cache import get_post_data
+    conn = _get_conn()
     try:
-        return collect_post_match(client, event_id, logger)
+        data, _state = get_post_data(conn, match_id, logger, allow_fetch=True)
+        return data
     finally:
-        client.close()
+        conn.close()
 
 
 def main() -> None:

@@ -85,6 +85,37 @@ CREATE TABLE IF NOT EXISTS post_match_review (
 )
 """
 
+# C-20260930-002：赛前报告三通道数据质量快照（Fix A）。
+# 报告每次渲染追加一行（同一场比赛可能提前多日多次渲染），不覆盖历史。
+# 归因引擎取「kickoff 当日结束前最后一条」为权威赛前口径；无行的历史场（2026-09-30 前）
+# 由 attribution_engine 走实时库检兜底（见维度1 _prematch_quality_signals）。
+PREMATCH_DATA_QUALITY_DDL = """
+CREATE TABLE IF NOT EXISTS prematch_data_quality (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_id             TEXT NOT NULL,   -- 英文键 {date}_{home_en}_{away_en}，对齐 build_log/odds500_match
+    fid                  INTEGER,         -- 500.com fid（可空）
+    match_date           TEXT,            -- YYYY-MM-DD（北京时间比赛日）
+    generated_at         TEXT NOT NULL,   -- 报告渲染时间 %Y-%m-%d %H:%M:%S（CN tz）
+    completeness         INTEGER,         -- 报告数据完整度 0-100（三通道各 1/3）
+    wdl_snapshots        INTEGER,         -- 竞彩时序快照条数
+    wdl_not_offered      INTEGER DEFAULT 0, -- 竞彩未开售 WDL（业务缺位，非缺失）0/1
+    sporttery_status     TEXT,            -- OK/WARN/FAIL
+    ouzhi_status         TEXT,            -- OK/FAIL（500 百家欧指，空壳计 FAIL）
+    betting_status       TEXT,            -- OK/WARN/FAIL（500 投注分析）
+    betting_crawl_status TEXT,            -- 原始 crawl_status（ok/anti_bot_blocked/...）
+    sofascore_status     TEXT,            -- OK/WARN/FAIL（SofaScore 赛前特征）
+    modules_json         TEXT,            -- 报告 §十七之三 全量模块状态 [{name,status,detail}]
+    report_file          TEXT,            -- 报告相对路径（docs/prematch_reports/...）
+    model_version        TEXT,
+    feature_version      TEXT,
+    created_at           TEXT DEFAULT (datetime('now','localtime'))
+)
+"""
+PREMATCH_QUALITY_INDEXES = [
+    "CREATE INDEX IF NOT EXISTS idx_prematch_dq_match ON prematch_data_quality(match_id)",
+    "CREATE INDEX IF NOT EXISTS idx_prematch_dq_date ON prematch_data_quality(match_date)",
+]
+
 # post_match_review 可写白名单列（不含自增 id / created_at）
 REVIEW_WRITABLE_COLS = [
     "match_id", "league", "match_date", "home_team", "away_team",
@@ -135,6 +166,37 @@ def ensure_post_match_schema(conn: sqlite3.Connection) -> None:
             "(UNIQUE(match_id, model_name, prediction_type))，无法保证 actual_* 幂等写入，"
             "请先运行 scripts/add_model_predictions_unique.py"
         )
+
+
+def ensure_prematch_quality_schema(conn: sqlite3.Connection) -> None:
+    """幂等建表：prematch_data_quality（C-20260930-002 Fix A）。可重复执行。"""
+    conn.execute(PREMATCH_DATA_QUALITY_DDL)
+    for ddl in PREMATCH_QUALITY_INDEXES:
+        conn.execute(ddl)
+    conn.commit()
+
+
+def insert_prematch_data_quality(conn: sqlite3.Connection, row: Dict[str, Any]) -> int:
+    """追加一条赛前数据质量快照（append 历史，不覆盖）。返回新行 id。
+
+    必填 match_id/generated_at；modules_json 自动序列化。写库方负责异常隔离
+    （报告生成链路不得因快照写入失败而中断）。
+    """
+    if not row.get("match_id") or not row.get("generated_at"):
+        raise ValueError("insert_prematch_data_quality 必须提供 match_id 与 generated_at")
+    ensure_prematch_quality_schema(conn)
+    payload = dict(row)
+    if isinstance(payload.get("modules_json"), (list, dict)):
+        payload["modules_json"] = json.dumps(payload["modules_json"], ensure_ascii=False)
+    cols = list(payload.keys())
+    placeholders = ",".join("?" for _ in cols)
+    cur = conn.cursor()
+    cur.execute(
+        f"INSERT INTO prematch_data_quality ({','.join(cols)}) VALUES ({placeholders})",
+        list(payload.values()),
+    )
+    conn.commit()
+    return int(cur.lastrowid)
 
 
 def _normalize(name: Optional[str]) -> Optional[str]:
@@ -346,10 +408,13 @@ def main() -> None:
     conn.execute("PRAGMA busy_timeout = 5000")
     try:
         ensure_post_match_schema(conn)
+        ensure_prematch_quality_schema(conn)
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM post_match_review")
         print(f"数据库: {ODDS_DB}")
         print("post_match_review 表已就绪（幂等建表），当前行数:", cur.fetchone()[0])
+        cur.execute("SELECT COUNT(*) FROM prematch_data_quality")
+        print("prematch_data_quality 表已就绪（幂等建表），当前行数:", cur.fetchone()[0])
 
         if args.clean:
             deleted = clean_review(conn, args.clean)

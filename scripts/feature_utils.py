@@ -11,6 +11,21 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_DIR = os.path.dirname(_SCRIPT_DIR)
 if _PROJECT_DIR not in sys.path:
     sys.path.insert(0, _PROJECT_DIR)
+
+# C-20261015-109: 导入 team_names 权威别名表，供 normalize_team_name 反向查别名→canonical_cn
+# （此前 normalize_team_name 只查 TEAM_NAME_MAP 正向键→值，ALIASES 反向路径完全没被用，
+# 导致布赖顿/巴伦西亚/纽卡斯尔联/曼彻斯特城 等别名直接漏归）
+from team_names import CANONICAL_CN as _CN, TEAM_ALIASES as _ALIAS  # noqa: E402
+
+# 预构建别名反向索引：{alias_lower: canonical_en}，一次建、全复用
+_ALIAS_REVERSE = {}
+for _cen, _aliases in _ALIAS.items():
+    for _a in _aliases:
+        _ALIAS_REVERSE[str(_a).lower()] = _cen
+# 覆盖 canonical_cn 值（防止 CANONICAL_CN 里写的中文不被认作 canonical）
+for _cen, _ccn in _CN.items():
+    _ALIAS_REVERSE[str(_ccn).lower()] = _cen
+    _ALIAS_REVERSE[str(_cen).lower()] = _cen
 from db_utils import connect, read_sql, table_exists  # noqa: E402
 
 DB_PATH = os.path.join(_PROJECT_DIR, "data", "five_leagues.db")
@@ -128,6 +143,7 @@ TEAM_NAME_MAP = {
     'Darmstadt 98': '达姆施塔特', 'VfL Bochum 1848': '波鸿',
     # 旧标准名 → score_history 变体名
     '云达不莱梅': '云达不来梅',
+    '莱比锡': '莱比锡红牛',
     'Schalke 04': '沙尔克04', 'FC Schalke 04': '沙尔克04', 'Schalke': '沙尔克04',
 
     # ========================
@@ -156,22 +172,58 @@ TEAM_NAME_MAP = {
     # ========================
     # 其他联赛球队（score_history中可能出现）
     # ========================
-    '埃尔沃斯堡': '埃沃斯堡', '罗德兹': '罗德兹', '敦刻尔克': '敦刻尔克',
+    '埃尔沃斯堡': '埃沃斯堡', '埃尔弗斯贝格': '埃沃斯堡', '罗德兹': '罗德兹', '敦刻尔克': '敦刻尔克',
     '杜塞尔多夫': '杜塞尔多夫',
 }
 
 def normalize_team_name(name):
-    # 标准化空格（处理 "St       Pauli" → "St Pauli" 等异常）
+    """归一化任意队名（中英混/简称/别名 → canonical_cn）。
+
+    路径优先级：
+    1. 别名反向索引（ALIASES 表驱动）→ 别名 → canonical_en → CANONICAL_CN → canonical_cn
+       覆盖所有 team_names.py 里注册过的别名（布赖顿→布莱顿、巴伦西亚→瓦伦西亚、
+       曼彻斯特城→曼城、纽卡斯尔联→纽卡斯尔、云达不莱梅→云达不来梅 等）
+    2. TEAM_NAME_MAP 正向（feature_utils.py 本地字典，留作 legacy 兜底）
+    3. CANONICAL_CN 直接查（canonical_en → canonical_cn）
+    4. canonical_cn 自匹配（已归一化中文直接返回）
+    5. 全 miss → 返回原名
+
+    C-20261015-109: 之前只走路径 2-4，ALIASES 反向完全没用，导致别名漏归。
+    """
+    # 标准化空格
     if isinstance(name, str):
         name = ' '.join(name.split())
-    if name in TEAM_NAME_MAP:
-        return TEAM_NAME_MAP[name]
-    if name in TEAM_NAME_MAP.values():
+    if not name:
         return name
     name_lower = name.lower()
+
+    # 路径 1: ALIASES 反向 → canonical_en → canonical_cn
+    canonical_en = _ALIAS_REVERSE.get(name_lower)
+    if canonical_en and canonical_en in _CN:
+        return _CN[canonical_en]
+
+    # 路径 2: TEAM_NAME_MAP 正向（legacy 兜底）
+    if name in TEAM_NAME_MAP:
+        return TEAM_NAME_MAP[name]
+
+    # 路径 3: CANONICAL_CN 直接查
+    if name in _CN:
+        return _CN[name]
+    for eng, ch in _CN.items():
+        if eng.lower() == name_lower:
+            return ch
+
+    # 路径 4: canonical_cn 自匹配（CANONICAL_CN.values() 里含的中文直接返回）
+    if name in _CN.values():
+        return name
+
+    # 路径 5: TEAM_NAME_MAP 自匹配 + 英文 lowercase
+    if name in TEAM_NAME_MAP.values():
+        return name
     for eng, ch in TEAM_NAME_MAP.items():
         if eng.lower() == name_lower:
             return ch
+
     return name
 
 
@@ -2397,11 +2449,11 @@ def build_match_alignment(conn, history_table: str) -> dict:
     except Exception:  # noqa: BLE001
         cn_to_en, en_to_cn = {}, {}
 
-    def _canon_cn(cn_name):
-        # 中文别名 → 标准中文名（TEAM_NAME_MAP 含中→中别名链）
-        return TEAM_NAME_MAP.get(cn_name, cn_name)
-
     def _official_canon(off_name):
+        # 中文场次直接走 TEAM_NAME_MAP 归一化（_key_en 会把中文抹成空串，
+        # 导致 16/17~22/23 中文赛季匹配失效——全称/简称差异无法对齐）
+        if any('\u4e00' <= c <= '\u9fff' for c in str(off_name)):
+            return normalize_team_name(off_name)
         return en_to_cn.get(_key_en(off_name))
 
     # matches 按日期分组：date -> list[(home_tokens, away_tokens, canon_h, canon_a, match_id)]
@@ -2418,10 +2470,9 @@ def build_match_alignment(conn, history_table: str) -> dict:
         if len(parts) != 3 or len(parts[0]) != 10:
             continue
         d, cn_h, cn_a = parts
+        # 中文名归一化（修复：全称/简称差异，解锁中文赛季场次）
+        ch, ca = normalize_team_name(cn_h), normalize_team_name(cn_a)
         en_h, en_a = cn_to_en.get(cn_h), cn_to_en.get(cn_a)
-        if not en_h and not en_a:
-            continue
-        ch, ca = _canon_cn(cn_h), _canon_cn(cn_a)
         th, ta = _tokens(en_h) if en_h else [], _tokens(en_a) if en_a else []
         candidates = []
         for dd in (d, _shift_date(d, -1), _shift_date(d, 1)):
@@ -2445,3 +2496,111 @@ def _shift_date(d: str, delta: int) -> str:
         return (_dt.strptime(d, "%Y-%m-%d") + _td(days=delta)).strftime("%Y-%m-%d")
     except Exception:  # noqa: BLE001
         return d
+
+
+# ============================================================================
+# 特征准入闸（D-20261006-052 轨 A）
+# ----------------------------------------------------------------------------
+# 历史教训（change_log T-003/D-011、D-017、P1-10）：特征只加不减导致边际收益
+# 递减并诱发过拟合。本闸将三条准入规则机制化，新特征进入任何生产/实验
+# 特征集前必须通过：
+#   1. 注册校验：必须在 PRE_MATCH_FEATURE_CATALOG 登记（D-009，赛后特征禁入）
+#   2. 去相关：与现有特征 |r| > 0.8 视为冗余，拒绝接入
+#   3. importance 淘汰：训练后 gain 重要性占比 < 1% 的建议下线
+# ============================================================================
+FEATURE_GATE_CORR_THRESH = 0.8
+FEATURE_GATE_MIN_IMPORTANCE_SHARE = 0.01
+
+
+def _load_pre_match_catalog():
+    """延迟导入避免循环依赖：feature_temporal 可能反向依赖本模块。"""
+    try:
+        from feature_temporal import PRE_MATCH_FEATURE_CATALOG
+        return PRE_MATCH_FEATURE_CATALOG
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def feature_gate_register_check(new_features, catalog=None):
+    """注册校验。返回 {'registered': [...], 'unregistered': [...]}。"""
+    catalog = _load_pre_match_catalog() if catalog is None else catalog
+    registered = [f for f in new_features if f in catalog]
+    return {'registered': registered,
+            'unregistered': [f for f in new_features if f not in catalog]}
+
+
+def feature_gate_correlation(X_new, X_existing, thresh=FEATURE_GATE_CORR_THRESH):
+    """去相关校验。
+
+    参数: X_new/X_existing 为 DataFrame（列=特征），逐列算 Pearson r。
+    返回 {feat: {'max_abs_r': float, 'most_corr_with': str, 'drop': bool}}
+    drop=True 表示与某现有特征 |r|>thresh，建议拒绝接入。
+    """
+    import numpy as _np
+    out = {}
+    if X_new is None or len(X_new.columns) == 0:
+        return out
+    ex = X_existing.astype(float).values
+    ex_cols = list(X_existing.columns)
+    ex_std = ex.std(axis=0)
+    for c in X_new.columns:
+        v = X_new[c].astype(float).values
+        if _np.std(v) < 1e-12 or len(ex_cols) == 0:
+            out[c] = {'max_abs_r': 0.0, 'most_corr_with': None, 'drop': False}
+            continue
+        valid = ex_std > 1e-12
+        if not valid.any():
+            out[c] = {'max_abs_r': 0.0, 'most_corr_with': None, 'drop': False}
+            continue
+        r = _np.corrcoef(_np.vstack([v, ex[:, valid].T]))[0, 1:]
+        r = _np.nan_to_num(r)
+        j = int(_np.argmax(_np.abs(r)))
+        cols = [ex_cols[k] for k, ok in enumerate(valid) if ok]
+        out[c] = {'max_abs_r': float(abs(r[j])), 'most_corr_with': cols[j],
+                  'drop': bool(abs(r[j]) > thresh)}
+    return out
+
+
+def feature_gate_importance(importances, feature_names,
+                            min_share=FEATURE_GATE_MIN_IMPORTANCE_SHARE):
+    """importance 淘汰校验。
+
+    参数: importances 为 LGBM/XGB gain 数组（与 feature_names 对齐）。
+    返回 {'keep': [...], 'drop': [...], 'share': {feat: 占比}}
+    """
+    import numpy as _np
+    imp = _np.asarray(importances, float)
+    total = imp.sum()
+    share = {f: (float(imp[i]) / total if total > 0 else 0.0)
+             for i, f in enumerate(feature_names)}
+    keep = [f for f in feature_names if share[f] >= min_share]
+    return {'keep': keep,
+            'drop': [f for f in feature_names if share[f] < min_share],
+            'share': share}
+
+
+def feature_gate_audit(feature_names, X_new=None, X_existing=None,
+                       importances=None, catalog=None,
+                       corr_thresh=FEATURE_GATE_CORR_THRESH,
+                       min_share=FEATURE_GATE_MIN_IMPORTANCE_SHARE):
+    """组合体检：注册 + （可选）相关性 + （可选）importance。
+
+    返回 dict，含各层结果与最终 verdict：
+      - 'rejected_unregistered': 未注册（硬性拒绝）
+      - 'rejected_correlated'  : 高相关（建议拒绝）
+      - 'rejected_low_importance': 低重要性（训练后建议下线）
+      - 'accepted': 通过全部已启用检查
+    """
+    reg = feature_gate_register_check(feature_names, catalog)
+    corr = feature_gate_correlation(X_new, X_existing, corr_thresh) \
+        if (X_new is not None and X_existing is not None) else {}
+    imp = feature_gate_importance(importances, feature_names, min_share) \
+        if importances is not None else None
+    rej_corr = [f for f, r in corr.items() if r['drop']]
+    rej_imp = imp['drop'] if imp else []
+    blocked = set(reg['unregistered']) | set(rej_corr) | set(rej_imp)
+    return {'register': reg, 'correlation': corr, 'importance': imp,
+            'rejected_unregistered': reg['unregistered'],
+            'rejected_correlated': rej_corr,
+            'rejected_low_importance': rej_imp,
+            'accepted': [f for f in feature_names if f not in blocked]}

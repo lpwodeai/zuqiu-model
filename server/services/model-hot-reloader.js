@@ -42,6 +42,22 @@ const MODEL_FILES = {
     path: path.join(__dirname, '../../assets/feature_scaler_params.js'),
     pattern: /var FEATURE_SCALER_PARAMS = (\{[\s\S]*\});/,
     type: 'model'
+  },
+  // C-20261011-045: 补齐校准头与 λ 头热重载（Node 实际消费 calibration.json 与 lambda_model_export.js）
+  xgbCalibration: {
+    path: path.join(__dirname, '../../assets/xgb_calibration.json'),
+    pattern: null,
+    type: 'json'
+  },
+  lgbCalibration: {
+    path: path.join(__dirname, '../../assets/lgb_calibration.json'),
+    pattern: null,
+    type: 'json'
+  },
+  lambdaModel: {
+    path: path.join(__dirname, '../../assets/lambda_model_export.js'),
+    pattern: /var LAMBDA_MODEL = (\{[\s\S]*\});/,
+    type: 'model'
   }
 };
 

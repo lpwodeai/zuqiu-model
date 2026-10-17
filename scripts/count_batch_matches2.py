@@ -62,6 +62,8 @@ if __name__ == '__main__':
     
     print(f'\n文件信息:')
     print(f'  文件大小: {file_size:.2f} MB')
-    print(f'  行数: {len(lines)} 行')
+    with open(file_path, 'r', encoding='utf-8') as f:
+        line_count = sum(1 for _ in f)
+    print(f'  行数: {line_count} 行')
     
     print(f'\n{"="*60}')

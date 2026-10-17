@@ -1,7 +1,7 @@
 # 五大联赛数据采集进度汇总
 
 > **创建时间**: 2026-08-25
-> **最后更新**: 2026-09-21
+> **最后更新**: 2026-10-02
 > **用途**: 统一标注三大数据源（500.com / SofaScore / Understat）+ Sporttery 竞彩赔率的采集完成情况与完整度，供预测管线与人工巡检参考
 > **关联文档**: docs/change_log.md §3.63/§3.70/§3.170~3.172/§3.190, docs/project_memory.md §6.3/§6.3.4, .trae/skills/local-football-scraper/SKILL.md
 > **已删除归档**: `docs/archive/故障排查报告_数据采集_20260912.md`（C-20260918-049 删除，完整排查过程见 change_log §3.170 + 本文件 §2.6）
@@ -16,6 +16,17 @@
 > 1. **新增 TG Shadow 记录流**：每日赛前批次（`generate_unified_report.py`）在生产 TG 预测后自动双算「λ_total 滚动校准」版本，写 `reports/tg_calib_shadow.jsonl`（按 match_id 去重覆盖，含 control/shadow 双份 8 档分布、factor、联赛/池化 trace、λ）；**只写 JSONL，不展示、不落 model_predictions**，开关 `TRAE_TG_CALIB_SHADOW`（默认开）。该文件是赛后评测的唯一累积源，禁止手工编辑；当前基线样本为 2026-08-22~09-21 的 154 场干净回放（评测报告 `reports/tg_calib_shadow_124929/125105/125258.md`）。
 > 2. **TG 落库写入守卫生效**：`prediction_db_writer.py` 对 TG_over_2_5/TG_under_2_5/TG_top1/TG_top3 增加 `(0,1)` 严格概率校验，无有效赔率降级产出的 0.0 占位行今后**禁止入库**（warning 日志留痕）；**存量 49 场 98 行 0.0/1.0 占位脏行已于 C-20260921-037 清洗删除**（审计清单 `backup/tg_dirty_rows_deleted_C037.json`，全量备份 `backup/db_snapshots/odds_20260921_150658.db`），历史查询不再需要 `probability>0` 过滤。
 > 3. **采集侧无变更**：本次不涉及 500.com/SofaScore/Understat/Sporttery 采集逻辑与表结构。
+
+> **2026-10-01 凭证口径修正（C-20260930-006 + C-20261001-003，取代本文件早前「三层凭证」表述）**：
+> 1. **500.com 页面 URL 与采集器代码稳定、无端点迁移**：403/空壳 100% 是 EdgeOne Cookie 失效（2026-09-30 touzhu/ouzhi/getmatch 三通道实测全 200）。本文件 09-12/09-17 历史摘要及 §2.1/§2.6 旧版中「三层凭证缺一不可、`__tst_status` 为固定常量」的说法**作废**（历史摘要原文保留，以本条为准）。
+> 2. **持久放行凭证仅 `EO-Bot-Captcha-Token`**：`__tst_status`（JS 动态值）与 `EO_Bot_Ssid` 是挑战过程中的一次性会话 cookie，通过后即被消费/过期，在已过挑战的浏览器导出时可能不含二者、不影响使用（实测仅 Token + 统计类 cookie 共 26 条）；Token 与 UA/IP 绑定，JSON 仍需 `__user_agent` 记录导出浏览器 UA。
+> 3. **过验证方式**：Playwright `channel="msedge"` 拟人轨迹点击复选框即可通过（2026-10-01 实测首次即过、token 整域共享，持久配置目录 `data/pw_edge_profile_500/`），或手动 Edge 勾选后导出；Cookie 有效期约 20 分钟级，建议每日采集前刷新。现行细则以 [SKILL.md](file:///f:/zuqiu/五大联赛专属模型/五大联赛专属模型/.trae/skills/local-football-scraper/SKILL.md)「爬虫四」与 project_memory.md §6.3.4 第 2 条为准。
+
+> **2026-10-02 更新摘要（C-20261002-002，500 赛后技术统计补齐 + UA 绑定实证）**：
+> 1. **Token 与 Edge UA「主版本」强绑定（比既有「需记录 UA」口径更硬）**：token 新鲜但采集器 UA 停在 Chrome/152 时，`curl_cffi impersonate="edge"` 三种 UA/含 cookie 来源页均返回 ~2.1KB「Security Verification」拦截页（与 TLS 指纹、fid 无关）；实测用户 Edge 已 **154.0.4258.37**，UA 改为 `Chrome/154…Edg/154` 后同 token 立即放行（142KB/276KB 真实页）。`final_500_collector.py` UA 常量已 152→154；**今后 Edge 升级主版本必须同步该常量，或在 `cookies_500.json` 写 `"__user_agent"` 覆盖（优先级更高）**。版本沿革 152→153(C-054 注释)→154。
+> 2. **`SEASONS['25/26'].stid` 枚举失效**：按 `--season 25/26` 枚举赛程返回的是 2026-05 旧赛季 fid（1205xxx，stat 已有→全 skip），覆盖不到 25/26 真实比赛（fid≥1400000 段，经历史另一通道入库）。**补采改用「按库遍历」**：`odds500_match` 中 status=5 且无 `odds500_stat` 行的场，直接按 fid 抓 `fenxi/stat-{fid}.shtml` → `parse_stat` → `write_stat`（生产 `stat` 路径与 `shuju` 别名均放行，22 字段/场）。本次定向补采 **195 场、零空零拦截**，stat 总行 17,991→18,186。
+> 3. **英文队名双轨关联修复**：另有 23 场 stat 本已在库，但 `post_match_review`(SofaScore 规范名 `Hull City`/`Málaga CF`/`Deportivo de A Coruña`/`SC Paderborn 07`) 与 `odds500_match`(500 短名 `Hull`/`Malaga`/`La Coruna`/`Paderborn`) 的 match_id 不一致，A4 直查关联不上。新增 `generate_post_match_report.py::_resolve_stat500()`：直查 miss 时经 odds500_match 按「日期+英文队名 token 去重音/去装饰词重叠、主客各≥1、当日唯一最高分」解析。
+> 4. **结果**：30 日 `--no-collect` 重生成后，235/235 复盘 500 技术统计全部出表（此前 51/235）、「未回补」警告 0；SofaScore 时间线 235/235（C-20261002-001 缓存）保持；30 个 `_summary` 三方一致零异常。
 
 > **2026-09-17 更新摘要（C-20260917-001~003，实测口径）**：
 > 1. **500.com 反爬空壳误报修复**：新增 `anti_bot_blocked` 状态，空壳表格（全 `-` / company_count=0 / 必发成交为空）现判为 EdgeOne 反爬拦截（FAIL），不再误判为「源站无数据」（WARN）；采集端 + 报告端三层闭环：识别 → 三态展示 → 刷新 Cookie 重采恢复。
@@ -83,7 +94,7 @@
 | 支持联赛 | 五大联赛（英超/西甲/意甲/德甲/法甲），`SEASONS`（16/17~26/27 共 11 季 stid）+ `CN_TO_EN` + `_EXTRA_CN_TO_EN`（31 个历史升降班马） |
 | 支持赛季 | 五大联赛 16/17 ~ 26/27（11 季）。轮数：英/西/意 38 轮；德甲 34 轮；法甲 16/17~22/23 为 38 轮（20 队）、23/24 起 34 轮（18 队） |
 | 状态过滤 | ✅ 已加 `status==5` 过滤（C-20260825-005）：未赛场次跳过赛后技术统计、比分写 NULL |
-| 反爬机制 | ✅ **curl_cffi `Session(impersonate="chrome")` 模拟浏览器 JA3 指纹 + 手动 EdgeOne Cookie**（`--cookies data/cookies_500.json`，三层凭证 `__tst_status`/`EO_Bot_Ssid`/`EO-Bot-Captcha-Token` + `__user_agent`；每日人工 Edge 导出；C-20260912-001，详见 §2.6） |
+| 反爬机制 | ✅ **curl_cffi `Session(impersonate="edge")` 模拟浏览器 TLS/JA3 指纹 + 手动 EdgeOne Cookie**（`--cookies data/cookies_500.json`；持久放行凭证仅 `EO-Bot-Captcha-Token`，`__tst_status`/`EO_Bot_Ssid` 为一次性会话 cookie、非必需；**Token 与导出浏览器 Edge 的 UA 主版本强绑定（C-20261002-002 实证）**——UA 主版本不符即使 token 新鲜也返回 ~2.1KB「Security Verification」拦截页（与 TLS 指纹/fid 无关），现行常量 Chrome/154 Edg/154（对应用户 Edge 154.0.4258.37），Edge 升级主版本须同步 `final_500_collector.py` 的 `UA` 常量或在 cookies JSON 写 `"__user_agent"` 覆盖（优先级更高）；每日人工或 Playwright `msedge` 拟人点击半自动刷新；C-20260930-006 凭证口径 + C-20261002-002 UA 绑定，详见 §2.6 与文首 2026-10-02 摘要） |
 | 亚盘刷新 | ✅ `--refresh-odds --season 26/27 --rounds 1-8`：完赛场结算盘口全量覆盖、未开赛场仅补空盘（C-20260912-003，详见 §2.6） |
 | 三类页面 | 投注分析 (touzhu) / 百家欧指 (ouzhi) / 技术统计 (stat)；赛程接口 getmatch 提供亚盘 handline/pan 与欧赔 win/draw/lost |
 | 写入表 | `odds500_match` / `odds500_betting` / `odds500_ouzhi_summary` / `odds500_ouzhi_company` / `odds500_stat` |
@@ -180,9 +191,16 @@
 
 > 完整排查过程见 `docs/archive/故障排查报告_数据采集_20260912.md`（**已删除 C-20260918-049**，要点见本节下方 + change_log §3.170），运维细则见 project_memory.md §6.3.4。
 
-**反爬（已解决）**：500.com 部署腾讯云 EdgeOne 两层人机防护，`requests` 因 JA3 指纹被拦（采集结果为空壳行）。采集器已改用 `curl_cffi`（`Session(impersonate="chrome")`），配合人工导出的 Cookie 通过：
-- Cookie 文件默认 `data/cookies_500.json`（`--cookies` 可覆盖），需含 `__tst_status`、`EO_Bot_Ssid`、`EO-Bot-Captcha-Token`（真人勾选后写入，与 UA 绑定，JSON 内用 `__user_agent` 记录导出浏览器 UA）；
-- **Cookie 需每日人工从自己的 Edge 浏览器导出**；高频请求会触发 EdgeOne 升级防护，保持 delay、避免连续探测；
+**反爬（已解决）**：500.com 部署腾讯云 EdgeOne 两层人机防护，`requests` 因 JA3 指纹被拦（采集结果为空壳行）。采集器已改用 `curl_cffi`（`Session(impersonate="edge")`，**必须 edge 指纹，chrome 指纹会被拦**），配合人工导出的 Cookie 通过：
+- Cookie 文件默认 `data/cookies_500.json`（`--cookies` 可覆盖）：**持久放行凭证仅 `EO-Bot-Captcha-Token`**（真人勾选后写入，与 UA/IP 绑定，JSON 内用 `__user_agent` 记录导出浏览器 UA）；`__tst_status`（JS 动态值）与 `EO_Bot_Ssid` 是一次性会话 cookie，导出时缺失不影响使用（C-20260930-006 修正：原「三层缺一不可/`__tst_status` 固定常量」说法作废）；可手动 Edge 勾选复选框导出，或用 Playwright `channel="msedge"` 拟人点击半自动过验证（C-20261001-003，首次即过、token 整域共享）；
+- **UA 版本绑定机制（C-20261002-002 实证，排障优先级最高）**：`EO-Bot-Captcha-Token` 与**导出浏览器 Edge 的 UA「主版本」强绑定**——即使 token 刚导出、TLS 指纹正确，只要请求 UA 主版本与浏览器不一致，一律返回 ~2.1KB 的「Security Verification」拦截页（HTTP 200），与 token 是否过期、fid 新旧、TLS/JA3 指纹均无关。排障特征：`len(r.text)≈2100` 且正文含 `Security Verification` 即判 UA/反爬拦截，而非源站无数据。
+  - 现行值：用户 Edge **155.0.4283.45** → 请求 UA `…Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0`，经 `cookies_500.json` 的 `__user_agent` 键覆盖（采集器代码常量仍是 154）；沿革 152 旧硬编码 → 153[C-20260922-054 注释] → 154[C-20261002-002] → **155[C-20261011-034]**。
+  - Edge 自动升级主版本后采集会再次全被拦，两种修法二选一：①改 `UA` 常量的 Chrome/Edg 主版本号（真实版本可查 `(Get-Item 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe').VersionInfo.ProductVersion`）；②在 `data/cookies_500.json` 顶层加 `"__user_agent": "<完整 UA>"`（`_load_cookies` 读取优先级高于代码常量，**无需改代码**，推荐临时排障用，现行即此方式）。
+  - **EdgeOne 两阶段反爬与自动解（C-20261011-034）**：第 1 关=~1KB 算术 JS 挑战页（含 `__tst_status`/`EO_Bot_Ssid`，无 `TencentEOCaptchaWidget`），采集器 `Client.get()` 命中后自动调本机 node 动态执行混淆 JS、解出会话 cookie 注入并重放一次（`_is_arith_challenge`/`_solve_arith_challenge`，node 缺失或失败时优雅回退）；第 2 关=~2.1KB 真人滑块页（`Security Verification`/`TencentEOCaptchaWidget`），无法自动过，需人工 Edge 导出 token（30 天有效）。**批量高频（几分钟 130+ 请求）会触发 IP 级临时风控**：即使 token 有效、UA 匹配也会对个别页返回真人验证页，冷却 ≥10 分钟方可恢复；批量建议 `--delay ≥1.0` 或分联赛间隔执行。
+  - **空解析防覆写（C-20261011-034）**：`collect_match` 对欧指页先判风控页/空解析（company_count 与 companies 全空），命中则跳过写库保留旧值——此前 `parse_ouzhi` 恒返回 truthy 空 dict，批量遇风控页会把已有 summary 覆写成 NULL。
+  - 验证放行：被拦页约 2KB；真实 shuju/stat 页 140KB~280KB，`parse_stat` 可解析出 22 个指标字段。单场冒烟可先跑 `python collection/final_500_collector.py --test <fid> --pages stat`。
+- **Cookie 需每日人工从自己的 Edge 浏览器导出**（有效期约 20 分钟级）；高频请求会触发 EdgeOne 升级防护，保持 delay、避免连续探测；
+- **赛季 stid 枚举可能失效（C-20261002-002）**：`--season 25/26` 曾枚举出 2026-05 旧赛季 fid（1205xxx，全 skip、0 新增），覆盖不到真实 fid（≥1400000）。此时改用「按库遍历」补采：`odds500_match` 中 `status=5` 且无 `odds500_stat` 行的场，直接按 fid 抓 `fenxi/stat-{fid}.shtml`→`parse_stat`→`write_stat`；另有英文队名双轨（`Hull City`↔`Hull`、`Málaga CF`↔`Malaga`、`Deportivo de A Coruña`↔`La Coruna`）导致 stat 在库却关联不上，由 `generate_post_match_report.py::_resolve_stat500()` 按日期+英文队名 token 解析；
 - 正常全量采集命令不变：`python collection/final_500_collector.py --season 26/27 --league all --rounds all --delay 0.5`。
 
 **亚盘刷新（已修复）**：原 `refresh_upcoming_odds` 对 `status==5` 完赛场直接跳过，导致「先入库、后完赛」比赛的结算亚盘永远缺失。现分两情形：完赛场用结算 handline/pan/欧赔全量覆盖并补比分、纠正 stale status；未开赛/进行中场仅当库内盘口为空时补齐。

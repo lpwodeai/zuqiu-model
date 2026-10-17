@@ -32,6 +32,45 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 DB_PATH = PROJECT_ROOT / "data" / "odds.db"
 
 
+# === C-20260929-017 L1 信号留痕：SQLite 健康钩子（locked 计数 + 慢查询告警） ===
+# 用途: 为将来 SQLite→PG 切换(P2-11 预案, 框架文档 §3.4 末)提供量化触发信号,
+#       计数落盘 data/sqlite_health.json, 由 scripts/db_health_check.py 读取汇总。
+import json as _json
+import logging as _logging
+import time as _time
+
+_health_logger = _logging.getLogger("db_utils.health")
+HEALTH_JSON_PATH = PROJECT_ROOT / "data" / "sqlite_health.json"
+SLOW_SQL_MS = int(os.environ.get("SLOW_SQL_MS", "500"))  # 慢查询阈值(毫秒), env 可调
+
+
+def _record_locked_error(sql: str = "") -> None:
+    """database is locked 事件累计: 原子写 data/sqlite_health.json, 供 db_health_check.py 读取。"""
+    try:
+        now = _time.strftime("%Y-%m-%dT%H:%M:%S")
+        state = {}
+        if HEALTH_JSON_PATH.exists():
+            try:
+                state = _json.loads(HEALTH_JSON_PATH.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                state = {}
+        events = state.get("locked_events", [])
+        events.append({"ts": now, "sql": sql[:120]})
+        state["locked_total"] = int(state.get("locked_total", 0)) + 1
+        state["locked_events"] = events[-50:]  # 只留最近 50 条, 防膨胀
+        state["updated_at"] = now
+        tmp = HEALTH_JSON_PATH.with_suffix(".json.tmp")
+        tmp.write_text(_json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+        tmp.replace(HEALTH_JSON_PATH)
+        _health_logger.warning("[DB-LOCKED] 累计 %s 次: %s", state["locked_total"], sql[:120])
+    except Exception:  # noqa: BLE001  健康钩子自身绝不影响主流程
+        pass
+
+
+def _is_locked_error(exc: BaseException) -> bool:
+    return isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc).lower()
+
+
 class Row:
     """sqlite3.Row 风格行对象: 支持整数索引 / 列名(大小写不敏感) / keys()。"""
 
@@ -148,11 +187,21 @@ def _to_pg_sql(sql: str) -> str:
 
 
 def _pg_kwargs() -> dict:
+    # C-20260929-009：弱密码加固——默认值由 postgres/postgres 改为 None，
+    # 强制必须通过环境变量 PG_USER/PG_PASSWORD 显式配置；无 env 时返回 None
+    # 让 PG 连接失败而非弱密码登录（pgsrv 自 2026-08-29 已废弃，详见 §9.16 ⑮）
+    user = os.environ.get("PG_USER")
+    password = os.environ.get("PG_PASSWORD")
+    if not user or not password:
+        raise RuntimeError(
+            "PG 连接需显式配置 PG_USER/PG_PASSWORD 环境变量（C-20260929-009 加固，"
+            "防止默认 postgres/postgres 弱密码；pgsrv 已废弃 1 月，详见 §9.16 ⑮）"
+        )
     return dict(
         host=os.environ.get("PG_HOST", "localhost"),
         port=int(os.environ.get("PG_PORT", "5432")),
-        user=os.environ.get("PG_USER", "postgres"),
-        password=os.environ.get("PG_PASSWORD", "postgres"),
+        user=user,
+        password=password,
         database=os.environ.get("PG_DB", "odds"),
         timeout=int(os.environ.get("PG_TIMEOUT", "3600")),
     )
@@ -179,11 +228,23 @@ def connect(backend: Optional[str] = None, db_path: Optional[Path] = None):
 
 
 def read_sql(sql: str, conn, params: Optional[Sequence[Any]] = None):
-    """统一的 pandas 读入(两后端行为一致), 替代 pd.read_sql。"""
+    """统一的 pandas 读入(两后端行为一致), 替代 pd.read_sql。
+
+    C-20260929-017 L1: 慢查询(>SLOW_SQL_MS, 默认 500ms)告警 + database is locked 事件累计。
+    """
     import pandas as pd
 
-    cur = conn.execute(sql, params or ())
-    rows = cur.fetchall()
+    _t0 = _time.perf_counter()
+    try:
+        cur = conn.execute(sql, params or ())
+        rows = cur.fetchall()
+    except Exception as exc:
+        if _is_locked_error(exc):
+            _record_locked_error(sql)
+        raise
+    _elapsed_ms = (_time.perf_counter() - _t0) * 1000
+    if _elapsed_ms > SLOW_SQL_MS:
+        _health_logger.warning("[SLOW-SQL] %.0fms: %s", _elapsed_ms, sql[:160])
     cols = [d[0] for d in cur.description]
     cur.close()
     return pd.DataFrame([tuple(r) for r in rows], columns=cols)
@@ -219,8 +280,13 @@ def write_dataframe(conn, df, table_name: str) -> int:
     rows = [tuple(_cell(v) for v in rec.values()) for rec in df.to_dict("records")]
 
     cursor = conn.cursor()
-    cursor.executemany(sql, rows)
-    conn.commit()
+    try:
+        cursor.executemany(sql, rows)
+        conn.commit()
+    except Exception as exc:
+        if _is_locked_error(exc):
+            _record_locked_error(f"write_dataframe {table_name} x{len(rows)}")
+        raise
     return len(rows)
 
 

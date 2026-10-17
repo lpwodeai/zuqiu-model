@@ -4,25 +4,36 @@
   - 赛程（场次号/联赛/队名/时间）: getMatchListV1.qry 实时接口
   - 赔率（胜平负/让球/总进球/比分）: data/odds.db 时序表
 
-输出（UTF-8 BOM，Excel 可直接打开）:
+输出（UTF-8 BOM，Excel 可直接打开，落 logs/audit/）:
   - sporttery_{date}_赔率快照.csv     每场一行：三大玩法最新赔率
   - sporttery_{date}_比分赔率.csv     每场比分 -> 最新赔率（长表）
   - sporttery_{date}_时序_胜平负.csv  胜平负全历史时序
   - sporttery_{date}_时序_让球.csv    让球全历史时序
   - sporttery_{date}_时序_总进球.csv  总进球全历史时序
   - sporttery_{date}_时序_比分.csv    比分全历史时序
+
+使用方法:
+  python scripts/export_sporttery_snapshot_csv.py                # 默认今天
+  python scripts/export_sporttery_snapshot_csv.py 2026-08-29     # 指定日期
+
+修复历史（C-20260928-034）:
+  - 表头补"开赛时间"列名（原 5 列数据 vs 4 列表头错位）
+  - date 改为 CLI 参数（原硬编码 L80）
+  - 输出路径从项目根目录迁至 logs/audit/（原违反 §9.5/§9.10 目录职责边界）
 """
 from __future__ import annotations
 
 import csv
 import sqlite3
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import requests
 
 ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "data" / "odds.db"
+OUT_DIR = ROOT / "logs" / "audit"  # C-20260928-034: 从根目录迁至 logs/audit/
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sporttery_sync_to_odds import TEAM_NAME_MAP
@@ -77,8 +88,11 @@ def write_csv(path: Path, header: list, rows: list) -> None:
 
 
 def main() -> None:
-    date = "2026-08-29"
+    # C-20260928-034: date 改为 CLI 参数（原硬编码 "2026-08-29"）
+    date = sys.argv[1] if len(sys.argv) > 1 else datetime.now().strftime("%Y-%m-%d")
     stamp = date.replace("-", "")
+    # C-20260928-034: 输出迁至 logs/audit/
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
     matches = fetch_matches(date)
     conn = sqlite3.connect(str(DB))
     cur = conn.cursor()
@@ -118,28 +132,30 @@ def main() -> None:
 
     conn.close()
 
-    write_csv(ROOT / f"sporttery_{stamp}_赔率快照.csv",
+    # C-20260928-034: 表头补"开赛时间"列名（原 PRE(m) 返回 5 元素但表头只 4 元素，导致字段错位）
+    write_csv(OUT_DIR / f"sporttery_{stamp}_赔率快照.csv",
               ["场次号", "联赛", "主队", "客队", "开赛时间",
                "胜平负_胜", "胜平负_平", "胜平负_负",
                "让球_胜", "让球_平", "让球_负",
                "总进球_0球", "总进球_1球", "总进球_2球", "总进球_3球",
                "总进球_4球", "总进球_5球", "总进球_6球", "总进球_7球及以上"],
               snap_rows)
-    write_csv(ROOT / f"sporttery_{stamp}_比分赔率.csv",
-              ["场次号", "联赛", "主队", "客队", "比分", "赔率"], score_snap_rows)
-    write_csv(ROOT / f"sporttery_{stamp}_时序_胜平负.csv",
-              ["场次号", "联赛", "主队", "客队", "更新时间", "胜", "平", "负"], wdl_rows)
-    write_csv(ROOT / f"sporttery_{stamp}_时序_让球.csv",
-              ["场次号", "联赛", "主队", "客队", "更新时间", "让球胜", "让球平", "让球负"], hcp_rows)
-    write_csv(ROOT / f"sporttery_{stamp}_时序_总进球.csv",
-              ["场次号", "联赛", "主队", "客队", "更新时间",
+    write_csv(OUT_DIR / f"sporttery_{stamp}_比分赔率.csv",
+              ["场次号", "联赛", "主队", "客队", "开赛时间", "比分", "赔率"], score_snap_rows)
+    write_csv(OUT_DIR / f"sporttery_{stamp}_时序_胜平负.csv",
+              ["场次号", "联赛", "主队", "客队", "开赛时间", "更新时间", "胜", "平", "负"], wdl_rows)
+    write_csv(OUT_DIR / f"sporttery_{stamp}_时序_让球.csv",
+              ["场次号", "联赛", "主队", "客队", "开赛时间", "更新时间", "让球胜", "让球平", "让球负"], hcp_rows)
+    write_csv(OUT_DIR / f"sporttery_{stamp}_时序_总进球.csv",
+              ["场次号", "联赛", "主队", "客队", "开赛时间", "更新时间",
                "0球", "1球", "2球", "3球", "4球", "5球", "6球", "7球及以上"], ttg_rows)
-    write_csv(ROOT / f"sporttery_{stamp}_时序_比分.csv",
-              ["场次号", "联赛", "主队", "客队", "更新时间", "比分", "赔率"], score_rows)
+    write_csv(OUT_DIR / f"sporttery_{stamp}_时序_比分.csv",
+              ["场次号", "联赛", "主队", "客队", "开赛时间", "更新时间", "比分", "赔率"], score_rows)
 
     print(f"✅ 快照 {len(snap_rows)} 场")
     print(f"✅ 比分快照 {len(score_snap_rows)} 行")
     print(f"✅ 时序: 胜平负 {len(wdl_rows)} / 让球 {len(hcp_rows)} / 总进球 {len(ttg_rows)} / 比分 {len(score_rows)} 行")
+    print(f"📂 输出目录: {OUT_DIR}")
 
 
 if __name__ == "__main__":

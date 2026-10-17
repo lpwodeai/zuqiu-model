@@ -297,6 +297,26 @@ draw_threshold_factor_league:
   LaLiga: 0.80 # 西甲 — 反压低平局 +1.05pp                    (C-20260820-037)
   PL: 0.0     # 英超 — argmax（上浮/反压均无收益）            (C-20260820-037)
 
+# C-20261014-086: 平局高危旗标（实验性·待 fresh 验证）
+# 定义冻结：flag = 融合 spread ≤ 0.07 且 p_draw ≥ 0.30；spread = 融合(Stacking)三向概率 max−min，
+# 与赛前报告 §一 Stacking 融合行同源取值（阈值常量写死于 generate_unified_report.py，禁止再扫网格）
+# 默认关闭：enabled 只管报告渲染；影子 reports/draw_flag_shadow.jsonl 恒开每场一行（含 flag=false）
+# fresh 三门禁全过由人工评审翻 true（不自动开）：①n_flag≥45 且命中率≥40% 且 CI 下限>25.5% 基线
+#   ②覆盖率≤12% ③旗标场 ≥3 球差比分占比不高于非旗标场
+report_flags:
+  draw_high_risk:
+    enabled: false
+
+# C-20261014-090: PA 特征「无数据哨兵」（默认关，与下一次重训配套开启）
+# 关闭=保持历史行为：pa_* 的「无数据/样本不足」写 0.0（稳定性兜底 0.5、休息天数兜底 7.0），
+#   与「真值 0」不可区分 → 训练矩阵隐性噪声（实测 pa_missing_impact=0.0 占落库行 70.8%、
+#   pa_fatigue_7d=0.0 占 39.5%、pa_squad_stability=0.5 兜底 178 行、pa_availability=0.8 占 41.4%）
+# 开启=无数据/样本不足写 -1.0，与特征矩阵层缺失填充 -1.0（feature_utils fillna(-1.0)）对齐
+# ⚠️ 开启会改变进入 254 维矩阵的特征取值 → 必须与下一次重训配套（否则 train/serve 语义分叉）
+pa_features:
+  no_data_sentinel:
+    enabled: false
+
 # C-20260816-208: Poisson λ 增强参数 — 赛后复盘验证通过
 # 基于西甲第1轮两场比赛复盘: 旧 λ 系统性低估 (+0.64~+1.77), 实际进球均超预期
 # 验证结果 (阿拉维斯 vs 赫塔费): 期望总进球 1.42→2.01, 大球概率 17.1%→32.6%, 主胜置信度 30.0%→33.4%
@@ -519,6 +539,68 @@ tg_calibration:
   # C-20260921-040: 融合权重 Shadow（C-039 验证 0.30 RPS p=0.000 Brier p=0.005 高桶 gap 0.164→0.085）
   w_odds: 0.30              # 生产融合权重（Poisson 1-w_odds + TG赔率 w_odds）；2026-09-26 0.15→0.30（C-102 配对评测 n=182 三闸门全过 RPS 0.1361→0.1343 p=0.002）
   shadow_w_odds: 0.30       # Shadow 实验权重（只写 JSONL，不影响发布值/落库）；与生产同值，保留监控链路
+
+# ============================================================
+# P1-1（C-20261002-006）: λ 强度差拆分模式
+# legacy = A-002 stage1 独立乘数 (0.5+1.5p)（生产现状）
+# bisect = 锁死 λ 总量，市场去水 WDL 经独立泊松二分反演拆分（v5 同口径）
+# 235 场复盘证据：bisect λ MAE −14.5%、热门/冷门 xG 偏差近零、净胜≥2
+# 概率偏差 +4.7pp→+1.3pp，TG 总量守恒、WDL 不变；切生产须等下轮重训时序
+# A/B 门禁通过。环境变量 TRAE_LAMBDA_SPLIT / TRAE_LAMBDA_SPLIT_SHADOW 优先。
+# ============================================================
+lambda_split:
+  mode: legacy             # legacy（默认）| bisect
+  shadow_enabled: false    # true 时只双算写 reports/lambda_split_shadow.jsonl
+
+# ============================================================
+# C-20261013-072: class_weight 平局判别力影子实验（P0-DrawDiscrim-ClassWeight）
+# 红线豁免: §15.3 红线 2 + §8.2/§13.4「重训禁平局加权」——有条件豁免
+# 豁免边界: 仅训练层 class_weight ∈ {1.5,2.0,2.5,3.0}；不含 focal loss / 阈值调参
+# 启动形态: 训练 + 影子接入，不含切换决策；fresh n≥300 四门禁裁决后才可提交切换 PR
+# 登记文档: docs/class_weight_draw_discrim_experiment.md
+# 开关优先级: 环境变量 TRAE_CLASS_WEIGHT_SHADOW > shadow_enabled（写入）
+#             TRAE_CLASS_WEIGHT_EXPERIMENT > active（训练守门）
+# 默认 false——只有红线拥有者显式拍板才开启
+# ============================================================
+class_weight_experiment:
+  active: true             # [C-072 第1步 2026-10-13] 红线拥有者显式拍板: 训练守门已开
+                           # 豁免 §15.3 红线 2 + §8.2/§13.4，仅训练层 class_weight
+                           # 训练完→冒烟→shadow_enabled=true（今晚 20:30 链起 fresh）
+  shadow_enabled: true     # [C-072 第3步 2026-10-13 17:30] 冒烟闸已通过:
+                           # 报告内容逐字节一致(438行仅时间戳字段不同) + jsonl schema 正确
+                           # + match_id 去重生效 + try/except 全隔离无 error
+                           # 今晚 20:30 生产链起每场新预测自动写影子行 → fresh 开始滚
+  exempted_from:
+    - red_line_2_draw_weight_retrain_ban   # §15.3 红线 2 + §8.2/§13.4
+  exemption_scope: training_layer_class_weight_only
+  excludes:
+    - focal_loss
+    - output_threshold_tuning              # t=0.30 已证伪净收益 -1.3pp
+    - stage2_direction_retrain             # 复用生产 t005v3_direction_predictor.pkl
+  auto_recover_on:
+    - experiment_fail                      # 四门禁任一未通过
+    - experiment_pass                      # 四门禁全过 + 切换 PR 合并
+    - protocol_violation                   # 候选 pkl 被生产路径加载
+    - shared_window_pollution              # C-013 先上线 → 重跑基线
+  baseline_class_weight: 2.5               # 生产 ratio（C-069 部署）
+  candidate_ratios: [1.5, 2.0, 2.5, 3.0]
+  training_window: '<2026-08-22'           # C-002 冻结协议
+  calibration_window: '2026-03-01~2026-08-21'
+  cal_kind: iso
+  eval_window_policy: fresh_only_no_eval_peek   # 不读 08-22~09-21（EVAL-peek 防护）
+  four_gates:
+    gate1_auc: 0.68                        # fresh n≥300 才正式裁决
+    gate2_push_mean_bias: 0.02             # |p_push_mean - push_actual| ≤ 2pp
+    gate3_push_recall: 0.30                # 与 drawfix C-002 一致
+    gate4_calib_drift: 0.02                # 候选 p_draw 均值偏差 |Δ| ≤ 2pp（防带偏校准）
+  statistical_power:
+    se_auc: 0.07                           # fresh ~48 平局样本 → SE≈0.07
+    min_n_for_verdict: 300                 # n<300 只作方向参考
+  shared_window:
+    - C-013_hybrid_protocol                # 共享 fresh 窗口，C-013 先上线须重跑基线
+    - C-014_market_undervalues_draw        # 仅观察台账，不搭车
+  candidate_pkl_dir: assets/shadow_class_weight
+  shadow_jsonl: reports/class_weight_shadow.jsonl
 
 # ============================================================
 # P1-10: EV 决策引擎全局配置（第二层决策层，D3 运行时读取）

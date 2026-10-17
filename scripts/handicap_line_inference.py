@@ -61,8 +61,9 @@ DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 REPORT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'reports')
 os.makedirs(REPORT_DIR, exist_ok=True)
 
-# 2026-07 时间戳过滤阈值（project_memory 规则）
-MAX_VALID_TIMESTAMP = "2026-07-01 00:00:00"
+# 2026-07 时间戳过滤阈值（project_memory 规则；P0-1 C-20261002-006 起可由
+# TRAE_HCP_TRAIN_CUTOFF 提升，供 T-005 重训纳入 2026-08 起结算样本）
+MAX_VALID_TIMESTAMP = os.environ.get('TRAE_HCP_TRAIN_CUTOFF', "2026-07-01 00:00:00")
 
 # 让球结果映射
 HCP_RESULT_MAP = {'胜': 0, '平': 1, '负': 2}

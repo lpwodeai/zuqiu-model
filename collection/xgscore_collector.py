@@ -335,10 +335,62 @@ def _write_db(
     result: Dict[str, Any],
     logger: logging.Logger,
 ) -> None:
-    """写入 xgscore_match_stats 表（UPSERT）。"""
+    """写入 xgscore_match_stats 表（UPSERT）。
+
+    C-20261011: 增加「已赛场校验」——若本地 matches 表无 actual_score，
+    说明比赛尚未进行，xgscore.io 此时展示的是模拟比分，须丢弃防止污染。
+    """
     home_en = _cn_to_en_team(home_name) or home_name
     away_en = _cn_to_en_team(away_name) or away_name
     match_id = f"{date_str}_{home_en}_{away_en}"
+
+    # ── 已赛场校验（核心修复） ──
+    # C-20261012 订正：校验源改为 post_match_review 为主（每小时复盘链正常回写，
+    # match_id 与本函数构造格式一致，可精确匹配）；matches.actual_score 为副
+    # （该列由 backfill_3matches_result_teamstats.py 回写，竞彩赛果源断流时会滞后，
+    # 单源依赖会造成已赛场次被误拦截）。
+    match_played = False
+    try:
+        conn_check = sqlite3.connect(str(DB_PATH), timeout=CONNECT_TIMEOUT)
+        conn_check.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
+        cur = conn_check.cursor()
+        # 主源：post_match_review（中文队名 + match_date ±1 天窗口匹配；
+        # 不用 match_id——英文队名两侧归一化口径不一致，如 'Olympique Marseille'
+        # vs 'Olympique de Marseille'，精确匹配会失配；
+        # 日期窗口容忍复盘表当地日期与调用方北京日期差一天，如埃尔切场
+        # 复盘存 10/11 而调用方传 10/12；同对阵两队不可能相邻两天赛两场，窗口安全）
+        cur.execute(
+            "SELECT actual_score FROM post_match_review "
+            "WHERE home_team=? AND away_team=? "
+            "AND match_date IN (?, date(?, '-1 day'), date(?, '+1 day')) "
+            "AND actual_score IS NOT NULL AND actual_score <> ''",
+            (home_name, away_name, date_str, date_str, date_str),
+        )
+        row = cur.fetchone()
+        if row and row[0]:
+            match_played = True
+        # 副源：matches（英文/中文队名双匹配）
+        if not match_played:
+            cur.execute(
+                "SELECT actual_score FROM matches "
+                "WHERE match_date=? AND "
+                "((home_team=? OR home_team=?) AND (away_team=? OR away_team=?))",
+                (date_str, home_en, home_name, away_en, away_name),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                match_played = True
+        conn_check.close()
+    except Exception as e:
+        logger.debug(f"已赛场校验查询失败，保守跳过: {e}")
+
+    if not match_played:
+        logger.warning(
+            f"[SKIP] 比赛尚未进行或无实际比分，丢弃 xgscore 模拟数据: {match_id} "
+            f"(模拟比分 {result['home_goals']}-{result['away_goals']})"
+        )
+        return
+
     try:
         conn = sqlite3.connect(str(DB_PATH), timeout=CONNECT_TIMEOUT)
         conn.execute("PRAGMA journal_mode=WAL")

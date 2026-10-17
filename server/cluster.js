@@ -77,12 +77,27 @@ if (cluster.isPrimary) {
     console.log('✅ [主进程] 复盘服务已初始化');
   }).catch(err => console.error('❌ [主进程] 复盘服务初始化失败:', err.message));
 
-  trainScheduler.init().then(() => {
-    return trainScheduler.scheduleTraining();
-  }).then(() => {
-    console.log('✅ [主进程] 训练调度服务已启动（仅主进程）');
+  trainScheduler.init().then(async () => {
+    // C-20260926-109：内嵌训练 cron 默认禁用——它（0 2 * * 1 周一02:00）与
+    // Windows 计划任务 FootballModelAutoTrain 触发时刻完全相同，并发会重复训练、
+    // 竞相导出 assets。训练统一收敛到计划任务链路；手动触发（triggerTraining）不受影响。
+    // 恢复方式：设置环境变量 TRAIN_CRON_ENABLED=true（.env 同样生效）
+    //
+    // C-20260927-022（R1 修复）：该守卫原仅存在于 worker 入口 index.js L251-268。
+    // PM2(ecosystem.config.cjs)/start-service.bat 启动的是本文件主进程，此前无条件
+    // scheduleTraining() 会绕过开关注册 cron——即"PM2 接管会使 C-109 撞车消除结论
+    // 失效"。现补齐与 index.js 完全同款的判断，两条入口口径统一。
+    const cronEnabled = ['true', '1', 'yes'].includes(
+      (process.env.TRAIN_CRON_ENABLED || '').toLowerCase()
+    );
+    if (cronEnabled) {
+      await trainScheduler.scheduleTraining();
+      console.log('✅ 训练调度服务已启动（仅主进程）');
+    } else {
+      console.log('⏸️ 内嵌训练 cron 已禁用（TRAIN_CRON_ENABLED 未开启），训练由计划任务触发');
+    }
   }).catch(err => {
-    console.warn('⚠️ [主进程] 训练调度服务启动失败:', err.message);
+    console.warn('⚠️ 训练调度服务启动失败:', err.message);
   });
 
   // Fork workers

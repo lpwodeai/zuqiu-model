@@ -140,10 +140,12 @@ def collect_one(client: SofaScoreClient, event: Dict[str, Any],
     counts = {"predicted": 0, "missing": 0}
 
     detail = fetch_event_detail(client, event_id, logger)
-    if not detail or "event" not in detail:
+    # fetch_event_detail 已统一 unwrap，直接返回内部 event dict（含 homeTeam/awayTeam/status）；
+    # 旧实现误判 "event" not in detail 恒真，导致全部未赛场次被跳过（C-20261009-028 修复）
+    if not isinstance(detail, dict) or "homeTeam" not in detail:
         logger.warning(f"[event {event_id}] event detail 无数据，跳过")
         return counts
-    ev = detail["event"]
+    ev = detail
     home_name = (ev.get("homeTeam") or {}).get("name") or event["home_team"]
     away_name = (ev.get("awayTeam") or {}).get("name") or event["away_team"]
     status_type = (ev.get("status") or {}).get("type", "")

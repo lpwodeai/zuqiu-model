@@ -4,11 +4,11 @@ DoH HTTP 客户端 —— DNS 污染自动绕过工具（DATA-013 自动化实�
 ================================================================
 
 背景：
-  本地 DNS 被污染时（如 api.sofascore.com / www.sofascore.com 解析失败或
-  被劫持），普通 requests/curl_cffi 在 DNS 层即失败。经实测（C-20260918-053），
+  本地 DNS 被污染时（如 www.sofascore.com 解析失败或被劫持），
+  普通 requests/curl_cffi 在 DNS 层即失败。经实测（C-20260918-053），
   绕过链路为：
     ① DoH（DNS over HTTPS）解析域名真实 IP（加密 DNS，不走本地运营商解析器）
-    ② curl_cffi impersonate="chrome" 保留 TLS 指纹（Akamai 等反爬不拦截）
+    ② curl_cffi impersonate="chrome" 保留 TLS 指纹
     ③ 请求 URL 用 IP，附加 Host 头，verify=False 跳过证书名校验
        （CDN 按 Host 头回源，SNI 为 IP 不影响路由）
 
@@ -19,21 +19,21 @@ DoH HTTP 客户端 —— DNS 污染自动绕过工具（DATA-013 自动化实�
 作为模块复用：
     from doh_http_client import DohSession
     with DohSession() as s:
-        r = s.get("https://api.sofascore.com/api/v1/event/16416299")
+        r = s.get("https://www.sofascore.com/api/v1/event/16416299")
         print(r.status_code, r.json())
 
 CLI 用法：
   # 诊断域名 DNS 状态（直连 / DoH 结果对比）
-  python collection/doh_http_client.py check api.sofascore.com
+  python collection/doh_http_client.py check www.sofascore.com
 
   # 仅做 DoH 解析
-  python collection/doh_http_client.py resolve api.sofascore.com
+  python collection/doh_http_client.py resolve www.sofascore.com
 
   # 经绕过链路发请求（默认直连优先，失败自动降级 DoH）
-  python collection/doh_http_client.py fetch https://api.sofascore.com/api/v1/event/16416299
+  python collection/doh_http_client.py fetch https://www.sofascore.com/api/v1/event/16416299
 
   # 强制走 DoH（已知污染，跳过直连探测）
-  python collection/doh_http_client.py fetch --force-doh https://api.sofascore.com/api/v1/event/16416299
+  python collection/doh_http_client.py fetch --force-doh https://www.sofascore.com/api/v1/event/16416299
 """
 from __future__ import annotations
 

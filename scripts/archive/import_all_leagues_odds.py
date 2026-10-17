@@ -212,7 +212,6 @@ def parse_date(date_str, dayfirst=True):
             return date_str
         
         # 尝试用dateutil解析
-        from dateutil import parser as date_parser
         dt = date_parser.parse(date_str, dayfirst=dayfirst)
         return dt.strftime('%Y-%m-%d')
     except:

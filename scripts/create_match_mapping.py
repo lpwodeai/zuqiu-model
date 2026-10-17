@@ -188,7 +188,6 @@ def verify_mapping(odds_path):
         print(f"    {sample[2]} vs {sample[3]} on {sample[4]}")
 
 if __name__ == '__main__':
-    import os
     base_dir = os.path.dirname(os.path.abspath(__file__))
     project_dir = os.path.dirname(base_dir)
     

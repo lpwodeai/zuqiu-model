@@ -180,6 +180,28 @@ def parse_hcp_line(hcp_str):
     return val if neg else -val
 
 
+def format_hcp_label(hcp_line):
+    """C-20261013-068: 竞彩让球线（整数 goalLine，主队视角：负=让球，正=受让）→ 中文标签。
+
+    全链路统一线源：§一摘要卡 / §三让球节 / §7.2 标题 / §十四盘口对比 共用此函数，
+    杜绝亚盘 0.25 档中文串（来自 odds500_match.handicap）再次混入展示层。
+
+    None → "竞彩未开让球盘"（第③级真·未开售，与 C-067 线源切换口径一致）。
+    """
+    if hcp_line is None:
+        return "竞彩未开让球盘"
+    try:
+        v = float(hcp_line)
+    except (TypeError, ValueError):
+        return "竞彩未开让球盘"
+    if v == 0:
+        return "平手"
+    n = int(abs(v)) if abs(v) == int(abs(v)) else abs(v)
+    if v < 0:
+        return "让{}球".format(n) if n != 1 else "让一球"
+    return "受让{}球".format(n) if n != 1 else "受让一球"
+
+
 def odds_to_implied(win, draw, lose):
     """赔率 → 去水隐含概率"""
     try:
@@ -243,15 +265,14 @@ def recommendation_type(edge):
 # 比赛清单
 # ============================================================
 def discover_matches(conn, start_date, end_date, leagues=None, played_only=False):
-    """从 odds500_match 取比赛清单。
+    """从 odds500_match 取比赛清单，竞彩 matches 表兜底补全。
+
+    主源：odds500_match（500.com，含中英文队名、盘口、赛程）。
+    兜底：matches（竞彩网 sporttery）——500.com 对部分联赛/轮次覆盖不全时
+          （如 2026-10 意甲/西甲赛程缺失），用竞彩在售场次补全。
 
     played_only=False：未开赛(status=1)，供日常赛前预测；
     played_only=True ：已赛(status IN (2,5))，供历史补生成回放（用已入库赔率+特征）。
-
-    C-20260924-065 兜底：500.com 偶发漏回补 status（仍为 1 等非终态），但 matches 表
-    已出实际赛果（actual_score 非空）的场次实际已赛，须纳入 replay 扫描，否则这类
-    「已赛但状态未回补」的历史报告会被漏扫、残留旧渲染文案。纯延期(status=7)且无比分
-    的场次不匹配此兜底（无赛果，属未赛范畴）。
     """
     if played_only:
         status_cond = (
@@ -278,6 +299,9 @@ def discover_matches(conn, start_date, end_date, leagues=None, played_only=False
     sql += "\n        ORDER BY match_date, match_time, league\n    "
     rows = conn.execute(sql, args).fetchall()
     out = []
+    seen_keys = set()  # (date, home_cn_norm, away_cn_norm) 去重
+    from datetime import datetime as _dt
+    _now = _dt.now() if not played_only else None
     for r in rows:
         d = dict(r)
         d["home_team_en"] = (d.get("home_team_en") or "").strip()
@@ -287,7 +311,127 @@ def discover_matches(conn, start_date, end_date, leagues=None, played_only=False
             d["home_team_en"] = d["home_team_cn"]
         if not d["away_team_en"] or any("\u4e00" <= ch <= "\u9fff" for ch in d["away_team_en"]):
             d["away_team_en"] = d["away_team_cn"]
+        # C-20261011-047 开球时间守卫
+        if _now is not None:
+            try:
+                _ko = _dt.strptime(f"{d['match_date']} {d['match_time']}", "%Y-%m-%d %H:%M")
+                if _ko <= _now:
+                    print(f"[SKIP] 已开球场次跳过渲染: {d.get('home_team_cn')} vs {d.get('away_team_cn')} "
+                          f"(开球 {d['match_date']} {d['match_time']}，500 status 滞后未翻转，C-20261011-047)")
+                    continue
+            except (ValueError, TypeError):
+                pass
+        key = (d["match_date"], _normalize_team_for_wdl(d["home_team_cn"]), _normalize_team_for_wdl(d["away_team_cn"]))
+        seen_keys.add(key)
         out.append(d)
+
+    # 兜底：从竞彩 matches 表补全 500.com 缺失的场次
+    if not played_only:
+        league_filter = ""
+        sp_args = [start_date, end_date]
+        if leagues:
+            placeholders = ",".join("?" for _ in leagues)
+            league_filter = " AND substr(match_type, 1, 2) IN (" + placeholders + ")"
+            sp_args.extend(leagues)
+        sp_sql = f"""
+            SELECT match_id, match_type, match_date, home_team, away_team, handicap
+            FROM matches
+            WHERE match_date >= ? AND match_date <= ?{league_filter}
+              AND (actual_score IS NULL OR actual_score = '')
+            ORDER BY match_date, match_type
+        """
+        sp_rows = conn.execute(sp_sql, sp_args).fetchall()
+        from datetime import timedelta as _td
+        for r in sp_rows:
+            mid, mtype, mdate, home, away, hcp = r
+            # 从 match_type 提取联赛简称
+            lg = mtype[:2] if mtype else ""
+            h_norm = _normalize_team_for_wdl(home)
+            a_norm = _normalize_team_for_wdl(away)
+            # 去重：500.com 用欧洲当地日期（深夜球赛存为前一天），竞彩用北京日期。
+            # 同一场比赛在两表中 match_date 可能差 1 天，按 ±1 天 + 队名匹配去重。
+            dup = False
+            for (sd, sh, sa) in seen_keys:
+                if sh == h_norm and sa == a_norm:
+                    try:
+                        if abs((_dt.strptime(sd, "%Y-%m-%d") - _dt.strptime(mdate, "%Y-%m-%d")).days) <= 1:
+                            dup = True
+                            break
+                    except ValueError:
+                        pass
+            if dup:
+                continue
+            key = (mdate, h_norm, a_norm)
+            seen_keys.add(key)
+            # C-20261016-114: 兜底场次反查真实 500 fid —— 跨源日期口径不一（竞彩北京日
+            # vs 500 欧洲当地日，实测同一物理场次差 1~2 天且方向不定），discover 日期窗
+            # 可能漏掉主源；此前直接拿竞彩中文 match_id 当 fid，load_500_data(m["fid"])
+            # 按 fid 查不到 → §八/§九 显示「无数据」（C-20261016-002 遗留）。
+            # 按 队名归一 + 日期±2天 反查、取日期最接近者（同对阵队名双重归一已足够防误配），
+            # 命中则挂真实 fid，未命中保留原 mid（不劣化既有行为）。
+            _fid500 = None
+            _kickoff500 = None
+            _round500 = None
+            for _c in conn.execute(
+                "SELECT fid, home_team_cn, away_team_cn, match_date, match_time, round "
+                "FROM odds500_match "
+                "WHERE season='26/27' "
+                "AND match_date BETWEEN date(?,'-2 day') AND date(?,'+2 day') "
+                "ORDER BY ABS(julianday(match_date) - julianday(?))",
+                (mdate, mdate, mdate),
+            ).fetchall():
+                if (_normalize_team_for_wdl(_c[1]) == h_norm
+                        and _normalize_team_for_wdl(_c[2]) == a_norm):
+                    _fid500 = _c[0]
+                    # C-20261016-116: 命中真实 500 记录时，取该场 500 口径的真实开赛
+                    # 日期+时刻，供表头展示（与主源/主分支报告口径一致）。500 日期与
+                    # 竞彩北京日可能差 1~2 天，故单独存为展示字段 _kickoff500，
+                    # 不改内部 match_date/match_time（零模型影响）。
+                    if _c[3] and _c[4]:
+                        _kickoff500 = f"{_c[3]} {_c[4]}"
+                    # C-20261016-118: 同步取 500 轮次，修表头「第None轮」（兜底分支原硬编码 round=None）
+                    _round500 = _c[5]
+                    break
+            out.append({
+                "fid": _fid500 if _fid500 else mid,
+                "_sporttery_fallback": True,
+                "league": lg,
+                "season": "26/27",
+                "round": _round500,  # C-20261016-118: 500 轮次；未命中仍为 None（表头降级处理）
+                "match_date": mdate,
+                "match_time": "12:00",  # 竞彩表无开赛时间；表头展示改由 _kickoff500 承担（见下）
+                "_kickoff500": _kickoff500,  # C-20261016-116: 500 真实开赛（日期+时刻），仅表头展示用
+                "home_team_cn": home,
+                "away_team_cn": away,
+                "home_team_en": home,   # 无英文名，用中文占位
+                "away_team_en": away,
+                "win": 0, "draw": 0, "lost": 0,
+                "handicap": hcp or 0,
+                "pan": None,
+                "_source": "sporttery",
+            })
+        if sp_rows:
+            print(f"[兜底] 竞彩 matches 表补全 {len([r for r in out if r.get('_source')=='sporttery'])} 场（500.com 缺失）")
+
+        # C-20261016-109: 跨源日期归一——500.com 深夜场按欧洲当地日期存前一天，
+        # 报告目录/文件名归一到竞彩北京日期（±1 天 + 队名匹配），防同一物理场次
+        # 在 <date> 与 <date+1> 两个目录重复渲染。仅影响展示层（report_date），
+        # match_date 原始值保留供逻辑/落库使用。
+        sp_date_map = {}
+        for r in sp_rows:
+            sp_date_map[(_normalize_team_for_wdl(r[3]), _normalize_team_for_wdl(r[4]))] = r[2]
+        for d in out:
+            if d.get("_sporttery_fallback"):
+                continue
+            bj = sp_date_map.get((_normalize_team_for_wdl(d["home_team_cn"]),
+                                  _normalize_team_for_wdl(d["away_team_cn"])))
+            if bj and bj != d["match_date"]:
+                try:
+                    if abs((_dt.strptime(bj, "%Y-%m-%d") - _dt.strptime(d["match_date"], "%Y-%m-%d")).days) <= 1:
+                        d["report_date"] = bj
+                except (ValueError, TypeError):
+                    pass
+
     return out
 
 
@@ -459,7 +603,12 @@ def find_sporttery_match_id(conn, home_cn, away_cn, match_date):
     if not rows:
         return None
     base = datetime.strptime(match_date, "%Y-%m-%d")
-    best, best_diff = None, 999
+    # C-20261016-117: 同一物理场次的竞彩时序会因销售日跨零点分裂到两个日期键
+    # （实测 2026-10-16_法兰克福_科隆 与 2026-10-17_法兰克福_科隆 并存）。原先只取
+    # 日期最近者，命中记录稀疏的错键（10-17 键 wdl=2 vs 10-16 键 wdl=5，且 10-16 键
+    # 时间戳更新）→ §七 时序漂移被高估为「快照不足」。改为取四表记录总数最多者，
+    # 同数再取日期最近，使报告读到该场真实/最完整的那条序列。
+    best, best_score, best_diff = None, -1, 999
     for r in rows:
         mid = r["match_id"]
         try:
@@ -468,11 +617,16 @@ def find_sporttery_match_id(conn, home_cn, away_cn, match_date):
         except (ValueError, IndexError):
             continue
         diff = abs((d - base).days)
-        if diff < best_diff:
-            best, best_diff = mid, diff
-    if best is not None and best_diff <= 3:
-        return best
-    return None
+        if diff > 3:
+            continue
+        total = 0
+        for tbl in ("wdl_history", "handicap_history", "total_goals_history", "score_history"):
+            total += conn.execute(
+                f"SELECT COUNT(*) FROM {tbl} WHERE match_id=?", (mid,)
+            ).fetchone()[0]
+        if total > best_score or (total == best_score and diff < best_diff):
+            best, best_score, best_diff = mid, total, diff
+    return best
 
 
 def find_any_sporttery_match_id(conn, home_cn, away_cn, match_date):
@@ -488,55 +642,73 @@ def find_any_sporttery_match_id(conn, home_cn, away_cn, match_date):
     away_cn = _normalize_team_for_wdl(away_cn)
     like = f"%_{home_cn}_{away_cn}"
     base = datetime.strptime(match_date, "%Y-%m-%d")
-    best, best_diff = None, 999
+    cands = set()
     for tbl in ("handicap_history", "total_goals_history", "score_history", "wdl_history"):
-        rows = conn.execute(
+        for r in conn.execute(
             f"SELECT DISTINCT match_id FROM {tbl} WHERE match_id LIKE ?", (like,)
-        ).fetchall()
-        for r in rows:
-            mid = r["match_id"]
-            try:
-                dstr = mid.split("_", 1)[0]
-                d = datetime.strptime(dstr, "%Y-%m-%d")
-            except (ValueError, IndexError):
-                continue
-            diff = abs((d - base).days)
-            if diff < best_diff:
-                best, best_diff = mid, diff
-    if best is not None and best_diff <= 3:
-        return best
-    return None
+        ):
+            cands.add(r["match_id"])
+    # C-20261016-117: 与 find_sporttery_match_id 同口径——多候选键取四表记录总数
+    # 最多者（同数取日期最近），避免跨零点分裂的稀疏错键遮蔽真实序列。
+    best, best_score, best_diff = None, -1, 999
+    for mid in cands:
+        try:
+            d = datetime.strptime(mid.split("_", 1)[0], "%Y-%m-%d")
+        except (ValueError, IndexError):
+            continue
+        diff = abs((d - base).days)
+        if diff > 3:
+            continue
+        total = 0
+        for tbl in ("wdl_history", "handicap_history", "total_goals_history", "score_history"):
+            total += conn.execute(
+                f"SELECT COUNT(*) FROM {tbl} WHERE match_id=?", (mid,)
+            ).fetchone()[0]
+        if total > best_score or (total == best_score and diff < best_diff):
+            best, best_score, best_diff = mid, total, diff
+    return best
 
 
-def build_sporttery_odds(conn, mid, fallback_win, fallback_draw, fallback_lose):
-    """从竞彩网四张时序表组装 odds_data（prediction_core 兼容）。"""
+def build_sporttery_odds(conn, mid, fallback_win, fallback_draw, fallback_lose, other_mid=None):
+    """从竞彩网四张时序表组装 odds_data（prediction_core 兼容）。
+
+    C-20261002-004：mid 仅按 wdl_history 解析；深盘强队场竞彩常不开 WDL 但开
+    让球/大小球/比分（如 2026-09-20 塞维利亚 vs 巴塞罗那：HAD 0 条、HHAD 8 条、
+    TTG 5 条、CRS 4 时点）。other_mid 为另三表解析到的 match_id——WDL 仍走 500
+    兜底，但让球/总进球/比分必须用 other_mid 继续取数（此前 mid=None 直接 return，
+    三表数据全部被丢弃，报告误报「无总进球赔率记录」）。
+    """
     odds_data = {
         "wdl_odds": {"records": [], "open": {}, "close": {}},
         "handicap_odds": {"line": None, "records": [], "open": {}, "close": {}},
         "score_odds": {"records": []},
         "tg_odds": {"records": []},
     }
+    timing_mid = mid or other_mid
     if not mid:
-        # 无竞彩时序 → 用 500.com 初盘做单条兜底 WDL
+        # 无竞彩 WDL 时序 → 用 500.com 初盘做单条兜底 WDL（不再提前 return，
+        # 让球/总进球/比分若 other_mid 命中仍继续取）
         fw, fd, fl = num(fallback_win), num(fallback_draw), num(fallback_lose)
         if fw and fd and fl and fw > 1:
             rec = {"time": "初盘", "win": fw, "draw": fd, "lose": fl}
             odds_data["wdl_odds"] = {"records": [rec], "open": rec, "close": rec}
-        return odds_data
+    else:
+        # WDL
+        rows = conn.execute(
+            "SELECT timestamp, win_a, draw, win_b FROM wdl_history WHERE match_id=? ORDER BY timestamp",
+            (mid,),
+        ).fetchall()
+        if rows:
+            recs = [{"time": r["timestamp"], "win": r["win_a"], "draw": r["draw"], "lose": r["win_b"]} for r in rows]
+            odds_data["wdl_odds"] = {"records": recs, "open": recs[0], "close": recs[-1]}
 
-    # WDL
-    rows = conn.execute(
-        "SELECT timestamp, win_a, draw, win_b FROM wdl_history WHERE match_id=? ORDER BY timestamp",
-        (mid,),
-    ).fetchall()
-    if rows:
-        recs = [{"time": r["timestamp"], "win": r["win_a"], "draw": r["draw"], "lose": r["win_b"]} for r in rows]
-        odds_data["wdl_odds"] = {"records": recs, "open": recs[0], "close": recs[-1]}
+    if not timing_mid:
+        return odds_data
 
     # 让球
     rows = conn.execute(
         "SELECT timestamp, hcp_win, hcp_draw, hcp_lose FROM handicap_history WHERE match_id=? ORDER BY timestamp",
-        (mid,),
+        (timing_mid,),
     ).fetchall()
     if rows:
         recs = [{"time": r["timestamp"], "win": r["hcp_win"], "draw": r["hcp_draw"], "lose": r["hcp_lose"]} for r in rows]
@@ -546,7 +718,7 @@ def build_sporttery_odds(conn, mid, fallback_win, fallback_draw, fallback_lose):
     rows = conn.execute(
         "SELECT timestamp, goals_0, goals_1, goals_2, goals_3, goals_4, goals_5, goals_6, goals_7_plus "
         "FROM total_goals_history WHERE match_id=? ORDER BY timestamp",
-        (mid,),
+        (timing_mid,),
     ).fetchall()
     if rows:
         labels = ["0", "1", "2", "3", "4", "5", "6", "7+"]
@@ -559,7 +731,7 @@ def build_sporttery_odds(conn, mid, fallback_win, fallback_draw, fallback_lose):
     # 比分（按时间戳分组，按比分主/平/客分类）
     rows = conn.execute(
         "SELECT timestamp, score, odds FROM score_history WHERE match_id=? ORDER BY timestamp",
-        (mid,),
+        (timing_mid,),
     ).fetchall()
     if rows:
         by_ts = {}
@@ -626,6 +798,27 @@ def append_tg_calib_shadow(record):
     path.write_text("\n".join(kept) + "\n", encoding="utf-8")
 
 
+def append_lambda_split_shadow(record):
+    """P1-1（C-20261002-006）: 追加 λ 拆分 Shadow 记录到 reports/lambda_split_shadow.jsonl。
+
+    control=生产 legacy A-002 拆分，shadow=同总量市场去水 WDL 二分反演拆分，
+    两份各自重跑 T-006 v4（WDL 区域重加权不变）。赛前生成、不含赛果，
+    赛后按 match_id JOIN 实际比分做配对评测；按 match_id 去重覆盖。
+    """
+    path = BASE_DIR / "reports" / "lambda_split_shadow.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    kept = []
+    if path.exists():
+        for ln in path.read_text(encoding="utf-8").splitlines():
+            try:
+                if json.loads(ln).get("match_id") != record["match_id"]:
+                    kept.append(ln)
+            except json.JSONDecodeError:
+                continue
+    kept.append(json.dumps(record, ensure_ascii=False))
+    path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+
+
 def append_tg_wodds_shadow(record):
     """C-20260921-040: 追加 TG 融合权重 Shadow 记录到 reports/tg_wodds_shadow.jsonl。
 
@@ -633,6 +826,72 @@ def append_tg_wodds_shadow(record):
     factor=1.0 隔离 λ 校准变量；按 match_id 去重覆盖。
     """
     path = BASE_DIR / "reports" / "tg_wodds_shadow.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    kept = []
+    if path.exists():
+        for ln in path.read_text(encoding="utf-8").splitlines():
+            try:
+                if json.loads(ln).get("match_id") != record["match_id"]:
+                    kept.append(ln)
+            except json.JSONDecodeError:
+                continue
+    kept.append(json.dumps(record, ensure_ascii=False))
+    path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+
+
+# C-20261014-086: 平局高危旗标（实验性·待 fresh 验证）——定义冻结，禁止再扫网格
+# （282 场窗口已扫过 15 组网格，任何再选择都是 EVAL-peek；取最初命名规则 48.0%/1.88x）
+DRAW_FLAG_SPREAD_MAX = 0.07  # 融合(Stacking)三向概率 max−min 上限
+DRAW_FLAG_P_DRAW_MIN = 0.30  # 融合平局概率下限
+
+# C-20261014-086 文案逐字冻结（语义=不确定度旗标；禁止引入「子模型一致性/平局预测」措辞）
+DRAW_FLAG_TEXT = (
+    "平局高危旗标（实验性·待 fresh 验证）：融合三向概率接近、方向高度不明朗，"
+    "且融合平局概率偏高；样本内同构 25 场平局率 48%（基线 25.5%），误报含大比分场次"
+    "——语义为「结果高度不确定、平局概率约五成」，不是「要出平局」。"
+)
+
+
+def compute_draw_high_risk_flag(hp, dp, ap):
+    """C-20261014-086: 平局高危旗标判定（§十六风险标签 + §一小注 + 影子 jsonl 三处共用）。
+
+    入参必须与报告 §一 Stacking 融合行同一对象（render_report 内 hp/dp/ap
+    ← result["wdl"] 的 home_prob/draw_prob/away_prob），禁止另算或从 DB 重读，
+    禁用子模型分歧度 std 口径——防「回测口径 vs serving 口径」分叉。
+    概率缺失时返回 None（该场不写影子，等效旧行为）。
+    """
+    if not all(isinstance(v, (int, float)) for v in (hp, dp, ap)):
+        return None
+    spread = max(hp, dp, ap) - min(hp, dp, ap)
+    return {
+        "flag": bool(spread <= DRAW_FLAG_SPREAD_MAX and dp >= DRAW_FLAG_P_DRAW_MIN),
+        "spread": round(float(spread), 4),
+        "p_draw": round(float(dp), 4),
+    }
+
+
+def draw_flag_enabled():
+    """C-20261014-086: 读 config.yaml report_flags.draw_high_risk.enabled（默认 false；读取异常=关）。
+
+    开关只管报告渲染，不管影子——影子 jsonl 恒开。
+    """
+    try:
+        import yaml
+        cfg = yaml.safe_load((BASE_DIR / "config.yaml").read_text(encoding="utf-8")) or {}
+        return bool(((cfg.get("report_flags") or {}).get("draw_high_risk") or {}).get("enabled", False))
+    except Exception:
+        return False
+
+
+def append_draw_flag_shadow(record):
+    """C-20261014-086: 追加平局高危旗标 Shadow 到 reports/draw_flag_shadow.jsonl（按 match_id 去重覆盖）。
+
+    恒开（不受 report_flags.draw_high_risk.enabled 影响），每场必写一行含 flag=false
+    （覆盖率门禁分母）；赛前生成、不含实际比分，赛后按 match_id JOIN 实际比分做
+    fresh 三门禁评估（①n_flag≥45 且命中率≥40% 且 CI 下限>25.5% 基线；②覆盖率≤12%；
+    ③旗标场 ≥3 球差比分占比不高于非旗标场），全过由人工评审把 enabled 翻 true。
+    """
+    path = BASE_DIR / "reports" / "draw_flag_shadow.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
     kept = []
     if path.exists():
@@ -706,6 +965,15 @@ def load_500_data(conn, fid):
     return d
 
 
+# C-20261016-124: SofaScore 采集端自有译名与 team_names 规范名存在少量不一致
+# （如 sofa 入库「弗洛西诺内」，规范名/竞彩名「弗罗西诺内」）。normalize_team_name
+# 路径 1（ALIASES 反向→规范名）优先命中会遮蔽 feature_utils 本地 CN 别名映射，
+# 故查询前显式换用 sofa 侧译名候选。不动物理表、不动规范名（score_history 口径）。
+SOFA_NAME_OVERRIDES = {
+    '弗罗西诺内': '弗洛西诺内',
+}
+
+
 def load_sofascore_data(conn, match_date, home_cn):
     """按日期 + 主队中文名匹配 SofaScore 特征（客队可能是英文混合名）。
 
@@ -715,6 +983,11 @@ def load_sofascore_data(conn, match_date, home_cn):
     """
     # 队名归一化：避免「云达不莱梅/云达不来梅」这类别名导致匹配失败
     home_norm = _normalize_team_name(home_cn)
+    # C-20261016-124: 候选名 = 竞彩原名 / 规范名 / sofa 侧译名，去重保序
+    name_candidates = [home_cn, home_norm]
+    _sofa_alt = SOFA_NAME_OVERRIDES.get(home_norm) or SOFA_NAME_OVERRIDES.get(home_cn)
+    if _sofa_alt and _sofa_alt not in name_candidates:
+        name_candidates.append(_sofa_alt)
     base = datetime.strptime(match_date, "%Y-%m-%d")
     # 按 |diff| 递增生成候选日期（0, ±1, ±2, ±3 天），与 find_sporttery_match_id
     # 的 ±3 天口径对齐；同队一周内不会打两次，±3 天范围内只会命中一场。
@@ -724,16 +997,20 @@ def load_sofascore_data(conn, match_date, home_cn):
         date_candidates.append((base + timedelta(days=delta)).strftime("%Y-%m-%d"))
 
     for d in date_candidates:
+        placeholders = ",".join("?" for _ in name_candidates)
         row = conn.execute(
-            "SELECT * FROM sofascore_team_features WHERE match_date=? AND (home_team_cn=? OR home_team_cn=?)",
-            (d, home_cn, home_norm),
+            f"SELECT * FROM sofascore_team_features WHERE match_date=? AND home_team_cn IN ({placeholders})",
+            (d, *name_candidates),
         ).fetchone()
         if row is None:
-            # 兜底：归一化后主队名模糊匹配
-            row = conn.execute(
-                "SELECT * FROM sofascore_team_features WHERE match_date=? AND home_team_cn LIKE ?",
-                (d, f"%{home_norm}%"),
-            ).fetchone()
+            # 兜底：候选名逐个模糊匹配
+            for cand in name_candidates:
+                row = conn.execute(
+                    "SELECT * FROM sofascore_team_features WHERE match_date=? AND home_team_cn LIKE ?",
+                    (d, f"%{cand}%"),
+                ).fetchone()
+                if row is not None:
+                    break
         if row is not None:
             return row
     return None
@@ -747,6 +1024,9 @@ def _sf(row, field, nd=2):
 
     P0-03: 采集端缺失时以 0 或 NULL 占位（如 pa_fatigue_7d、sofa_rat_5g、sofa_pass_sr_5g），
     这里统一把 0 归为缺失返回 None，避免报告显示 0.00% 冒充真实数据。
+
+    C-20261014-090: 同时把 PA 无数据哨兵 -1.0 视为缺失（与 pa_features.no_data_sentinel 配套；
+    §十一/§十二 经 _sf 渲染的字段均非负，-1.0 不可能是真值，故该判定为纯增量、无回归）。
     """
     if row is None:
         return None
@@ -762,7 +1042,7 @@ def _sf(row, field, nd=2):
         fv = float(v)
     except (TypeError, ValueError):
         return None
-    if fv == 0.0:  # 采集端缺失占位
+    if fv == 0.0 or fv == -1.0:  # 采集端缺失占位 / PA 无数据哨兵
         return None
     return round(fv, nd)
 
@@ -884,6 +1164,40 @@ def _find_standing(table, team_cn):
         if s["team"] == str(team_cn):
             return s
     return None
+
+
+def load_sofa_standings(conn, league):
+    """读 SofaScore 权威积分榜快照（league_standings 表最新 snapshot_date）。C-20261016-120。
+
+    行结构与 compute_league_standings 输出对齐（team=归一中文），供 §十四 优先使用；
+    表不存在/无快照返回 ([], None)，调用方回退 matches 现算。collector=
+    collection/collect_sofascore_standings.py（每日 20:30 链刷新）。
+    """
+    if conn is None:
+        return [], None
+    try:
+        row = conn.execute(
+            "SELECT MAX(snapshot_date) FROM league_standings WHERE league=?", (league,)).fetchone()
+        snap = row[0] if row else None
+        if not snap:
+            return [], None
+        rows = conn.execute(
+            "SELECT team_cn, position, points, played, wins, draws, losses, gf, ga, gd "
+            "FROM league_standings WHERE league=? AND snapshot_date=? ORDER BY position",
+            (league, snap)).fetchall()
+        table = []
+        for r in rows:
+            if not r["team_cn"]:
+                continue
+            table.append({
+                "team": r["team_cn"], "rank": r["position"] or 0,
+                "pts": r["points"] or 0, "played": r["played"] or 0,
+                "win": r["wins"] or 0, "draw": r["draws"] or 0, "loss": r["losses"] or 0,
+                "gf": r["gf"] or 0, "ga": r["ga"] or 0, "gd": r["gd"] or 0,
+            })
+        return table, snap
+    except sqlite3.OperationalError:  # 表不存在（旧库/未建）
+        return [], None
 
 
 # ============================================================
@@ -1031,7 +1345,63 @@ def classify_zhan_yi(rank, total_teams):
 EXPECTED_TEAMS = {"英超": 20, "西甲": 20, "意甲": 20, "德甲": 18, "法甲": 18}
 
 
-def render_report(m, odds_data, result, extra, report_path, conn=None):
+# C-20260930-002 Fix A：§十七之三 模块名 → prematch_data_quality 列名
+_PDQUALITY_STATUS_COLS = {
+    "竞彩时序赔率": "sporttery_status",
+    "500.com 百家欧指": "ouzhi_status",
+    "500.com 投注分析": "betting_status",
+    "SofaScore 赛前特征": "sofascore_status",
+}
+
+
+def _persist_prematch_quality(conn, m, match_date, build_log, quality_items, wdl_snap,
+                              report_path, wdl_not_offered=False, betting_crawl_status=None):
+    """把三通道模块状态追加写入 prematch_data_quality（append 历史，不覆盖）。
+
+    归因引擎权威赛前口径源；任何异常仅 stderr 告警，绝不阻断报告生成
+    （与 build_log 落盘同等级隔离）。
+    """
+    if conn is None:
+        return
+    try:
+        from post_match_schema import insert_prematch_data_quality  # 懒加载隔离
+        statuses = {}
+        for _name, _status, _detail in quality_items:
+            _col = _PDQUALITY_STATUS_COLS.get(_name)
+            if _col:
+                statuses[_col] = _status
+        try:
+            fid = int(m.get("fid"))
+        except (TypeError, ValueError):
+            fid = None
+        try:
+            rel = report_path.resolve().relative_to(BASE_DIR).as_posix()
+        except Exception:
+            rel = str(report_path)
+        insert_prematch_data_quality(conn, {
+            "match_id": build_log["match_id"],
+            "fid": fid,
+            "match_date": match_date,
+            "generated_at": build_log["generated_at"],
+            "completeness": build_log["completeness"],
+            "wdl_snapshots": int(wdl_snap or 0),
+            "wdl_not_offered": 1 if wdl_not_offered else 0,
+            "sporttery_status": statuses.get("sporttery_status"),
+            "ouzhi_status": statuses.get("ouzhi_status"),
+            "betting_status": statuses.get("betting_status"),
+            "betting_crawl_status": betting_crawl_status,
+            "sofascore_status": statuses.get("sofascore_status"),
+            "modules_json": [{"name": n, "status": s, "detail": d}
+                             for n, s, d in quality_items],
+            "report_file": rel,
+            "model_version": build_log.get("model_version"),
+            "feature_version": build_log.get("feature_version"),
+        })
+    except Exception as _e:  # noqa: BLE001
+        print(f"  ⚠️ 写入 prematch_data_quality 失败: {_e}", file=sys.stderr)
+
+
+def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay=False):
     """按 18 章模板渲染单场报告。m=比赛元数据, result=四维预测, extra={500,sofascore}。"""
     home_cn, away_cn = m["home_team_cn"], m["away_team_cn"]
     home_en, away_en = m["home_team_en"], m["away_team_en"]
@@ -1041,7 +1411,12 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     round_no = m["round"]
 
     # 联赛积分榜 + 战意（赛前口径，截止 match_date 之前的完赛场次）
-    standings = compute_league_standings(conn, league, match_date) if conn is not None else []
+    standings_derived = compute_league_standings(conn, league, match_date) if conn is not None else []
+    # C-20261016-120: SofaScore 权威积分榜快照优先（matches 赛果库断更时排名/战绩失真，
+    # 如勒芒「已赛2」vs 真实 6）；无快照回退 matches 现算。derived 保留供 §十四 对拍。
+    standings, sofa_snap = load_sofa_standings(conn, league)
+    if not standings:
+        standings, sofa_snap = standings_derived, None
     home_std = _find_standing(standings, home_cn)
     away_std = _find_standing(standings, away_cn)
     total_teams = len(standings)
@@ -1064,6 +1439,10 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     sub_models = wdl.get("sub_models") or {}
     divergence_level, divergence_std, n_sub_models = _sub_model_divergence(sub_models)
 
+    # C-20261014-086: 平局高危旗标（与 §一 Stacking 融合行同源 hp/dp/ap；开关只管渲染，影子恒开）
+    draw_flag = compute_draw_high_risk_flag(hp, dp, ap)
+    draw_flag_on = draw_flag_enabled()
+
     # 竞彩 WDL 赔率（尾盘/初盘）
     wdl_close = wdl.get("close") or {}
     wdl_open = wdl.get("open") or {}
@@ -1074,8 +1453,11 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     ih_h, ih_d, ih_a, wdl_return = odds_to_implied(oc_h, oc_d, oc_a)
 
     # 让球
-    hcp_line_raw = hcp.get("line") or m.get("handicap_line")
-    hcp_line_disp = m.get("handicap") or "—"
+    # C-20261013-068: hcp_line_disp 改用竞彩 SSOT（hcp["line"]，C-067 已切换），
+    # 不再读 m["handicap"]（亚盘 0.25 档中文串，来自 odds500_match.handicap）。
+    # 全链路统一线源：§一/§三/§7.2/§十四 共用 format_hcp_label。
+    hcp_line_raw = hcp.get("line")
+    hcp_line_disp = format_hcp_label(hcp_line_raw)
     hcp_pred = hcp.get("prediction", "—")
     hcp_upper = hcp.get("home_win_prob")
     hcp_draw = hcp.get("draw_prob")
@@ -1087,6 +1469,7 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     lambda_h = score.get("lambda_home")
     lambda_a = score.get("lambda_away")
     score_method = score.get("method", "—")
+    score_reorder_note = score.get("reorder_note")  # C-20261011-041: WDL 方向族重排注记
     lambda_alert = result.get("lambda_alert")  # P1-13: λ 主客差值告警
 
     # 总进球（C-20260921-035：结论=精确进球数 Top1/Top3，不再出大小球结论）
@@ -1108,6 +1491,8 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     # 500.com 完整度须验证「存在行且含真实赔率数据」，而非仅判断行是否存在。
     # 空壳行（company_count=0 且无公司明细）应计为缺失，避免掩盖采集失败。
     _ouzhi = extra["500"]["ouzhi"]
+    if _ouzhi is not None and not isinstance(_ouzhi, dict):
+        _ouzhi = dict(_ouzhi)  # C-20261016-114: sqlite3.Row → dict，供 .get() 访问（§八 欧指展示）
     _has_real_500 = _ouzhi is not None and (
         int(_ouzhi["company_count"] or 0) > 0 or len(extra["500"]["companies"]) > 0
     )
@@ -1142,13 +1527,17 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     _conf_breakdown = compute_confidence_breakdown(
         completeness, wdl.get("confidence"),
         divergence_std=divergence_std, n_sub=n_sub_models, wdl_snap=wdl_snap,
-        extra_penalty=_conflict_penalty)
+        extra_penalty=_conflict_penalty, wdl_source=result.get("_wdl_source", "jc"))
     conf_score = _conf_breakdown["score"]
 
     # 官方伤停名单（match_missing_players 赛前采集行，经 event_id 精确关联）。
     # 提前到质检清单构建之前查询，供 §十二/§十六/§十七之三 三处复用，避免文案自相矛盾。
     om_home: list = []
     om_away: list = []
+    om_names_home: set = set()   # C-20261014-092: 官方缺阵原始球员名（英文），供校正推算首发
+    om_names_away: set = set()
+    _home_fbref = None
+    _away_fbref = None
     _event_id = None
     _sofa_pre = extra["sofascore"]
     if _sofa_pre is not None and "event_id" in _sofa_pre.keys():
@@ -1156,11 +1545,14 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     if _event_id and conn is not None:
         try:
             _mrow = conn.execute(
-                "SELECT home_team_cn, away_team_cn FROM fbref_match_mapping WHERE fbref_match_id=?",
+                "SELECT home_team_cn, away_team_cn, home_team_fbref, away_team_fbref "
+                "FROM fbref_match_mapping WHERE fbref_match_id=?",
                 (str(_event_id),)).fetchone()
             if _mrow:
-                for _team_en, _bucket in ((_mrow["home_team_cn"], om_home),
-                                          (_mrow["away_team_cn"], om_away)):
+                _home_fbref = _mrow["home_team_fbref"]
+                _away_fbref = _mrow["away_team_fbref"]
+                for _team_en, _bucket, _names in ((_mrow["home_team_cn"], om_home, om_names_home),
+                                                  (_mrow["away_team_cn"], om_away, om_names_away)):
                     if not _team_en:
                         continue
                     for _r in conn.execute(
@@ -1170,16 +1562,51 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
                         _ret = (_r["expected_end_date"] or "").strip()
                         _bucket.append(f"{_r['player_name']}({_r['reason']}"
                                        + (f",复出{_ret[5:]}" if _ret else "") + ")")
+                        _names.add(_r["player_name"])
         except Exception:
             pass  # 伤停展示失败不阻塞报告
+
+    # C-20261014-092: 官方缺阵校正推算首发（仅报告展示层；不改 pa_* 模型特征值，防 train/serve 分叉）。
+    # 校正口径：predict_xi_players（纯历史推算，数据严格早于 match_date）∩ match_missing_players
+    # 官方缺阵（该场赛前采集）→ confirmed_out = 推算首发中被官方确认缺阵的球员。
+    # 报告均为赛前生成（含 replay 复现赛前口径），天然满足「仅未赛场次」；已赛场次的 replay
+    # 展示的仍是该场赛前快照，口径一致。模型特征/λ 不读 match_missing_players → 无重复计数。
+    _official_corr: dict = {}
+    if (om_names_home or om_names_away) and conn is not None:
+        try:
+            if str(BASE_DIR / "features") not in sys.path:
+                sys.path.insert(0, str(BASE_DIR / "features"))
+            from player_availability_features import PlayerAvailabilityFeatures
+            from player_injury_source import apply_official_injuries
+            _pa_gen = PlayerAvailabilityFeatures(db_path=ODDS_DB)
+            try:
+                for _side, _tfb, _names in (("home", _home_fbref, om_names_home),
+                                            ("away", _away_fbref, om_names_away)):
+                    if not _tfb or not _names:
+                        continue
+                    _pa_gen.ensure_team_stats(_tfb)
+                    _xi = _pa_gen.predict_xi_players(_tfb, match_date)
+                    if not _xi:
+                        _official_corr[_side] = {"unavailable": True, "official_n": len(_names)}
+                        continue
+                    _res = apply_official_injuries(_xi, sorted(_names))
+                    _res["official_n"] = len(_names)
+                    _official_corr[_side] = _res
+            finally:
+                _pa_gen.close()
+        except Exception:
+            _official_corr = {}  # 校正失败不阻塞报告
 
     # ===== P0-03 遗留: 数据质量清单（逐模块状态，报告可视化）=====
     # 每个模块：name / status (OK/WARN/FAIL) / detail
     _quality_items = []
 
-    # 1. 竞彩时序赔率
-    if result.get("_wdl_not_offered"):
-        _quality_items.append(("竞彩时序赔率", "WARN", "未开售WDL（500兜底）"))
+    # 1. 竞彩时序赔率（C-20261002-005：按 WDL 来源三态分档）
+    _wdl_src = result.get("_wdl_source", "jc")
+    if _wdl_src == "fallback_deep":
+        _quality_items.append(("竞彩时序赔率", "WARN", "未开售WDL，让球/大小/比分已接入（500兜底）"))
+    elif _wdl_src == "fallback_none":
+        _quality_items.append(("竞彩时序赔率", "WARN", "未开售本场四玩法（500兜底，非采集缺失）"))
     elif wdl_snap >= 2:
         _quality_items.append(("竞彩时序赔率", "OK", f"≥{wdl_snap}条快照（含开盘/即时）"))
     elif wdl_snap == 1:
@@ -1196,9 +1623,18 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
 
     # 3. 500 投注分析（必发/冷热）
     _betting = extra["500"]["betting"]
+    if _betting is not None and not isinstance(_betting, dict):
+        _betting = dict(_betting)  # C-20261016-114: sqlite3.Row → dict，供 .get() 访问（§九 质检三态）
     _bet_crawl = _betting["crawl_status"] if _betting is not None else None
     if _bet_crawl == "ok" and betting_has_real_data(_betting):
-        _quality_items.append(("500.com 投注分析", "OK", "必发/冷热数据已接入"))
+        # C-20261014-100 三态修正：投注比例/欧指存在 ≠ 必发接入；
+        # 必发缺失单独 WARN（此前误标 OK "必发/冷热数据已接入" → 清单失真、置信度虚高）
+        _bet_has_bf = any(_betting.get(f"{s}_bf_volume") and _betting[f"{s}_bf_volume"] not in ("0", "", "None", "-")
+                          for s in ("home", "draw", "away"))
+        if _bet_has_bf:
+            _quality_items.append(("500.com 投注分析", "OK", "必发/冷热数据已接入"))
+        else:
+            _quality_items.append(("500.com 投注分析", "WARN", "仅投注比例/欧指（必发/冷热缺失：源站未提供或解析缺口）"))
     elif _bet_crawl == "anti_bot_blocked":
         _quality_items.append(("500.com 投注分析", "FAIL", "受 500.com EdgeOne 反爬拦截（需刷新 Cookie 重采）"))
     elif _bet_crawl == "source_no_data":
@@ -1358,12 +1794,19 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("")
     A("> **报告版本**: {}".format(REPORT_VERSION))
     A("> **生成时间**: {}".format(datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S")))
-    A("> **比赛**: {} 第{}轮".format(league, round_no))
-    A("> **时间**: {} {} (北京时间)".format(match_date, match_time))
+    # C-20261016-118: 兜底场次反查 500 轮次失败时降级为「轮次未知」，不再显示「第None轮」
+    A("> **比赛**: {} {}".format(league, f"第{round_no}轮" if round_no is not None else "轮次未知"))
+    # C-20261016-116: 竞彩兜底场次无开赛时间（占位 12:00），命中真实 500 记录时
+    # 用其开赛日期+时刻展示（与主源/主分支口径一致）；未命中仍回退 match_date+占位。
+    A("> **时间**: {} (北京时间)".format(
+        m.get("_kickoff500") or "{} {}".format(match_date, match_time)))
     A("> **对阵**: {} (主) vs {} (客)".format(home_cn, away_cn))
     if m.get("fid"):
         A("> **500.com**: fid={}".format(m["fid"]))
     A("> **数据完整度**: {}%".format(completeness))
+    if is_replay:
+        A("> ⚠️ **回放说明**: 本报告为赛后回放重生成（--replay），概率为当前模型重算值，"
+          "非赛前发布锚点；赛前发布口径以 model_predictions 表为准")
     A("")
     A("---")
     A("")
@@ -1376,8 +1819,12 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("| 预测维度 | 预测结果 | 概率 | 置信度 |")
     A("|---------|---------|:----:|:------:|")
     A("| **胜平负** | **{}** | {} | {} |".format(wdl_pred, pct(max(hp or 0, dp or 0, ap or 0)), "{}/100".format(conf_score)))
-    A("| **让球胜平负** ({}) | **{}** | {} | — |".format(hcp_line_disp, hcp_pred,
-          pct(max(hcp_upper or 0, hcp_draw or 0, hcp_lower or 0))))
+    # C-20261013-068: hcp_line=None（竞彩未开让球盘）摘要卡走占位，不显示概率
+    if hcp_line_raw is None:
+        A("| **让球胜平负** | 竞彩未开让球盘 | — | — |")
+    else:
+        A("| **让球胜平负** ({}) | **{}** | {} | — |".format(hcp_line_disp, hcp_pred,
+              pct(max(hcp_upper or 0, hcp_draw or 0, hcp_lower or 0))))
     if tg_top3:
         A("| **总进球 Top1** | **{}** | {} | — |".format(tg_top3[0]["label"], pct(tg_top3[0]["prob"])))
     else:
@@ -1474,6 +1921,9 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("> 分歧度等级: **{}**（std={:.4f}，可用子模型 {}/{}）".format(
         divergence_level, divergence_std, _sub_total or n_sub_models, len(SUB_MODEL_LABELS)))
     A("> 阈值: std<0.05 低分歧 / 0.05–0.10 中分歧 / ≥0.10 高分歧；高分歧意味着子模型对结果判断差异显著，建议结合 EV 与抽水分析谨慎决策。")
+    # C-20261014-086: 平局高危旗标小注（开关默认关；与 §十六/影子共用同一判定，文案逐字冻结）
+    if draw_flag_on and draw_flag and draw_flag["flag"]:
+        A("> ⚠️ **{}**".format(DRAW_FLAG_TEXT))
     # C-20260919-022: XGB 缺失在报告内直接告警，杜绝"静默 —"（prediction_core 哨兵同步报错）
     _xgb_sp = sub_models.get("xgboost")
     if not _xgb_sp or not all(isinstance(_xgb_sp.get(k), (int, float)) for k in ("win", "draw", "lose")):
@@ -1503,16 +1953,46 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     # ================= 四、让球 =================
     A("## 三、让球胜平负预测 (T-005 v3)")
     A("")
-    A("| 让球盘口 | 让球主胜 | 让球平局 | 让球客胜 | 预测方向 | 概率 |")
-    A("|---------|:--------:|:--------:|:--------:|---------|:----:|")
-    A("| {} | {} | {} | {} | **{}** | {} |".format(
-        hcp_line_disp, pct(hcp_upper), pct(hcp_draw), pct(hcp_lower), hcp_pred,
-        pct(max(hcp_upper or 0, hcp_draw or 0, hcp_lower or 0))))
-    A("")
-    A("**走水检测**: 走水概率 {} | 方法: {}".format(pct(hcp_draw), hcp_method))
-    A("")
-    A("---")
-    A("")
+    # C-20261013-068: hcp_line=None（竞彩未开让球盘）整节占位，保持 19 章结构稳定
+    if hcp_line_raw is None:
+        A("> 竞彩未开让球盘（hcp_line=None，T-005 v3/D2 短路，无 HC 落库）")
+        A("")
+        A("---")
+        A("")
+    else:
+        A("| 让球盘口 | 让球主胜 | 让球平局 | 让球客胜 | 预测方向 | 概率 |")
+        A("|---------|:--------:|:--------:|:--------:|---------|:----:|")
+        A("| {} | {} | {} | {} | **{}** | {} |".format(
+            hcp_line_disp, pct(hcp_upper), pct(hcp_draw), pct(hcp_lower), hcp_pred,
+            pct(max(hcp_upper or 0, hcp_draw or 0, hcp_lower or 0))))
+        A("")
+        A("**走水检测**: 走水概率 {} | 方法: {}".format(pct(hcp_draw), hcp_method))
+        # C-20261016-119: §二/§三 对账自检——**仅 ±1 盘**（走水=恰赢1球）。
+        # 深盘（±2 起）下盘=净胜≤1球（含主胜恰赢1球），恒等式口径不成立 → 不渲染，防假警报
+        # （威尼斯场实测 -2 盘误显 -42.7pp）。两口径差 >5pp 提示走水估计与 WDL/市场分裂
+        # （法兰克福场实测 让球下盘 51.7% vs WDL 隐含 44.0%，根因=isotonic 台阶低估走水）。
+        # C-20261016-123: 恒等式按盘口方向分支——主让一球(line<0)：让球负=平+客；
+        # 受让一球(line>0)：让球胜=主+平（让球负=客胜2球+，「平+客」不成立）。
+        # 残差语义不变=「模型 WDL vs 市场让球盘」跨源残差（受让场模型 WDL 高估主队时残差仍可 >5pp，属真实分歧）。
+        if (hcp_lower is not None and dp is not None and ap is not None
+                and hcp_line_raw is not None and abs(hcp_line_raw) == 1):
+            if hcp_line_raw < 0:
+                _wdl_side, _hcp_side = dp + ap, hcp_lower
+                _side, _p1, _p2 = "下盘", pct(dp), pct(ap)
+            elif hcp_upper is not None and hp is not None:
+                _wdl_side, _hcp_side = hp + dp, hcp_upper
+                _side, _p1, _p2 = "上盘", pct(hp), pct(dp)
+            else:
+                _wdl_side = None
+            if _wdl_side is not None:
+                _diff_pp = (_hcp_side - _wdl_side) * 100.0
+                _flag = "⚠️" if abs(_diff_pp) > 5 else "✓"
+                A("")
+                A("> {} **口径自检**: WDL 隐含{} = {} + {} = {}；让球{} {}（差 {:+.1f}pp）".format(
+                    _flag, _side, _p1, _p2, pct(_wdl_side), _side, pct(_hcp_side), _diff_pp))
+        A("")
+        A("---")
+        A("")
 
     # ================= 五、比分 =================
     A("## 四、比分预测 Top5 ({})".format(score_method))
@@ -1541,6 +2021,11 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
             lambda_alert.get("diff", "—")))
         A("> 赛后建议：拿真实 xG 数据复核 λ 链路（赔率隐含概率 → WDL/TG 缩放 → 调整后 λ），"
           "确认客场强队 λ 被压低是否合理。")
+        A("")
+    # C-20261011-041: WDL 方向族重排注记（Top1=族内最大格；网格/边缘/Top5 集合不变）
+    if score_reorder_note:
+        A("> ℹ️ **WDL 方向族重排**: {}（C-20261011-041；λ 失衡场重加权后 Top1 概率仍可能虚高，仅供参考）".format(
+            score_reorder_note))
         A("")
     A("---")
     A("")
@@ -1702,7 +2187,11 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("")
 
     # ================= 八、时序赔率异动 =================
+    # C-20261011-037：§七 由 WDL 单玩法扩展为四玩法（WDL/让球=快照网格+异动标签，
+    # 大小球=初盘→即时两端点，比分=变动 Top8 摘要），数据不足时逐玩法降级声明。
     A("## 七、时序赔率异动分析")
+    A("")
+    A("### 7.1 胜平负（WDL）时序")
     A("")
     wdl_records = wdl.get("records") or []
     if wdl_snap >= 2:
@@ -1733,12 +2222,137 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
             r.get("time", "—"), fnum(r.get("win")), fnum(r.get("draw")), fnum(r.get("lose")),
             pct(ih), pct(idr), pct(ia)))
         A("")
-        if result.get("_wdl_not_offered"):
-            A("> ℹ️ 竞彩未开售胜平负盘（仅让球/大小球/比分），上表为 500.com 初盘参考（非时序缺失）。")
+        if _wdl_src == "fallback_deep":
+            A("> ℹ️ 竞彩未开售胜平负盘（已开让球/大小球/比分），上表为 500.com 初盘参考（非时序缺失）。")
+        elif _wdl_src == "fallback_none":
+            A("> ℹ️ 竞彩未开售本场（胜平负/让球/大小球/比分均无），上表为 500.com 初盘参考（非采集缺失，回踩无法补）。")
         else:
             A("> ⚠️ 仅 1 条竞彩 WDL 快照，缺少开盘→即时漂移，需回踩刷新（--no-skip-existing）。")
     else:
         A("(无时序赔率数据；需补采竞彩 WDL 时序)")
+    A("")
+
+    # --- 7.2 让球胜平负时序（C-20261011-037）---
+    # C-20261013-068: 标题盘口串改用竞彩线标签（hcp_line_disp），None 时不显示盘口串
+    A("### 7.2 让球胜平负时序{}".format(
+        "（盘口 {}）".format(hcp_line_disp) if hcp_line_raw is not None else ""))
+    A("")
+    hcp_recs = (odds_data.get("handicap_odds") or {}).get("records") or []
+
+    def _hcp_delta(prev, cur):
+        if prev is None or cur is None:
+            return "—"
+        labels = []
+        for key, cn in (("win", "上盘"), ("draw", "走水"), ("lose", "下盘")):
+            d0 = num(cur.get(key))
+            d1 = num(prev.get(key))
+            if d0 is None or d1 is None:
+                continue
+            if d0 - d1 <= -0.05:
+                labels.append("{}↓".format(cn))
+            elif d0 - d1 >= 0.05:
+                labels.append("{}↑".format(cn))
+        return "、".join(labels) if labels else "平稳"
+
+    if len(hcp_recs) >= 2:
+        A("| 时间 | 主胜 | 走水 | 客胜 | 主胜隐含 | 走水隐含 | 客胜隐含 | 异动标签 |")
+        A("|------|:----:|:----:|:----:|:--------:|:--------:|:--------:|:--------:|")
+        _prev = None
+        for r in hcp_recs:
+            ih, idr, ia, _ = odds_to_implied(r.get("win"), r.get("draw"), r.get("lose"))
+            _delta = _hcp_delta(_prev, r)
+            A("| {} | {} | {} | {} | {} | {} | {} | {} |".format(
+                r.get("time", "—"), fnum(r.get("win")), fnum(r.get("draw")), fnum(r.get("lose")),
+                pct(ih), pct(idr), pct(ia), _delta))
+            _prev = r
+        A("")
+        A("> 让球三向赔率是 T-005 的直接输入市场：盘口固定、赔率随资金流漂移；走水赔率下行=市场认为走水风险上升。异动阈值 0.05。")
+    elif len(hcp_recs) == 1:
+        r = hcp_recs[0]
+        ih, idr, ia, _ = odds_to_implied(r.get("win"), r.get("draw"), r.get("lose"))
+        A("| 时间 | 主胜 | 走水 | 客胜 | 主胜隐含 | 走水隐含 | 客胜隐含 |")
+        A("|------|:----:|:----:|:----:|:--------:|:--------:|:--------:|")
+        A("| {} | {} | {} | {} | {} | {} | {} |".format(
+            r.get("time", "—"), fnum(r.get("win")), fnum(r.get("draw")), fnum(r.get("lose")),
+            pct(ih), pct(idr), pct(ia)))
+        A("")
+        A("> ⚠️ 仅 1 条竞彩让球快照，无漂移可分析；今晚 0b 临场补采 + 23:30 兜底重生成可补齐。")
+    else:
+        A("(竞彩让球时序无快照：未开售或未采集)")
+    A("")
+
+    # --- 7.3 总进球数时序（初盘→即时摘要）---
+    A("### 7.3 总进球数时序（初盘 → 即时）")
+    A("")
+    tg_recs = (odds_data.get("tg_odds") or {}).get("records") or []
+    _tg_labels = ["0", "1", "2", "3", "4", "5", "6", "7+"]
+    if tg_recs:
+        _tg_show = [tg_recs[0], tg_recs[-1]] if len(tg_recs) > 1 else [tg_recs[0]]
+        A("| 快照 | " + " | ".join(_tg_labels) + " |")
+        A("|------|" + ":----:|" * len(_tg_labels))
+        for r in _tg_show:
+            _g = r.get("goals") or {}
+            _tag = "初盘" if r is tg_recs[0] else ("即时" if len(tg_recs) > 1 else "唯一快照")
+            A("| {}（{}） | {} |".format(
+                _tag, (r.get("pub_time") or "—")[:16],
+                " | ".join(fnum(_g.get(k)) for k in _tg_labels)))
+        A("")
+        if len(tg_recs) >= 2:
+            A("> 共 {} 条竞彩总进球快照，仅展示首尾两端；某档赔率下降=资金流入该档位。".format(len(tg_recs)))
+        else:
+            A("> ⚠️ 仅 1 条竞彩总进球快照，无漂移可分析。")
+    else:
+        A("(竞彩总进球时序无快照：未开售或未采集)")
+    A("")
+
+    # --- 7.4 比分赔率时序（变动 Top8 摘要）---
+    A("### 7.4 比分赔率时序（初盘 → 即时变动 Top8）")
+    A("")
+    sc_recs = (odds_data.get("score_odds") or {}).get("records") or []
+    if len(sc_recs) >= 2:
+        def _score_map(rec):
+            mp = {}
+            for k in ("win_odds", "draw_odds", "lose_odds"):
+                for s, o in (rec.get(k) or {}).items():
+                    mp[s] = num(o)
+            return mp
+        _sm_first, _sm_last = _score_map(sc_recs[0]), _score_map(sc_recs[-1])
+        _deltas = []
+        for s in set(_sm_first) | set(_sm_last):
+            _io, _lo = _sm_first.get(s), _sm_last.get(s)
+            if _io and _lo:
+                # 相对变动排序（C-20261014-100）：绝对变动天然偏向高赔比分的机械波动；
+                # 负值=赔率下降=资金流入
+                _rel = (_lo - _io) / _io
+                _deltas.append((abs(_rel), _rel, s, _io, _lo))
+        _deltas.sort(reverse=True)
+        if _deltas:
+            A("| 比分 | 初盘赔率 | 即时赔率 | 相对变动 | 方向 |")
+            A("|:----:|:--------:|:--------:|:--------:|:----:|")
+            for _ar, _rel, s, _io, _lo in _deltas[:8]:
+                _tag = "↓ 资金流入" if _rel < 0 else "↑ 资金流出"
+                A("| {} | {} | {} | {:+.1%} | {} |".format(s, fnum(_io), fnum(_lo), _rel, _tag))
+            A("")
+            A("> 共 {} 个竞彩比分快照时刻（初盘 {} → 即时 {}）；按**相对变动**排序（绝对变动会偏向高赔比分），赔率下降=资金流入；|Δ|/赔率 ≥5% 视为显著，低于视为噪声。".format(
+                len(sc_recs), (sc_recs[0].get("pub_time") or "—")[:16], (sc_recs[-1].get("pub_time") or "—")[:16]))
+            # 自动结论行（C-20261014-100：显式点名资金流向，带 5% 噪声阈值）
+            _REL_TH = 0.05
+            _sig_in = [(s, _io, _lo, _rel) for _ar, _rel, s, _io, _lo in _deltas if _rel <= -_REL_TH]
+            if _sig_in:
+                A("")
+                A("> 💰 **资金净流入比分**（相对下降 ≥5%）：{}".format(
+                    "；".join("{}（{}→{}，{:+.1%}）".format(s, fnum(io), fnum(lo), rel)
+                              for s, io, lo, rel in _sig_in[:3])))
+            else:
+                A("")
+                A("> 💰 资金净流入比分：无（所有比分相对变动均 <5%，属噪声区间）")
+        else:
+            A("(初盘/即时快照无可对比的比分赔率)")
+    elif len(sc_recs) == 1:
+        A("> 仅 1 条竞彩比分快照（{}），无漂移可分析；31 列比分赔率不逐格展示。".format(
+            (sc_recs[0].get("pub_time") or "—")[:16]))
+    else:
+        A("(竞彩比分时序无快照：未开售或未采集)")
     A("")
     A("---")
     A("")
@@ -1865,7 +2479,8 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     if sof:
         if om_home or om_away:
             A("> 预测首发为历史连续性推算；**官方伤停**来自 SofaScore 赛前采集（prematch_sofascore_lineups，临场重采自动转官方确认），"
-              "已用于校正下方可用性/缺阵影响等特征。")
+              "已用于校正推算首发判定（见下方「官方校正·推算首发」行）；可用性/缺阵影响等数值特征保持纯推算口径"
+              "（与模型训练输入一致，官方名单不改写模型特征）。")
         else:
             A("> 预测首发/伤病缺阵为代理指标（由 player_availability_features 基于历史出场连续性推算，非官方伤病新闻）。"
               "官方伤停未采集：运行 collection/prematch_sofascore_lineups.py 后重算特征即可补齐。")
@@ -1874,6 +2489,19 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
         A("|------|:----:|:----:|")
         A("| 官方伤停 | {} | {} |".format(
             "、".join(om_home) if om_home else "无记录", "、".join(om_away) if om_away else "无记录"))
+        # C-20261014-092: 官方校正行（仅展示层）：推算首发中被官方确认缺阵的球员
+        if _official_corr:
+            def _corr_cell(_side):
+                _c = _official_corr.get(_side)
+                if _c is None:
+                    return "—"
+                if _c.get("unavailable"):
+                    return "官方缺阵 {} 人；推算首发不可用，未校正".format(_c["official_n"])
+                if _c["n_confirmed_out"] == 0:
+                    return "推算首发未含官方缺阵（{}人）".format(_c["official_n"])
+                return "{}（{}人确认缺阵，占官方名单{:.0%}）".format(
+                    "、".join(_c["confirmed_out"]), _c["n_confirmed_out"], _c["coverage_of_official"])
+            A("| 官方校正·推算首发 | {} | {} |".format(_corr_cell("home"), _corr_cell("away")))
         A("| 预计首发评分 | {} | {} |".format(
             fnum(_sf(sof, "pa_xi_rating_home")), fnum(_sf(sof, "pa_xi_rating_away"))))
         A("| 预计首发 xG | {} | {} |".format(
@@ -1939,6 +2567,23 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
         (classify_zhan_yi(home_std["rank"], total_teams) if home_std and standings_ok else "—"),
         (classify_zhan_yi(away_std["rank"], total_teams) if away_std and standings_ok else "—")))
     A("| 让球盘口 | {} | — |".format(hcp_line_disp))
+    # C-20261016-120: 数据源标注 + 与 matches 赛果库对拍（自检证伪仪表——赛果库缺漏当场现形）
+    if sofa_snap:
+        _diffs = []
+        for _s in standings:
+            _dv = next((d for d in standings_derived if d["team"] == _s["team"]), None)
+            if _dv is None:
+                _diffs.append("{}(赛果库无完赛记录)".format(_s["team"]))
+            elif _dv["played"] != _s["played"] or _dv["pts"] != _s["pts"]:
+                _diffs.append("{}(库{}场{}分 vs 权威{}场{}分)".format(
+                    _s["team"], _dv["played"], _dv["pts"], _s["played"], _s["pts"]))
+        if _diffs:
+            _tail = " 等 {} 队".format(len(_diffs)) if len(_diffs) > 3 else ""
+            _tag = "⚠️ " + "；".join(_diffs[:3]) + _tail
+        else:
+            _tag = "✓ 全部一致"
+        A("")
+        A("> 📊 排名数据源: SofaScore 权威积分榜快照 {} | 与 matches 赛果库对拍: {}".format(sofa_snap, _tag))
     A("")
     A("## 十五、技术统计对比")
     A("")
@@ -1988,6 +2633,9 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
                 _conflict_result.fund_home_prob,
                 _conflict_result.market_home_prob,
                 _conflict_result.conflict_score))
+    # C-20261014-086: 平局高危旗标追加风险标签（开关默认关；与 §一小注/影子共用同一判定）
+    if draw_flag_on and draw_flag and draw_flag["flag"]:
+        risk_labels.append(DRAW_FLAG_TEXT)
     A("```")
     A("⚠️  本场专属风险标签")
     A("─────────────────────────────────────────────────")
@@ -2082,7 +2730,11 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     if _warn_fail_count == 0:
         A("> ✅ 本场所有数据模块采集完整，模型输入质量良好。")
     else:
-        A("> ⚠️  本场有 {} 个数据模块处于 WARN/FAIL 状态，已在置信度计算中自动扣除相应分数。".format(_warn_fail_count))
+        # C-20261011-039：原文案「已在置信度计算中自动扣除相应分数」以偏概全——
+        # 仅三通道缺失降完整度基准、时序不足独立扣分（-3/-5），其余模块 WARN/FAIL 不影响置信度。
+        A("> ⚠️  本场有 {} 个数据模块处于 WARN/FAIL 状态。模块状态不直接进置信度扣分项：".format(_warn_fail_count))
+        A("> 竞彩时序 / 500 欧指 / SofaScore 赛前特征三通道缺失会降低完整度基准分；竞彩时序快照不足另有独立扣分（-3/-5）；")
+        A("> 其余模块（投注分析/球员伤病/积分榜等）的 WARN/FAIL 仅作数据质量提示，不影响综合置信度。")
     A("")
     A("---")
     A("")
@@ -2103,8 +2755,10 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     A("|--------|:----:|")
     if wdl_snap >= 2:
         sporttery_status = "已接入(≥2快照)"
-    elif result.get("_wdl_not_offered"):
-        sporttery_status = "未开售WDL(500兜底)"  # 玩法缺位，非数据缺失
+    elif _wdl_src == "fallback_deep":
+        sporttery_status = "未开售WDL(让球等已接入,500兜底)"  # 玩法缺位，非数据缺失
+    elif _wdl_src == "fallback_none":
+        sporttery_status = "未开售本场(500兜底)"  # 四玩法全缺位，非采集缺失
     elif wdl_snap == 1:
         sporttery_status = "仅1快照(缺漂移)"
     else:
@@ -2133,8 +2787,8 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
             "score": "ok" if top_scores else "missing",
             "tg": "ok" if tg_over is not None else "missing",
             "sporttery_timing": "ok" if wdl_snap >= 2 else (
-                "partial" if wdl_snap == 1 else (
-                    "degraded" if result.get("_wdl_not_offered") else "missing")),
+                "partial" if (wdl_snap == 1 and _wdl_src == "jc") else (
+                    "degraded" if wdl_snap == 1 else "missing")),
             "ev_engine": "ok" if ev_analysis is not None else "degraded",
             "ouzhi_500": "ok" if _has_real_500 else "missing",
             "betting_500": _betting_status_label(betting),
@@ -2163,6 +2817,14 @@ def render_report(m, odds_data, result, extra, report_path, conn=None):
     except Exception as _log_err:
         print(f"  ⚠️ 写入 build_log 失败: {_log_err}")
 
+    # C-20260930-002 Fix A：同口径快照追加落 prematch_data_quality（历史不覆盖；
+    # 归因引擎维度1权威源）。异常已在 helper 内全隔离。
+    _persist_prematch_quality(
+        conn, m, match_date, build_log, _quality_items, wdl_snap, report_path,
+        wdl_not_offered=bool(result.get("_wdl_not_offered")),
+        betting_crawl_status=_bet_crawl,
+    )
+
     return completeness
 
 
@@ -2178,20 +2840,26 @@ def compute_confidence(completeness, model_conf):
 
 
 def compute_confidence_breakdown(completeness, model_conf, divergence_std=0.0, n_sub=0,
-                                wdl_snap=0, total_sub=5, extra_penalty=0.0):
+                                wdl_snap=0, total_sub=5, extra_penalty=0.0, wdl_source="jc"):
     """P1-01: 综合置信度拆解 = 基准分 + 加分项 - 扣分项。
 
     返回 dict: {score, base, components: [{name, type, value, reason}], explanation}
     - base  = 0.5*completeness + 0.5*model_c （即旧 compute_confidence 输出，保持向后兼容基线）
     - 扣分项: 子模型分歧度 / 时序赔率快照不足 / 子模型覆盖度不足 / extra_penalty（如跨源冲突）
     - score = clamp(base - sum(deductions), 0, 100)
+    - C-20261002-005：wdl_source 三态（jc/fallback_deep/fallback_none）区分「真·竞彩单快照」
+      与「竞彩未开盘、500 初盘兜底」，避免把兜底静态初盘误述为时序快照（分值不变，仅文案分档）。
     """
     model_c = (model_conf or 0) * 100
-    base = int(round(0.5 * completeness + 0.5 * model_c))
+    # C-20261011-036：基准分 = 两个展示组件各自取整后求和，消除「逐项进位 vs 总和取整」
+    # 的 ±1 口径冲突（旧实现 base=round(41.5+19.5)=61 而组件显示 42+20=62）。
+    _c1 = int(round(0.5 * completeness))
+    _c2 = int(round(0.5 * model_c))
+    base = _c1 + _c2
     components = [
-        {"name": "数据完整度", "type": "base", "value": int(round(0.5 * completeness)),
+        {"name": "数据完整度", "type": "base", "value": _c1,
          "reason": "三通道（竞彩时序+500+SofaScore）各占 1/3，完整度 {}%".format(completeness)},
-        {"name": "模型方向概率", "type": "base", "value": int(round(0.5 * model_c)),
+        {"name": "模型方向概率", "type": "base", "value": _c2,
          "reason": "WDL 主预测方向概率 {}%".format(int(round(model_c)))},
     ]
     deductions = []
@@ -2208,13 +2876,19 @@ def compute_confidence_breakdown(completeness, model_conf, divergence_std=0.0, n
     if d:
         deductions.append({"name": "子模型分歧度", "type": "deduct", "value": -d,
                            "reason": "{}（std={:.3f}，{}）".format(lvl, divergence_std, lvl)})
-    # 时序赔率快照不足
+    # 时序赔率快照不足（C-20261002-005：按 WDL 来源分档，扣分口径不变）
     if wdl_snap == 0:
         d = 5
         r = "无时序赔率快照，缺少开盘→即时漂移信息"
-    elif wdl_snap == 1:
+    elif wdl_snap == 1 and wdl_source == "jc":
         d = 3
-        r = "仅 1 条时序赔率快照，无法观测漂移"
+        r = "仅 1 条竞彩时序快照，无法观测漂移"
+    elif wdl_snap == 1 and wdl_source == "fallback_deep":
+        d = 3
+        r = "竞彩未开售胜平负盘（已开让球/大小球/比分），WDL 为 500 欧指初盘兜底，无时序漂移"
+    elif wdl_snap == 1:  # fallback_none：四玩法全未开售
+        d = 3
+        r = "竞彩未开售本场，WDL 为 500 欧指初盘兜底，无时序漂移"
     else:
         d = 0
         r = ""
@@ -2296,7 +2970,8 @@ def build_match_dict(m, hcp_line):
         "home_team_cn": m["home_team_cn"],
         "away_team_cn": m["away_team_cn"],
         "league": m["league"],
-        "round": f"第{m['round']}轮",
+        # C-20261016-118: 兜底场次未命中 500 轮次时写 None，避免「第None轮」
+        "round": (f"第{m['round']}轮" if m["round"] is not None else None),
         "match_date": m["match_date"],
         "match_time": f"{m['match_date']} {m['match_time']}",
         "handicap_line": hcp_line,
@@ -2420,8 +3095,14 @@ def run(args):
         # 1. 定位竞彩时序 match_id（仅 WDL 表）
         sporttery_mid = find_sporttery_match_id(conn, home_cn, away_cn, m["match_date"])
         # 竞彩未开胜平负盘：WDL 无记录，但让球/大小球/比分有记录（深盘强队常见，非采集缺失）
-        wdl_not_offered = (sporttery_mid is None) and (
-            find_any_sporttery_match_id(conn, home_cn, away_cn, m["match_date"]) is not None)
+        # C-20261002-004：any_mid 必须传入 build_sporttery_odds，否则三表数据被丢弃
+        any_mid = (find_any_sporttery_match_id(conn, home_cn, away_cn, m["match_date"])
+                   if sporttery_mid is None else None)
+        wdl_not_offered = any_mid is not None
+        # C-20261002-005：WDL 来源三态，驱动扣分/§七/质检/元数据四处文案分档
+        #   jc=竞彩WDL有盘；fallback_deep=未开WDL但开了让球/大小/比分；fallback_none=四玩法全无
+        wdl_source = "jc" if sporttery_mid is not None else (
+            "fallback_deep" if any_mid is not None else "fallback_none")
         # 2. 组装 odds_data（500 欧指兜底：优先 live 欧指，回退 init 欧指）
         #    m["win/draw/lost"] 字段自 2026-10 起长期为 None，真实 500 欧指在
         #    odds500_ouzhi_summary 表（avg_live_win/draw/lose 等），故提前取
@@ -2431,12 +3112,33 @@ def run(args):
         fb_w = ouzhi.get("avg_live_win") or ouzhi.get("avg_init_win")
         fb_d = ouzhi.get("avg_live_draw") or ouzhi.get("avg_init_draw")
         fb_l = ouzhi.get("avg_live_lose") or ouzhi.get("avg_init_lose")
-        odds_data = build_sporttery_odds(conn, sporttery_mid, fb_w, fb_d, fb_l)
+        odds_data = build_sporttery_odds(conn, sporttery_mid, fb_w, fb_d, fb_l, other_mid=any_mid)
         wdl_snapshots = len(odds_data["wdl_odds"]["records"])
         timing_complete = wdl_snapshots >= 2  # 时序漂移分析需开盘/即时两条快照
         has_odds = wdl_snapshots >= 1
-        # 让球线
-        hcp_line = parse_hcp_line(m.get("handicap"))
+        # C-20261013-067：让球线源切换——竞彩整数 goalLine（SSOT），亚盘兜底已禁用（C-066）
+        # None → 跳过让球节（竞彩未开让球盘）
+        # C-20261016-116：原实现按 `matches JOIN odds500_match ON match_id` 取线，而
+        # 26/27 起 odds500_match.match_id 已统一为英文权威 mid（如 2026-10-16_Eintracht
+        # Frankfurt_1. FC Köln），该行 handicap 为空/不存在 → 全部 24 场误报「竞彩未开
+        # 让球盘」。真实让球线在竞彩中文名行（如 2026-10-17_法兰克福_科隆 = -1.0）。
+        # 改为按归一化队名 + ±3 天日期邻近、handicap 非空的行取最近日期值（复用 C-114 模式）。
+        _n_h, _n_a = _normalize_team_for_wdl(home_cn), _normalize_team_for_wdl(away_cn)
+        _m_base = datetime.strptime(m["match_date"], "%Y-%m-%d")
+        hcp_line = None
+        _hcp_best_diff = 999
+        for _r in conn.execute(
+            "SELECT match_date, home_team, away_team, handicap FROM matches "
+            "WHERE handicap IS NOT NULL "
+            "AND match_date BETWEEN date(?,'-3 day') AND date(?,'+3 day')",
+            (m["match_date"], m["match_date"]),
+        ).fetchall():
+            if (_normalize_team_for_wdl(_r[1]) != _n_h
+                    or _normalize_team_for_wdl(_r[2]) != _n_a):
+                continue
+            _diff = abs((datetime.strptime(_r[0], "%Y-%m-%d") - _m_base).days)
+            if _diff < _hcp_best_diff:
+                hcp_line, _hcp_best_diff = float(_r[3]), _diff
         odds_data["handicap_odds"]["line"] = hcp_line
 
         if not has_odds:
@@ -2462,17 +3164,20 @@ def run(args):
         result["_wdl_snapshots"] = wdl_snapshots
         result["_timing_complete"] = timing_complete
         result["_wdl_not_offered"] = wdl_not_offered
+        result["_wdl_source"] = wdl_source
 
-        # 5. 渲染报告（按比赛日 match_date 落目录）
-        out_dir = BASE_DIR / "docs" / "prematch_reports" / m['match_date'].replace("-", "")
+        # 5. 渲染报告（按 report_date 北京归一日 落目录，C-20261016-109；缺省回退 match_date）
+        _rd = m.get("report_date") or m['match_date']
+        out_dir = BASE_DIR / "docs" / "prematch_reports" / _rd.replace("-", "")
         out_dir.mkdir(parents=True, exist_ok=True)
-        fname = f"{m['league']}_{m['match_date']}_{home_cn}_vs_{away_cn}.md".replace("/", "-")
+        fname = f"{m['league']}_{_rd}_{home_cn}_vs_{away_cn}.md".replace("/", "-")
         report_path = out_dir / fname
         # C-20260922-053: 必须在 render_report 覆盖文件前解析赛前时间锚点
         replay_anchor, anchor_ev = (None, None)
         if args.replay:
             replay_anchor, anchor_ev = resolve_replay_anchor(m["match_date"], report_path)
-        completeness = render_report(m, odds_data, result, extra, report_path, conn)
+        completeness = render_report(m, odds_data, result, extra, report_path, conn,
+                                     is_replay=args.replay)
         print(f"  ✅ 报告: {report_path.name} (完整度 {completeness}%)")
         if args.replay:
             print(f"  ♻️ 回放落库锚点: {replay_anchor} (证据={anchor_ev})")
@@ -2480,8 +3185,11 @@ def run(args):
         # C-20260920-029: v5 Shadow 记录（仅 JSONL，不落库/不展示；键与 model_predictions 同口径）
         _shadow_v5 = result.get("_shadow_v5")
         if _shadow_v5:
+            # C-20261006-005: dist 仅供持久化，pop 出避免写入 jsonl（保持原记录口径）
+            _v5_dist = _shadow_v5.pop("dist", None) if isinstance(_shadow_v5, dict) else None
+            _v5_mid = f"{m['match_date']}_{m['home_team_en']}_{m['away_team_en']}"
             append_shadow_v5({
-                "match_id": f"{m['match_date']}_{m['home_team_en']}_{m['away_team_en']}",
+                "match_id": _v5_mid,
                 "gen_time": datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S"),
                 "match_date": m["match_date"],
                 "league": m["league"],
@@ -2491,6 +3199,14 @@ def run(args):
                 "v4_most_likely": result["score"].get("most_likely"),
                 "v5": _shadow_v5,
             })
+            # C-20261006-005: v5 全网格日常落库（修复 09-08 起 Score_grid 断供——此前仅
+            # backfill 一次性覆盖 ≤09-07；异常就地隔离，绝不影响报告生成与 jsonl 记录）。
+            if _v5_dist:
+                try:
+                    from score_prediction_module import save_score_prediction
+                    save_score_prediction(conn, _v5_mid, {"score_probs": _v5_dist})
+                except Exception as _e:
+                    print(f"  ⚠️ v5 网格落库失败（已隔离，不影响报告）: {type(_e).__name__}: {_e}")
 
         # C-20260921-036: TG λ 校准 Shadow 记录（仅 JSONL；factor=1.0 的 fallback 场也记录，
         # 便于监控激活率；生产 result['tg'] / model_predictions 值不变）
@@ -2507,6 +3223,19 @@ def run(args):
                 "tg_calib": _shadow_tg,
             })
 
+        # P1-1（C-20261002-006）: λ 拆分 bisect Shadow 记录（仅 JSONL，不落库/不展示；
+        # control 即生产 legacy 结果，shadow 仅替换 λ 拆分且总量逐位相同）
+        _shadow_ls = result.get("_shadow_lambda_split")
+        if _shadow_ls and not _shadow_ls.get("error") and not _shadow_ls.get("skipped"):
+            append_lambda_split_shadow({
+                "match_id": f"{m['match_date']}_{m['home_team_en']}_{m['away_team_en']}",
+                "gen_time": datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+                "match_date": m["match_date"],
+                "league": m["league"],
+                "home": home_cn, "away": away_cn,
+                "lambda_split": _shadow_ls,
+            })
+
         # C-20260921-040: TG 融合权重 Shadow 记录（仅 JSONL；w_odds=0.30 vs 生产 0.15）
         _shadow_wodds = result.get("_shadow_tg_wodds")
         if _shadow_wodds and not _shadow_wodds.get("error"):
@@ -2520,6 +3249,45 @@ def run(args):
                 "lambda_away": result["score"].get("lambda_away"),
                 "tg_wodds": _shadow_wodds,
             })
+
+        # C-20261013-072: class_weight 平局判别力 Shadow 记录（仅 JSONL;
+        # 4 个候选 ratio vs 生产 baseline_2.5; 赛后 JOIN post_match_review 做四门禁）
+        _shadow_cw = (result.get("hcp") or {}).get("_shadow_class_weight")
+        if _shadow_cw and not _shadow_cw.get("error"):
+            try:
+                from class_weight_shadow_writer import append_class_weight_shadow
+                append_class_weight_shadow({
+                    "match_id": f"{m['match_date']}_{m['home_team_en']}_{m['away_team_en']}",
+                    "gen_time": datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+                    "match_date": m["match_date"],
+                    "league": m["league"],
+                    "home": home_cn, "away": away_cn,
+                    "control": _shadow_cw.get("control"),
+                    "shadow": _shadow_cw.get("shadow"),
+                    "join_key": f"{m['match_date']}_{m['home_team_en']}_{m['away_team_en']}",
+                })
+            except Exception as _e:
+                print(f"  ⚠️ class_weight shadow jsonl 写入失败（已隔离）: {type(_e).__name__}: {_e}")
+
+        # C-20261014-086: 平局高危旗标 Shadow（恒开不受开关影响；每场必写一行含 flag=false，
+        # 覆盖率门禁分母；与 §一 Stacking 行同源 result["wdl"]，赛后 JOIN 实际比分做三门禁）
+        try:
+            _w = result.get("wdl") or {}
+            _df = compute_draw_high_risk_flag(
+                _w.get("home_prob"), _w.get("draw_prob"), _w.get("away_prob"))
+            if _df is not None:
+                append_draw_flag_shadow({
+                    "match_id": f"{m['match_date']}_{m['home_team_en']}_{m['away_team_en']}",
+                    "gen_time": datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+                    "match_date": m["match_date"],
+                    "league": m["league"],
+                    "home": home_cn, "away": away_cn,
+                    "flag": _df["flag"],
+                    "spread": _df["spread"],
+                    "p_draw": _df["p_draw"],
+                })
+        except Exception as _e:
+            print(f"  ⚠️ draw_flag shadow jsonl 写入失败（已隔离）: {type(_e).__name__}: {_e}")
 
         # 6. 汇总行 + 回写数据
         wdl = result["wdl"]; hcp = result["hcp"]; score = result["score"]; tg = result["tg"]
@@ -2574,10 +3342,12 @@ def run(args):
 
         rows.append({
             "match_date": m["match_date"],
+            "report_date": m.get("report_date"),  # C-20261016-109: 北京归一日（仅分组/汇总用）
             "league": m["league"],
             "home": home_cn, "away": away_cn,
             "home_en": m["home_team_en"], "away_en": m["away_team_en"],
-            "round": f"第{m['round']}轮",
+            # C-20261016-118: 兜底场次未命中 500 轮次时写 None，避免「第None轮」
+            "round": (f"第{m['round']}轮" if m["round"] is not None else None),
             "match_time": f"{m['match_date']} {m['match_time']}",
             "wdl": {"home_prob": wdl.get("home_prob"), "draw_prob": wdl.get("draw_prob"),
                     "away_prob": wdl.get("away_prob"), "prediction": wdl.get("prediction")},
@@ -2602,8 +3372,11 @@ def run(args):
             "_file": fname,
             "_wdl_snapshots": wdl_snapshots,
             "_wdl_not_offered": wdl_not_offered,
+            "_wdl_source": wdl_source,
             "_completeness": completeness,
             "lambda_alert": result.get("lambda_alert"),  # P1-13: λ 主客差值告警
+            # C-20261011-049: 5 子模型 WDL 概率随批透传落库（C-046⑧/C-048 影子线数据地基）
+            "sub_models": wdl.get("sub_models"),
         })
 
     # 6b. C-20260919-019: 方向分布哨兵——防止主客系统性反转再次悄无声息
@@ -2630,7 +3403,7 @@ def run(args):
         print("\n[回放模式] 跳过 _summary.md 汇总重写（避免覆盖已有汇总）")
     rows_by_date = {}
     for r in rows:
-        rows_by_date.setdefault(r["match_date"], []).append(r)
+        rows_by_date.setdefault(r.get("report_date") or r["match_date"], []).append(r)  # C-20261016-109 北京归一分组
 
     if not args.replay:
         for md, day_rows in rows_by_date.items():
@@ -2643,6 +3416,15 @@ def run(args):
             print(f"✅ 已回写 {len(ids)} 场到 model_predictions: {ids}")
         except Exception as e:
             print(f"⚠️ 回写 model_predictions 失败: {type(e).__name__}: {e}")
+
+        # C-20261011-049: 5 子模型 WDL 概率落库（C-046⑧/C-048 影子线数据地基）。
+        # 独立 try/except 守卫：失败只告警，不阻断主预测回写与报告产出。
+        try:
+            from prediction_db_writer import batch_save_submodel_probs
+            _n_sub = batch_save_submodel_probs(rows)
+            print(f"✅ 已回写子模型概率 {_n_sub} 行（{len(rows)} 场 × 最多 15，Submodel_* 类型）")
+        except Exception as e:
+            print(f"⚠️ 子模型概率回写失败（不影响主链路）: {type(e).__name__}: {e}")
 
     conn.close()
     print(f"\n完成。报告目录: {BASE_DIR / 'docs' / 'prematch_reports'}（按比赛日 match_date 分目录）")

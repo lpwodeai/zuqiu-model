@@ -7,6 +7,7 @@ from itertools import product
 from pathlib import Path
 from datetime import datetime
 from t006_score_predictor_v5 import predict_score_distribution_v5
+from feature_utils import build_match_alignment
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = BASE_DIR / "data" / "odds.db"
@@ -142,19 +143,12 @@ def predict_score_distribution(wdl_history, handicap_history=None, tg_history=No
         except Exception:
             wdl_probs = None
 
-    # 总进球期望（tg_history 均值，可选）
+    # 总进球期望（tg_history 去水后归一化概率 × 档位进球数求和，可选；7+ 档按 7 计）。
+    # M1 修复③：原实现按 Σ g×原始赔率 加权（未去水/未归一化），Σg 高达数百被 clamp 4.5 顶格；
+    # 复用本模块 calculate_lambda_from_total_goals 的 1/odds 去水口径（与 serving 层 tg_implied_expected 一致）。
     tg_expected = None
     if tg_history:
-        latest_tg = tg_history[-1]
-        keys = ['goals_0', 'goals_1', 'goals_2', 'goals_3', 'goals_4', 'goals_5', 'goals_6', 'goals_7_plus']
-        vals = []
-        for i, k in enumerate(keys):
-            v = latest_tg.get(k)
-            if v is not None:
-                g = 7 if k == 'goals_7_plus' else i
-                vals.append(g * v)
-        if vals:
-            tg_expected = sum(vals)
+        tg_expected, _ = calculate_lambda_from_total_goals(tg_history)
 
     if wdl_probs is None:
         # 无赔率时回退：保持均线 λ（近似 v4 无赔率路径）
@@ -231,6 +225,38 @@ def load_production_wdl_probs(conn, match_id):
     return None
 
 
+# build_match_alignment 反查缓存：{history_table: {matches_match_id: [history_match_id, ...]}}。
+# 对齐映射仅由库内数据决定，进程内按表构建一次，避免逐场全表重扫。
+_ALIGNMENT_INV_CACHE = {}
+
+
+def _resolve_history_match_ids(conn, history_table, match_id):
+    """matches 表 match_id（英文 SofaScore 键）→ 赔率历史表 match_id 候选列表。
+
+    M1 修复①：原实现对 wdl/handicap/total_goals 三张中文键历史表做英文 match_id 裸 = 直查
+    （26/27 赛季命中率 0/298），改为经 build_match_alignment 四通道（直等/桥表/match_id_en/
+    中→英译名唯一候选）对齐后反查。唯一候选守卫不放宽：无候选返回空列表，保守漏配回退
+    无历史（错配不可接受，漏配退回默认值是可接受降级）。
+    """
+    if history_table not in _ALIGNMENT_INV_CACHE:
+        inv = {}
+        for hist_mid, matches_mid in build_match_alignment(conn, history_table).items():
+            inv.setdefault(matches_mid, []).append(hist_mid)
+        _ALIGNMENT_INV_CACHE[history_table] = inv
+    return _ALIGNMENT_INV_CACHE[history_table].get(match_id, [])
+
+
+def _fetch_history_rows(conn, history_table, columns, match_id):
+    """按四通道对齐候选取历史时序行（多写入变体候选合并，按 timestamp 排序）。"""
+    ids = _resolve_history_match_ids(conn, history_table, match_id)
+    if not ids:
+        return []
+    placeholders = ','.join('?' * len(ids))
+    return conn.execute(
+        f'SELECT {columns} FROM {history_table} WHERE match_id IN ({placeholders}) ORDER BY timestamp',
+        ids).fetchall()
+
+
 def analyze_match_score(match_id):
     conn = sqlite3.connect(DB_PATH)
     
@@ -245,18 +271,17 @@ def analyze_match_score(match_id):
     home_team, away_team, actual_score, actual_total_goals = match
     
     wdl_history = []
-    cursor.execute('SELECT timestamp, win_a, draw, win_b FROM wdl_history WHERE match_id = ? ORDER BY timestamp', (match_id,))
-    for row in cursor.fetchall():
+    for row in _fetch_history_rows(conn, 'wdl_history', 'timestamp, win_a, draw, win_b', match_id):
         wdl_history.append({'timestamp': row[0], 'win_a': row[1], 'draw': row[2], 'win_b': row[3]})
-    
+
     handicap_history = []
-    cursor.execute('SELECT timestamp, hcp_win, hcp_draw, hcp_lose FROM handicap_history WHERE match_id = ? ORDER BY timestamp', (match_id,))
-    for row in cursor.fetchall():
+    for row in _fetch_history_rows(conn, 'handicap_history', 'timestamp, hcp_win, hcp_draw, hcp_lose', match_id):
         handicap_history.append({'timestamp': row[0], 'hcp_win': row[1], 'hcp_draw': row[2], 'hcp_lose': row[3]})
-    
+
     tg_history = []
-    cursor.execute('SELECT timestamp, goals_0, goals_1, goals_2, goals_3, goals_4, goals_5, goals_6, goals_7_plus FROM total_goals_history WHERE match_id = ? ORDER BY timestamp', (match_id,))
-    for row in cursor.fetchall():
+    for row in _fetch_history_rows(conn, 'total_goals_history',
+                                   'timestamp, goals_0, goals_1, goals_2, goals_3, goals_4, goals_5, goals_6, goals_7_plus',
+                                   match_id):
         tg_history.append({
             'timestamp': row[0],
             'goals_0': row[1], 'goals_1': row[2], 'goals_2': row[3],
@@ -381,13 +406,23 @@ def save_score_prediction(conn, match_id, analysis, model_name=SCORE_MODEL_NAME)
     conn.commit()
 
 
-def run_full_score_backtest(persist=False):
+def run_full_score_backtest(persist=False, since=None, until=None):
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA busy_timeout = 5000")
     conn.execute("PRAGMA journal_mode = WAL")
-    
+
     cursor = conn.cursor()
-    cursor.execute('SELECT match_id, home_team, away_team, actual_score, actual_total_goals FROM matches ORDER BY match_id')
+    # C-20261006-005: since/until 可选日期过滤（按 match_id 前缀日期，用于缺口回填）
+    sql = 'SELECT match_id, home_team, away_team, actual_score, actual_total_goals FROM matches'
+    conds, params = [], []
+    if since:
+        conds.append('match_id >= ?'); params.append(since)
+    if until:
+        conds.append('match_id <= ?'); params.append(until + '_~')
+    if conds:
+        sql += ' WHERE ' + ' AND '.join(conds)
+    sql += ' ORDER BY match_id'
+    cursor.execute(sql, params)
     matches = cursor.fetchall()
     
     results = []

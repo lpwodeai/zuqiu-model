@@ -3,7 +3,7 @@
 import json
 from curl_cffi import requests
 
-BASE = "https://api.sofascore.com/api/v1"
+BASE = "https://www.sofascore.com/api/v1"  # C-20260930-004: api. 子域已 403，迁移至主域路径
 EVENTS = ["16421047", "16421052", "16421061", "16421053"]
 
 for eid in EVENTS:

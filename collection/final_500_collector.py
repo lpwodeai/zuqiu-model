@@ -36,8 +36,10 @@ import os
 import re
 import json
 import time
+import shutil
 import sqlite3
 import argparse
+import subprocess
 from pathlib import Path
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -80,7 +82,11 @@ FENXI_URL = "https://odds.500.com/fenxi/{page}-{fid}.shtml"
 COOKIE_FILE = MODEL_PROJECT_ROOT / "data" / "cookies_500.json"
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0")
+      "(KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0")
+# C-20261002-002：EO-Bot-Captcha-Token 与导出浏览器的 UA 主版本强绑定，
+# UA 不匹配时即使 token 新鲜也返回 ~2.1KB「Security Verification」拦截页（与 TLS 指纹无关）。
+# 用户 Edge 升级后必须同步本常量，或在 cookies_500.json 写 "__user_agent" 覆盖（优先级更高）。
+# 实测版本沿革：Chrome/152（旧）→ Edge153（C-20260922-054 注释）→ Edge154.0.4258.37（2026-10-02）。
 
 # 五大联赛 stid 映射：赛季 -> 联赛 -> (stid, 轮数)
 # 轮数约定：英超/西甲/意甲 38 轮（20 队）；德甲 34 轮（18 队）；
@@ -228,8 +234,9 @@ class Client:
 
     def __init__(self, delay=0.5, cookies=None):
         if curl_requests is not None:
-            # C-20260922-054: Cookie 与用户 Edge 153 UA 绑定（project_memory 硬约束），
-            # 必须 impersonate="edge" 才能通过腾讯云 EdgeOne 人机验证；chrome 指纹会被拦截。
+            # C-20260922-054 / C-20261002-002: Cookie 与用户 Edge UA 主版本绑定
+            # （实测 Edge154，见上方 UA 常量注释），必须 impersonate="edge" 且 UA 一致
+            # 才能通过腾讯云 EdgeOne；chrome 指纹或旧版 UA 均被拦截。
             self.session = curl_requests.Session(impersonate="edge")
         else:
             self.session = requests.Session()
@@ -282,6 +289,46 @@ class Client:
         if wait > 0:
             time.sleep(wait)
 
+    @staticmethod
+    def _is_arith_challenge(html: str) -> bool:
+        """C-20261011-033：EdgeOne 第一关算术 JS 挑战（~1KB），与 ~2.1KB 真人 captcha 页区分。
+
+        特征：混淆 JS 现场算出 __tst_status / EO_Bot_Ssid 两个 cookie 后自动 reload，
+        纯算术无交互，可由 node 动态执行求解；真人验证页含 TencentEOCaptchaWidget。
+        """
+        return (len(html) < 5000 and "__tst_status" in html
+                and "EO_Bot_Ssid" in html and "TencentEOCaptchaWidget" not in html)
+
+    def _solve_arith_challenge(self, html: str) -> bool:
+        """用 node 执行挑战 JS，把算出的 cookie 注入本会话。node 缺失/失败时优雅回退。"""
+        if not shutil.which("node"):
+            return False
+        m = re.search(r"<script>(.*?)</script>", html, re.S)
+        if not m:
+            return False
+        harness = (
+            "let cookies=[];\n"
+            "const document={set cookie(v){cookies.push(v);},"
+            "get cookie(){return cookies.join('; ');}};\n"
+            "const location={href:''};function setTimeout(){};\n"
+            + m.group(1)
+            + "\nconst o={};for(const c of cookies){o[c.split('=')[0]]=c;}"
+            "console.log(JSON.stringify(o));"
+        )
+        try:
+            p = subprocess.run(["node", "-e", harness], capture_output=True,
+                               text=True, timeout=20)
+            lines = [ln for ln in p.stdout.strip().splitlines() if ln.startswith("{")]
+            if not lines:
+                return False
+            solved = json.loads(lines[-1])
+            for kv in solved.values():
+                name, value = kv.split(";", 1)[0].split("=", 1)
+                self.session.cookies.set(name, value, domain=".500.com", path="/")
+            return bool(solved)
+        except Exception:
+            return False
+
     def get(self, url, referer="https://www.500.com/"):
         last_exc = None
         for attempt in range(3):
@@ -290,6 +337,11 @@ class Client:
             try:
                 r = self.session.get(url, headers=headers, timeout=20)
                 r.encoding = "gb18030"
+                # C-20261011-033：命中算术挑战时自动求解并重放一次（真人 captcha 页不处理）
+                if self._is_arith_challenge(r.text) and self._solve_arith_challenge(r.text):
+                    self._throttle()
+                    r = self.session.get(url, headers=headers, timeout=20)
+                    r.encoding = "gb18030"
                 return r
             except Exception as e:
                 # 瞬时断连/超时（如切热点导致 IP 变更）自动重试，避免整个进程崩溃
@@ -869,7 +921,17 @@ def collect_match(client, conn, item, season, league, pages):
     if "ouzhi" in pages:
         r = client.get(FENXI_URL.format(page="ouzhi", fid=fid), referer="https://odds.500.com/fenxi/")
         if r.status_code == 200:
-            result["ouzhi"] = parse_ouzhi(BeautifulSoup(r.text, "html.parser"))
+            soup_ouzhi = BeautifulSoup(r.text, "html.parser")
+            # C-20261011-034：风控页/空解析不得覆写既有好数据（parse_ouzhi 恒返回 truthy dict，
+            # 历史上 --no-skip-existing 遇 captcha 页会把 summary 写成 NULL，company_count 归零）
+            if _is_anti_bot_page(soup_ouzhi):
+                print(f"  [{fid}] 欧指页命中反爬拦截，跳过写库（保留旧值）")
+            else:
+                parsed_ouzhi = parse_ouzhi(soup_ouzhi)
+                if parsed_ouzhi["companies"] or parsed_ouzhi["summary"].get("company_count"):
+                    result["ouzhi"] = parsed_ouzhi
+                else:
+                    print(f"  [{fid}] 欧指解析为空（风控/布局异常），跳过写库（保留旧值）")
 
     if "stat" in pages and is_finished:
         r = client.get(FENXI_URL.format(page="stat", fid=fid), referer="https://odds.500.com/fenxi/")

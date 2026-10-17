@@ -36,3 +36,28 @@ deployment/trigger_state.json
 docs/concept_drift/
 docs/reliability_gate/
 docs/knowledge_iteration/
+
+# C-20260928-034: sporttery 一次性审计 CSV 兜底（已迁 logs/audit/，logs/ 已 ignore，
+# 此处双保险即使 logs/ 规则被改也不被追踪）
+sporttery_*.csv
+
+# C-20260929-005: 根目录一次性 test_*.mjs 诊断脚本兜底
+# （已归档至 scripts/archive/，scripts/ 已 ignore，此处双保险防止根目录再残留）
+test_*.mjs
+
+# C-20260929-007: 根目录 VERSION_*.md 发布清单兜底
+# （VERSION_RELEASE_v2.0.md 已归档至 docs/archive/，docs/ 已 ignore，此处双保险防止根目录再残留）
+VERSION_*.md
+
+# C-20260928-035: CI 用 pip-compile 自动生成的精确版本锁文件不入仓
+# （每次 push 由 test job 重新生成，避免与 requirements.txt 双源不同步）
+requirements.lock
+
+# C-20261017-128: 实验脚本可再生缓存（FEAT_CACHE/PRED_CACHE/CACHE 常量产物，非交付模型）
+scripts/_feat_cache_*.pkl
+scripts/_pred_cache_*.pkl
+scripts/_avariant_base.pkl
+# 门禁运行时水印状态（每次扫描覆写；基线 team_pollution_gate_baseline.json 仍入仓）
+scripts/team_pollution_gate_state.json
+# 根目录误生成的空运行时库（正式库在 data/，data/ 已忽略）
+/predictions.db

@@ -420,7 +420,7 @@ def main():
 - **训练数据**: odds.db 5252场比赛
 
 ### 数据来源
-- SofaScore API (api.sofascore.com) — 球队/教练/阵容/球员数据
+- SofaScore API (www.sofascore.com/api/v1) — 球队/教练/阵容/球员数据
 - 竞彩网 — 胜平负/让球/比分/总进球赔率数据
 """
     

@@ -264,6 +264,12 @@ def run_retrain(config, state, force=False):
 
     try:
         cmd = [sys.executable, str(script_path)]
+        # C-20261012-054 修复：Windows 中文控制台下子进程中文输出为 GBK，
+        # encoding='utf-8' 无 errors 兜底会致 reader 线程 UnicodeDecodeError、
+        # stdout 全丢（历史 7 次失败均因此看不到真实原因）。
+        # ① env 注入 PYTHONIOENCODING=utf-8 让子进程直接输出 UTF-8；
+        # ② errors='replace' 兜底 C 扩展直写控制台的 GBK 字节。
+        env = {**os.environ, 'PYTHONIOENCODING': 'utf-8'}
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -271,6 +277,8 @@ def run_retrain(config, state, force=False):
             cwd=str(BASE_DIR),
             timeout=600,
             encoding='utf-8',
+            errors='replace',
+            env=env,
         )
 
         elapsed = time.time() - start_time

@@ -7,7 +7,15 @@
 # CI 红灯：requests、beautifulsoup4 漏装，见 change_log
 # C-20260927-005；本文件为其后的治本措施）。
 #
-# 版本策略：不锁定版本，安装最新兼容版（与历史 CI 行为一致）。
+# 版本策略（C-20260928-035 调整，治本方案 ③）：
+#   - 开发期：本文件不锁版本（"安装最新兼容版"，与历史行为一致），便于
+#     本机与各开发者升级到最新版；
+#   - CI 侧：test job 先 `pip-compile requirements.txt -o requirements.lock`
+#     生成精确版本锁文件（不入仓、随 push 刷新），再 `pip install -r
+#     requirements.lock`——CI 6 矩阵重现性 100%、避免"今天绿明天红"；
+#   - 安全侧：新增独立 audit job 跑 `pip-audit -r requirements.txt`
+#     扫描 CVE（PyPI Advisory + OSV.dev），发现已知漏洞即阻断 CI，
+#     推动开发者升级或显式 `--ignore-vuln <ID>` 豁免。
 # 本机验证基线（2026-09-27，Python 3.14.6）：
 #   numpy 2.4.6 / pandas 3.0.3 / scipy 1.18.0 / scikit-learn 1.9.0
 #   joblib 1.5.3 / xgboost 3.3.0 / lightgbm 4.6.0 / optuna 4.9.0
@@ -51,3 +59,31 @@ pytest
 #   APScheduler  定时训练调度 scripts/scheduled_learning.py
 #   shap         SHAP 特征贡献分析 scripts/shap_analyzer.py
 # ============================================================
+
+# ============================================================
+# CI 流程落地（C-20260928-035 治本方案 ③）
+# ------------------------------------------------------------
+# .github/workflows/python-tests.yml 三 job 结构：
+#   test  (matrix 6: ubuntu/windows × 3.11/3.12/3.14)
+#         pip install pip-tools
+#         pip-compile --no-emit-options -o requirements.lock requirements.txt
+#         pip install -r requirements.lock      # 装精确版本
+#         pytest tests -v
+#   lint  (1: ubuntu-latest × 3.12, continue-on-error=true)
+#         flake8 + pylint                       # 仅报告，不阻断
+#   audit (1: ubuntu-latest × 3.12, 默认阻断)   # C-035 新增
+#         pip install pip-audit
+#         pip-audit -r requirements.txt         # 扫描 CVE（PyPI Advisory + OSV.dev）
+#                                                # 发现已知漏洞退出码非零，阻断 CI
+#
+# CVE 豁免流程：
+#   1) 在 workflow 的 audit job 的 pip-audit 命令追加 `--ignore-vuln <CVE-ID>`
+#   2) 在本文件头注释登记豁免原因 + 期限 + 跟踪 issue
+#   3) 上游修复后立即移除豁免并升级到修复版本
+#
+# 锁文件不入仓：
+#   .gitignore 已加 `requirements.lock` 规则，CI 每次 push 重新
+#   生成，永不入 git 索引——避免 lock 与 requirements.txt 双源
+#   不同步。
+# ============================================================
+

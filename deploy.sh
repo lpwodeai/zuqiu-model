@@ -67,19 +67,48 @@ print_success "Node.js: $(node --version)"
 print_success "PM2: $(pm2 --version)"
 echo ""
 
-# ===== 2. 安装依赖 =====
-print_step "2/6" "安装项目依赖"
+# ===== 2. 安装依赖并构建前端 =====
+# C-20260927-025（R2 修复）：client/dist 被 .gitignore 排除、不随仓库分发，
+# 且生产模式 server/index.js 仅托管 client/dist；原 `npm install --production`
+# 跳过 vite/react/antd（均在 devDependencies）且全程无构建步骤——全新 Ubuntu
+# 部署后 API 正常但前端 404。现改为：全量安装 → 本地构建 dist → 裁剪 devDeps。
+print_step "2/6" "安装依赖并构建前端"
 cd "$APP_DIR"
 
 if [ ! -d "node_modules" ]; then
-    npm install --production || {
+    # 全量安装（含 devDependencies 中的 vite/rollup/terser 构建工具链）
+    npm install || {
         print_error "依赖安装失败"
         exit 1
     }
-    print_success "依赖安装完成"
+    print_success "依赖安装完成（含前端构建工具链）"
 else
     echo -e "${YELLOW}[跳过]${NC} node_modules 已存在"
 fi
+
+# 构建前端生产产物（fresh 部署必做；产物不入库，只能在服务器本地构建）
+if [ ! -f "client/dist/index.html" ]; then
+    # 重复部署时 devDeps 可能已被文末 npm prune 裁剪，补装以提供 vite
+    if [ ! -d "node_modules/vite" ]; then
+        echo -e "${YELLOW}[提示]${NC} 构建工具缺失（devDeps 已裁剪），重新安装 ..."
+        npm install || {
+            print_error "构建工具补装失败"
+            exit 1
+        }
+    fi
+    npm run client:build || {
+        print_error "前端构建失败 (npm run client:build)"
+        exit 1
+    }
+    print_success "前端构建完成: client/dist"
+else
+    echo -e "${YELLOW}[跳过]${NC} client/dist 已存在（更新前端代码后需手动重建：npm install && npm run client:build && npm prune --omit=dev）"
+fi
+
+# 裁剪开发依赖，保持生产运行时精简（构建已完成，devDeps 不再需要）
+npm prune --omit=dev || {
+    echo -e "${YELLOW}[警告]${NC} npm prune 未成功，devDependencies 保留在 node_modules（不影响服务运行）"
+}
 echo ""
 
 # ===== 3. 创建目录 =====

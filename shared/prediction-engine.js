@@ -906,8 +906,9 @@ class PredictionEngine {
 
     const calibrated = [];
     for (let i = 0; i < 3; i++) {
-      const a = calibrationParams[i].a || 1.0;
-      const b = calibrationParams[i].b || 0.0;
+      // C-20261004-004: 用 ?? 修复 a||1.0 / b||0.0 吞零 bug（a=0 会被误吃成 1.0）
+      const a = calibrationParams[i].a ?? 1.0;
+      const b = calibrationParams[i].b ?? 0.0;
       const logit = a * probs[i] + b;
       calibrated.push(1 / (1 + Math.exp(-logit)));
     }
@@ -917,6 +918,20 @@ class PredictionEngine {
       return calibrated.map(p => p / total);
     }
     return probs;
+  }
+
+  /**
+   * C-20261004-004: 从 canonical JSON 校准参数里按联赛选择扁平 [{a,b}x3]。
+   * canonical: { global: [...], leagues: { 英超: [...], ... } }
+   * 兼容旧格式（直接数组 = 全局）。降级链: 联赛缺参 → global → null(不校准)。
+   */
+  _selectCalibrationParams(calibration, league) {
+    if (!calibration) return null;
+    if (calibration.leagues && calibration.global) {
+      const lg = calibration.leagues[league];
+      return Array.isArray(lg) && lg.length === 3 ? lg : calibration.global;
+    }
+    return Array.isArray(calibration) ? calibration : null;
   }
 
   buildFeatures(teamA, teamB, options, matchContext) {
@@ -1356,14 +1371,17 @@ class PredictionEngine {
     const normalizedFeatures = this.normalizeFeatures(features);
     const prob = this.treeModelPredict(this.xgbModel, normalizedFeatures);
 
-    const calibrated = this.applyPlattCalibration([prob.winA, prob.draw, prob.winB], this.xgbCalibration);
+    // C-20261004-004: 按联赛选择 Platt 参数；入参类序 [winB, draw, winA] 对齐训练类序 0/1/2
+    const league = LEAGUE_NAME_MAP[teamA.league ?? teamA.leagueName ?? ''] || LEAGUE_NAME_MAP[teamB.league ?? ''] || '';
+    const calParams = this._selectCalibrationParams(this.xgbCalibration, league);
+    const calibrated = this.applyPlattCalibration([prob.winB, prob.draw, prob.winA], calParams);
 
     return {
       winA: calibrated[2],
       draw: calibrated[1],
       winB: calibrated[0],
       model: 'XGBoost',
-      calibrated: this.xgbCalibration !== null
+      calibrated: calParams !== null
     };
   }
 
@@ -1372,14 +1390,17 @@ class PredictionEngine {
     const normalizedFeatures = this.normalizeFeatures(features);
     const prob = this.treeModelPredict(this.lgbModel, normalizedFeatures);
 
-    const calibrated = this.applyPlattCalibration([prob.winA, prob.draw, prob.winB], this.lgbCalibration);
+    // C-20261004-004: 按联赛选择 Platt 参数；入参类序 [winB, draw, winA] 对齐训练类序 0/1/2
+    const league = LEAGUE_NAME_MAP[teamA.league ?? teamA.leagueName ?? ''] || LEAGUE_NAME_MAP[teamB.league ?? ''] || '';
+    const calParams = this._selectCalibrationParams(this.lgbCalibration, league);
+    const calibrated = this.applyPlattCalibration([prob.winB, prob.draw, prob.winA], calParams);
 
     return {
       winA: calibrated[2],
       draw: calibrated[1],
       winB: calibrated[0],
       model: 'LightGBM',
-      calibrated: this.lgbCalibration !== null
+      calibrated: calParams !== null
     };
   }
 

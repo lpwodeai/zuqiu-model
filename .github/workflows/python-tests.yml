@@ -31,10 +31,15 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
+    - name: Install dependencies (Continuous Locking, C-20260928-035)
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt  # 依赖唯一事实来源，新增第三方 import 必须同步该文件
+        pip install pip-tools
+        # C-20260928-035: CI 用 pip-compile 生成精确版本 lock 文件（不入仓，.gitignore 已排除）
+        # 解决"不锁版本，CI 重现性不足"风险；lock 每次随 push 刷新无需人工维护
+        pip-compile --no-emit-options --output-file=requirements.lock requirements.txt
+        pip install -r requirements.lock
+        # 依赖唯一事实来源仍为 requirements.txt，新增第三方 import 必须同步该文件
 
     - name: Prepare runtime dirs
       run: |
@@ -66,3 +71,26 @@ jobs:
     - name: Run pylint
       run: |
         pylint scripts features modules collection --disable=all --enable=E,W,F
+
+  audit:
+    # C-20260928-035: 依赖 CVE 安全扫描（独立 job，发现已知漏洞即阻断 CI）
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install pip-audit
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-audit
+
+    - name: Audit dependencies for CVE
+      run: |
+        # 扫描 requirements.txt 中的依赖是否有已知 CVE
+        # 数据源：PyPI Advisory Database + OSV.dev
+        # 发现任何已知漏洞时退出码非零，阻断 CI（推动开发者升级或显式 --ignore-vuln）
+        pip-audit -r requirements.txt

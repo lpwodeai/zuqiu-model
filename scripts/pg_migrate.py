@@ -42,8 +42,15 @@ SCHEMA_JSON = PROJECT_ROOT / "scripts" / "pg_migration_schema.json"
 EXPORT_DIR = PROJECT_ROOT / "data" / "pg_export"
 
 PG_HOST, PG_PORT = "localhost", 5432
-PG_USER = "postgres"
-PG_PASSWORD = os.environ.get("PG_PASSWORD", "postgres")
+# C-20260929-009：弱密码加固——默认值由 postgres 改为强制 env 取，
+# 防止弱密码登录（pgsrv 已废弃 1 月，详见 §9.16 ⑮）
+PG_USER = os.environ.get("PG_USER")
+PG_PASSWORD = os.environ.get("PG_PASSWORD")
+if not PG_USER or not PG_PASSWORD:
+    raise RuntimeError(
+        "pg_migrate 需显式配置 PG_USER/PG_PASSWORD 环境变量（C-20260929-009 加固，"
+        "防止默认 postgres/postgres 弱密码；pgsrv 已废弃 1 月，详见 §9.16 ⑮）"
+    )
 PG_DB = "odds"
 
 # 三张分区大表

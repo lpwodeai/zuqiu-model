@@ -1,0 +1,9210 @@
+{
+ "total_strings": 685,
+ "summary": {
+  "ALL_AGREE": 661,
+  "OLD_AGREE_NEW_DIFF": 0,
+  "OLD_DISAGREE": 21,
+  "NEW_UNRESOLVED": 3,
+  "RAW_ONLY_DIFF": 336
+ },
+ "buckets": {
+  "ALL_AGREE": [
+   {
+    "in": "1. FC Heidenheim",
+    "tm": "海登海姆",
+    "fu": "海登海姆",
+    "tn": "1. FC Heidenheim",
+    "c_tm": "1. FC Heidenheim",
+    "c_fu": "1. FC Heidenheim",
+    "c_tn": "1. FC Heidenheim"
+   },
+   {
+    "in": "1. FC Koln",
+    "tm": "科隆",
+    "fu": "1. FC Koln",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "1. FC Köln",
+    "tm": "科隆",
+    "fu": "科隆",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "1. FC Nurnberg",
+    "tm": "纽伦堡",
+    "fu": "1. FC Nurnberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "1. FC Nürnberg",
+    "tm": "纽伦堡",
+    "fu": "1. FC Nürnberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "1. FC Union Berlin",
+    "tm": "柏林联合",
+    "fu": "柏林联合",
+    "tn": "1. FC Union Berlin",
+    "c_tm": "1. FC Union Berlin",
+    "c_fu": "1. FC Union Berlin",
+    "c_tn": "1. FC Union Berlin"
+   },
+   {
+    "in": "1. FSV Mainz 05",
+    "tm": "美因茨",
+    "fu": "美因茨",
+    "tn": "1. FSV Mainz 05",
+    "c_tm": "1. FSV Mainz 05",
+    "c_fu": "1. FSV Mainz 05",
+    "c_tn": "1. FSV Mainz 05"
+   },
+   {
+    "in": "AC Ajaccio",
+    "tm": "阿雅克肖",
+    "fu": "AC Ajaccio",
+    "tn": "Ajaccio",
+    "c_tm": "Ajaccio",
+    "c_fu": "Ajaccio",
+    "c_tn": "Ajaccio"
+   },
+   {
+    "in": "AC Chievo Verona",
+    "tm": "切沃",
+    "fu": "AC Chievo Verona",
+    "tn": "Chievo Verona",
+    "c_tm": "Chievo Verona",
+    "c_fu": "Chievo Verona",
+    "c_tn": "Chievo Verona"
+   },
+   {
+    "in": "AC Milan",
+    "tm": "AC米兰",
+    "fu": "AC米兰",
+    "tn": "AC Milan",
+    "c_tm": "AC Milan",
+    "c_fu": "AC Milan",
+    "c_tn": "AC Milan"
+   },
+   {
+    "in": "AC Monza",
+    "tm": "蒙扎",
+    "fu": "AC Monza",
+    "tn": "Monza",
+    "c_tm": "Monza",
+    "c_fu": "Monza",
+    "c_tn": "Monza"
+   },
+   {
+    "in": "AC Pisa",
+    "tm": "比萨",
+    "fu": "AC Pisa",
+    "tn": "Pisa",
+    "c_tm": "Pisa",
+    "c_fu": "Pisa",
+    "c_tn": "Pisa"
+   },
+   {
+    "in": "ACF Fiorentina",
+    "tm": "佛罗伦萨",
+    "fu": "ACF Fiorentina",
+    "tn": "Fiorentina",
+    "c_tm": "Fiorentina",
+    "c_fu": "Fiorentina",
+    "c_tn": "Fiorentina"
+   },
+   {
+    "in": "AC米兰",
+    "tm": "AC米兰",
+    "fu": "AC米兰",
+    "tn": "AC Milan",
+    "c_tm": "AC Milan",
+    "c_fu": "AC Milan",
+    "c_tn": "AC Milan"
+   },
+   {
+    "in": "AFC",
+    "tm": "阿森纳",
+    "fu": "AFC",
+    "tn": "Arsenal",
+    "c_tm": "Arsenal",
+    "c_fu": "Arsenal",
+    "c_tn": "Arsenal"
+   },
+   {
+    "in": "AFC Bournemouth",
+    "tm": "伯恩茅斯",
+    "fu": "AFC Bournemouth",
+    "tn": "Bournemouth",
+    "c_tm": "Bournemouth",
+    "c_fu": "Bournemouth",
+    "c_tn": "Bournemouth"
+   },
+   {
+    "in": "AJ Auxerre",
+    "tm": "欧塞尔",
+    "fu": "AJ Auxerre",
+    "tn": "Auxerre",
+    "c_tm": "Auxerre",
+    "c_fu": "Auxerre",
+    "c_tn": "Auxerre"
+   },
+   {
+    "in": "AS Monaco",
+    "tm": "摩纳哥",
+    "fu": "摩纳哥",
+    "tn": "AS Monaco",
+    "c_tm": "AS Monaco",
+    "c_fu": "AS Monaco",
+    "c_tn": "AS Monaco"
+   },
+   {
+    "in": "AS Nancy",
+    "tm": "南锡",
+    "fu": "AS Nancy",
+    "tn": "Nancy",
+    "c_tm": "Nancy",
+    "c_fu": "Nancy",
+    "c_tn": "Nancy"
+   },
+   {
+    "in": "AS Nancy-Lorraine",
+    "tm": "南锡",
+    "fu": "AS Nancy-Lorraine",
+    "tn": "Nancy",
+    "c_tm": "Nancy",
+    "c_fu": "Nancy",
+    "c_tn": "Nancy"
+   },
+   {
+    "in": "AS Roma",
+    "tm": "罗马",
+    "fu": "罗马",
+    "tn": "AS Roma",
+    "c_tm": "AS Roma",
+    "c_fu": "AS Roma",
+    "c_tn": "AS Roma"
+   },
+   {
+    "in": "ASSE",
+    "tm": "圣埃蒂安",
+    "fu": "ASSE",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "ATM",
+    "tm": "马德里竞技",
+    "fu": "ATM",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "AVFC",
+    "tm": "阿斯顿维拉",
+    "fu": "AVFC",
+    "tn": "Aston Villa",
+    "c_tm": "Aston Villa",
+    "c_fu": "Aston Villa",
+    "c_tn": "Aston Villa"
+   },
+   {
+    "in": "Ajaccio",
+    "tm": "阿雅克肖",
+    "fu": "Ajaccio",
+    "tn": "Ajaccio",
+    "c_tm": "Ajaccio",
+    "c_fu": "Ajaccio",
+    "c_tn": "Ajaccio"
+   },
+   {
+    "in": "Alaves",
+    "tm": "阿拉维斯",
+    "fu": "阿拉维斯",
+    "tn": "Deportivo Alavés",
+    "c_tm": "Deportivo Alavés",
+    "c_fu": "Deportivo Alavés",
+    "c_tn": "Deportivo Alavés"
+   },
+   {
+    "in": "Alavés",
+    "tm": "阿拉维斯",
+    "fu": "Alavés",
+    "tn": "Deportivo Alavés",
+    "c_tm": "Deportivo Alavés",
+    "c_fu": "Deportivo Alavés",
+    "c_tn": "Deportivo Alavés"
+   },
+   {
+    "in": "Almeria",
+    "tm": "阿尔梅里亚",
+    "fu": "Almeria",
+    "tn": "Almería",
+    "c_tm": "Almería",
+    "c_fu": "Almería",
+    "c_tn": "Almería"
+   },
+   {
+    "in": "Almería",
+    "tm": "阿尔梅里亚",
+    "fu": "阿尔梅里亚",
+    "tn": "Almería",
+    "c_tm": "Almería",
+    "c_fu": "Almería",
+    "c_tn": "Almería"
+   },
+   {
+    "in": "Amiens",
+    "tm": "亚眠",
+    "fu": "Amiens",
+    "tn": "Amiens SC",
+    "c_tm": "Amiens SC",
+    "c_fu": "Amiens SC",
+    "c_tn": "Amiens SC"
+   },
+   {
+    "in": "Amiens SC",
+    "tm": "亚眠",
+    "fu": "Amiens SC",
+    "tn": "Amiens SC",
+    "c_tm": "Amiens SC",
+    "c_fu": "Amiens SC",
+    "c_tn": "Amiens SC"
+   },
+   {
+    "in": "Angers",
+    "tm": "昂热",
+    "fu": "昂热",
+    "tn": "Angers",
+    "c_tm": "Angers",
+    "c_fu": "Angers",
+    "c_tn": "Angers"
+   },
+   {
+    "in": "Angers SCO",
+    "tm": "昂热",
+    "fu": "Angers SCO",
+    "tn": "Angers",
+    "c_tm": "Angers",
+    "c_fu": "Angers",
+    "c_tn": "Angers"
+   },
+   {
+    "in": "Arminia Bielefeld",
+    "tm": "比勒费尔德",
+    "fu": "Arminia Bielefeld",
+    "tn": "Arminia Bielefeld",
+    "c_tm": "Arminia Bielefeld",
+    "c_fu": "Arminia Bielefeld",
+    "c_tn": "Arminia Bielefeld"
+   },
+   {
+    "in": "Arsenal",
+    "tm": "阿森纳",
+    "fu": "阿森纳",
+    "tn": "Arsenal",
+    "c_tm": "Arsenal",
+    "c_fu": "Arsenal",
+    "c_tn": "Arsenal"
+   },
+   {
+    "in": "Aston Villa",
+    "tm": "阿斯顿维拉",
+    "fu": "阿斯顿维拉",
+    "tn": "Aston Villa",
+    "c_tm": "Aston Villa",
+    "c_fu": "Aston Villa",
+    "c_tn": "Aston Villa"
+   },
+   {
+    "in": "Atalanta",
+    "tm": "亚特兰大",
+    "fu": "亚特兰大",
+    "tn": "Atalanta",
+    "c_tm": "Atalanta",
+    "c_fu": "Atalanta",
+    "c_tn": "Atalanta"
+   },
+   {
+    "in": "Atalanta BC",
+    "tm": "亚特兰大",
+    "fu": "Atalanta BC",
+    "tn": "Atalanta",
+    "c_tm": "Atalanta",
+    "c_fu": "Atalanta",
+    "c_tn": "Atalanta"
+   },
+   {
+    "in": "Ath Bilbao",
+    "tm": "毕尔巴鄂",
+    "fu": "Ath Bilbao",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Athletic",
+    "tm": "毕尔巴鄂",
+    "fu": "Athletic",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Athletic Bilbao",
+    "tm": "毕尔巴鄂",
+    "fu": "毕尔巴鄂竞技",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Athletic Club",
+    "tm": "毕尔巴鄂",
+    "fu": "毕尔巴鄂竞技",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Atleti",
+    "tm": "马德里竞技",
+    "fu": "Atleti",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "Atletico",
+    "tm": "马德里竞技",
+    "fu": "Atletico",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "Atletico Madrid",
+    "tm": "马德里竞技",
+    "fu": "Atletico Madrid",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "Atlético Madrid",
+    "tm": "马德里竞技",
+    "fu": "马德里竞技",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "Augsburg",
+    "tm": "奥格斯堡",
+    "fu": "奥格斯堡",
+    "tn": "FC Augsburg",
+    "c_tm": "FC Augsburg",
+    "c_fu": "FC Augsburg",
+    "c_tn": "FC Augsburg"
+   },
+   {
+    "in": "Auxerre",
+    "tm": "欧塞尔",
+    "fu": "欧塞尔",
+    "tn": "Auxerre",
+    "c_tm": "Auxerre",
+    "c_fu": "Auxerre",
+    "c_tn": "Auxerre"
+   },
+   {
+    "in": "B Dortmund",
+    "tm": "多特蒙德",
+    "fu": "B Dortmund",
+    "tn": "Borussia Dortmund",
+    "c_tm": "Borussia Dortmund",
+    "c_fu": "Borussia Dortmund",
+    "c_tn": "Borussia Dortmund"
+   },
+   {
+    "in": "BHA",
+    "tm": "布莱顿",
+    "fu": "BHA",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "BMG",
+    "tm": "门兴格拉德巴赫",
+    "fu": "BMG",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "BVB",
+    "tm": "多特蒙德",
+    "fu": "BVB",
+    "tn": "Borussia Dortmund",
+    "c_tm": "Borussia Dortmund",
+    "c_fu": "Borussia Dortmund",
+    "c_tn": "Borussia Dortmund"
+   },
+   {
+    "in": "Barca",
+    "tm": "巴塞罗那",
+    "fu": "Barca",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Barcelona",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "Barcelona",
+    "tm": "巴塞罗那",
+    "fu": "巴塞罗那",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Barcelona",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "Barça",
+    "tm": "巴塞罗那",
+    "fu": "Barça",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Barcelona",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "Bastia",
+    "tm": "巴斯蒂亚",
+    "fu": "Bastia",
+    "tn": "Bastia",
+    "c_tm": "Bastia",
+    "c_fu": "Bastia",
+    "c_tn": "Bastia"
+   },
+   {
+    "in": "Bayer",
+    "tm": "勒沃库森",
+    "fu": "Bayer",
+    "tn": "Bayer 04 Leverkusen",
+    "c_tm": "Bayer 04 Leverkusen",
+    "c_fu": "Bayer 04 Leverkusen",
+    "c_tn": "Bayer 04 Leverkusen"
+   },
+   {
+    "in": "Bayer 04 Leverkusen",
+    "tm": "勒沃库森",
+    "fu": "勒沃库森",
+    "tn": "Bayer 04 Leverkusen",
+    "c_tm": "Bayer 04 Leverkusen",
+    "c_fu": "Bayer 04 Leverkusen",
+    "c_tn": "Bayer 04 Leverkusen"
+   },
+   {
+    "in": "Bayer Leverkusen",
+    "tm": "勒沃库森",
+    "fu": "勒沃库森",
+    "tn": "Bayer 04 Leverkusen",
+    "c_tm": "Bayer 04 Leverkusen",
+    "c_fu": "Bayer 04 Leverkusen",
+    "c_tn": "Bayer 04 Leverkusen"
+   },
+   {
+    "in": "Bayern",
+    "tm": "拜仁慕尼黑",
+    "fu": "Bayern",
+    "tn": "FC Bayern München",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Bayern München",
+    "c_tn": "FC Bayern München"
+   },
+   {
+    "in": "Bayern Munchen",
+    "tm": "拜仁慕尼黑",
+    "fu": "Bayern Munchen",
+    "tn": "FC Bayern München",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Bayern München",
+    "c_tn": "FC Bayern München"
+   },
+   {
+    "in": "Bayern Munich",
+    "tm": "拜仁慕尼黑",
+    "fu": "拜仁慕尼黑",
+    "tn": "FC Bayern München",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Bayern München",
+    "c_tn": "FC Bayern München"
+   },
+   {
+    "in": "Benevento",
+    "tm": "贝内文托",
+    "fu": "Benevento",
+    "tn": "Benevento",
+    "c_tm": "Benevento",
+    "c_fu": "Benevento",
+    "c_tn": "Benevento"
+   },
+   {
+    "in": "Benevento Calcio",
+    "tm": "贝内文托",
+    "fu": "Benevento Calcio",
+    "tn": "Benevento",
+    "c_tm": "Benevento",
+    "c_fu": "Benevento",
+    "c_tn": "Benevento"
+   },
+   {
+    "in": "Betis",
+    "tm": "皇家贝蒂斯",
+    "fu": "Betis",
+    "tn": "Real Betis",
+    "c_tm": "Real Betis",
+    "c_fu": "Real Betis",
+    "c_tn": "Real Betis"
+   },
+   {
+    "in": "Bielefeld",
+    "tm": "比勒费尔德",
+    "fu": "Bielefeld",
+    "tn": "Arminia Bielefeld",
+    "c_tm": "Arminia Bielefeld",
+    "c_fu": "Arminia Bielefeld",
+    "c_tn": "Arminia Bielefeld"
+   },
+   {
+    "in": "Bilbao",
+    "tm": "毕尔巴鄂",
+    "fu": "Bilbao",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Bochum",
+    "tm": "波鸿",
+    "fu": "Bochum",
+    "tn": "VfL Bochum 1848",
+    "c_tm": "VfL Bochum 1848",
+    "c_fu": "VfL Bochum 1848",
+    "c_tn": "VfL Bochum 1848"
+   },
+   {
+    "in": "Bologna",
+    "tm": "博洛尼亚",
+    "fu": "博洛尼亚",
+    "tn": "Bologna",
+    "c_tm": "Bologna",
+    "c_fu": "Bologna",
+    "c_tn": "Bologna"
+   },
+   {
+    "in": "Bologna FC",
+    "tm": "博洛尼亚",
+    "fu": "Bologna FC",
+    "tn": "Bologna",
+    "c_tm": "Bologna",
+    "c_fu": "Bologna",
+    "c_tn": "Bologna"
+   },
+   {
+    "in": "Bordeaux",
+    "tm": "波尔多",
+    "fu": "Bordeaux",
+    "tn": "Bordeaux",
+    "c_tm": "Bordeaux",
+    "c_fu": "Bordeaux",
+    "c_tn": "Bordeaux"
+   },
+   {
+    "in": "Boro",
+    "tm": "米德尔斯堡",
+    "fu": "Boro",
+    "tn": "Middlesbrough",
+    "c_tm": "Middlesbrough",
+    "c_fu": "Middlesbrough",
+    "c_tn": "Middlesbrough"
+   },
+   {
+    "in": "Borussia Dortmund",
+    "tm": "多特蒙德",
+    "fu": "多特蒙德",
+    "tn": "Borussia Dortmund",
+    "c_tm": "Borussia Dortmund",
+    "c_fu": "Borussia Dortmund",
+    "c_tn": "Borussia Dortmund"
+   },
+   {
+    "in": "Borussia M'gladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "门兴格拉德巴赫",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Borussia M.Gladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Borussia M.Gladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Borussia Monchengladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Borussia Monchengladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Borussia Mönchengladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "门兴格拉德巴赫",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Bournemouth",
+    "tm": "伯恩茅斯",
+    "fu": "伯恩茅斯",
+    "tn": "Bournemouth",
+    "c_tm": "Bournemouth",
+    "c_fu": "Bournemouth",
+    "c_tn": "Bournemouth"
+   },
+   {
+    "in": "Bremen",
+    "tm": "云达不莱梅",
+    "fu": "Bremen",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "Brentford",
+    "tm": "布伦特福德",
+    "fu": "布伦特福德",
+    "tn": "Brentford",
+    "c_tm": "Brentford",
+    "c_fu": "Brentford",
+    "c_tn": "Brentford"
+   },
+   {
+    "in": "Brentford FC",
+    "tm": "布伦特福德",
+    "fu": "Brentford FC",
+    "tn": "Brentford",
+    "c_tm": "Brentford",
+    "c_fu": "Brentford",
+    "c_tn": "Brentford"
+   },
+   {
+    "in": "Brescia",
+    "tm": "布雷西亚",
+    "fu": "Brescia",
+    "tn": "Brescia",
+    "c_tm": "Brescia",
+    "c_fu": "Brescia",
+    "c_tn": "Brescia"
+   },
+   {
+    "in": "Brescia Calcio",
+    "tm": "布雷西亚",
+    "fu": "Brescia Calcio",
+    "tn": "Brescia",
+    "c_tm": "Brescia",
+    "c_fu": "Brescia",
+    "c_tn": "Brescia"
+   },
+   {
+    "in": "Brest",
+    "tm": "布雷斯特",
+    "fu": "布雷斯特",
+    "tn": "Stade Brestois",
+    "c_tm": "Stade Brestois",
+    "c_fu": "Stade Brestois",
+    "c_tn": "Stade Brestois"
+   },
+   {
+    "in": "Brestois",
+    "tm": "布雷斯特",
+    "fu": "Brestois",
+    "tn": "Stade Brestois",
+    "c_tm": "Stade Brestois",
+    "c_fu": "Stade Brestois",
+    "c_tn": "Stade Brestois"
+   },
+   {
+    "in": "Brighton",
+    "tm": "布莱顿",
+    "fu": "布赖顿",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "Brighton & Hove Albion",
+    "tm": "布莱顿",
+    "fu": "布赖顿",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "Brighton and Hove Albion",
+    "tm": "布莱顿",
+    "fu": "Brighton and Hove Albion",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "Burnley",
+    "tm": "伯恩利",
+    "fu": "伯恩利",
+    "tn": "Burnley",
+    "c_tm": "Burnley",
+    "c_fu": "Burnley",
+    "c_tn": "Burnley"
+   },
+   {
+    "in": "Burnley FC",
+    "tm": "伯恩利",
+    "fu": "Burnley FC",
+    "tn": "Burnley",
+    "c_tm": "Burnley",
+    "c_fu": "Burnley",
+    "c_tn": "Burnley"
+   },
+   {
+    "in": "CA Osasuna",
+    "tm": "奥萨苏纳",
+    "fu": "CA Osasuna",
+    "tn": "Osasuna",
+    "c_tm": "Osasuna",
+    "c_fu": "Osasuna",
+    "c_tn": "Osasuna"
+   },
+   {
+    "in": "CD Leganes",
+    "tm": "莱加内斯",
+    "fu": "CD Leganes",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "CD Leganés",
+    "tm": "莱加内斯",
+    "fu": "CD Leganés",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "CFC",
+    "tm": "切尔西",
+    "fu": "CFC",
+    "tn": "Chelsea",
+    "c_tm": "Chelsea",
+    "c_fu": "Chelsea",
+    "c_tn": "Chelsea"
+   },
+   {
+    "in": "CPFC",
+    "tm": "水晶宫",
+    "fu": "CPFC",
+    "tn": "Crystal Palace",
+    "c_tm": "Crystal Palace",
+    "c_fu": "Crystal Palace",
+    "c_tn": "Crystal Palace"
+   },
+   {
+    "in": "Cadiz",
+    "tm": "加的斯",
+    "fu": "加的斯",
+    "tn": "Cádiz",
+    "c_tm": "Cádiz",
+    "c_fu": "Cádiz",
+    "c_tn": "Cádiz"
+   },
+   {
+    "in": "Cadiz CF",
+    "tm": "加的斯",
+    "fu": "Cadiz CF",
+    "tn": "Cádiz",
+    "c_tm": "Cádiz",
+    "c_fu": "Cádiz",
+    "c_tn": "Cádiz"
+   },
+   {
+    "in": "Caen",
+    "tm": "卡昂",
+    "fu": "Caen",
+    "tn": "Stade Malherbe Caen",
+    "c_tm": "Stade Malherbe Caen",
+    "c_fu": "Stade Malherbe Caen",
+    "c_tn": "Stade Malherbe Caen"
+   },
+   {
+    "in": "Cagliari",
+    "tm": "卡利亚里",
+    "fu": "卡利亚里",
+    "tn": "Cagliari",
+    "c_tm": "Cagliari",
+    "c_fu": "Cagliari",
+    "c_tn": "Cagliari"
+   },
+   {
+    "in": "Cagliari Calcio",
+    "tm": "卡利亚里",
+    "fu": "Cagliari Calcio",
+    "tn": "Cagliari",
+    "c_tm": "Cagliari",
+    "c_fu": "Cagliari",
+    "c_tn": "Cagliari"
+   },
+   {
+    "in": "Cardiff",
+    "tm": "加的夫城",
+    "fu": "Cardiff",
+    "tn": "Cardiff City",
+    "c_tm": "Cardiff City",
+    "c_fu": "Cardiff City",
+    "c_tn": "Cardiff City"
+   },
+   {
+    "in": "Cardiff City",
+    "tm": "加的夫城",
+    "fu": "Cardiff City",
+    "tn": "Cardiff City",
+    "c_tm": "Cardiff City",
+    "c_fu": "Cardiff City",
+    "c_tn": "Cardiff City"
+   },
+   {
+    "in": "Celta",
+    "tm": "塞尔塔",
+    "fu": "Celta",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "Celta Vigo",
+    "tm": "塞尔塔",
+    "fu": "维戈塞尔塔",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "Chelsea",
+    "tm": "切尔西",
+    "fu": "切尔西",
+    "tn": "Chelsea",
+    "c_tm": "Chelsea",
+    "c_fu": "Chelsea",
+    "c_tn": "Chelsea"
+   },
+   {
+    "in": "Chievo",
+    "tm": "切沃",
+    "fu": "Chievo",
+    "tn": "Chievo Verona",
+    "c_tm": "Chievo Verona",
+    "c_fu": "Chievo Verona",
+    "c_tn": "Chievo Verona"
+   },
+   {
+    "in": "Chievo Verona",
+    "tm": "切沃",
+    "fu": "Chievo Verona",
+    "tn": "Chievo Verona",
+    "c_tm": "Chievo Verona",
+    "c_fu": "Chievo Verona",
+    "c_tn": "Chievo Verona"
+   },
+   {
+    "in": "Clermont",
+    "tm": "克莱蒙",
+    "fu": "克莱蒙",
+    "tn": "Clermont Foot",
+    "c_tm": "Clermont Foot",
+    "c_fu": "Clermont Foot",
+    "c_tn": "Clermont Foot"
+   },
+   {
+    "in": "Clermont Foot",
+    "tm": "克莱蒙",
+    "fu": "克莱蒙",
+    "tn": "Clermont Foot",
+    "c_tm": "Clermont Foot",
+    "c_fu": "Clermont Foot",
+    "c_tn": "Clermont Foot"
+   },
+   {
+    "in": "Clermont Foot 63",
+    "tm": "克莱蒙",
+    "fu": "Clermont Foot 63",
+    "tn": "Clermont Foot",
+    "c_tm": "Clermont Foot",
+    "c_fu": "Clermont Foot",
+    "c_tn": "Clermont Foot"
+   },
+   {
+    "in": "Como",
+    "tm": "科莫",
+    "fu": "科莫",
+    "tn": "Como",
+    "c_tm": "Como",
+    "c_fu": "Como",
+    "c_tn": "Como"
+   },
+   {
+    "in": "Como 1907",
+    "tm": "科莫",
+    "fu": "Como 1907",
+    "tn": "Como",
+    "c_tm": "Como",
+    "c_fu": "Como",
+    "c_tn": "Como"
+   },
+   {
+    "in": "Coventry",
+    "tm": "考文垂",
+    "fu": "Coventry",
+    "tn": "Coventry City",
+    "c_tm": "Coventry City",
+    "c_fu": "Coventry City",
+    "c_tn": "Coventry City"
+   },
+   {
+    "in": "Coventry City",
+    "tm": "考文垂",
+    "fu": "考文垂",
+    "tn": "Coventry City",
+    "c_tm": "Coventry City",
+    "c_fu": "Coventry City",
+    "c_tn": "Coventry City"
+   },
+   {
+    "in": "Cremonese",
+    "tm": "克雷莫纳",
+    "fu": "克雷莫纳",
+    "tn": "Cremonese",
+    "c_tm": "Cremonese",
+    "c_fu": "Cremonese",
+    "c_tn": "Cremonese"
+   },
+   {
+    "in": "Crotone",
+    "tm": "克罗托内",
+    "fu": "Crotone",
+    "tn": "FC Crotone",
+    "c_tm": "FC Crotone",
+    "c_fu": "FC Crotone",
+    "c_tn": "FC Crotone"
+   },
+   {
+    "in": "Crystal Palace",
+    "tm": "水晶宫",
+    "fu": "水晶宫",
+    "tn": "Crystal Palace",
+    "c_tm": "Crystal Palace",
+    "c_fu": "Crystal Palace",
+    "c_tn": "Crystal Palace"
+   },
+   {
+    "in": "Cádiz",
+    "tm": "加的斯",
+    "fu": "加的斯",
+    "tn": "Cádiz",
+    "c_tm": "Cádiz",
+    "c_fu": "Cádiz",
+    "c_tn": "Cádiz"
+   },
+   {
+    "in": "Cádiz CF",
+    "tm": "加的斯",
+    "fu": "Cádiz CF",
+    "tn": "Cádiz",
+    "c_tm": "Cádiz",
+    "c_fu": "Cádiz",
+    "c_tn": "Cádiz"
+   },
+   {
+    "in": "DSC Arminia Bielefeld",
+    "tm": "比勒费尔德",
+    "fu": "DSC Arminia Bielefeld",
+    "tn": "Arminia Bielefeld",
+    "c_tm": "Arminia Bielefeld",
+    "c_fu": "Arminia Bielefeld",
+    "c_tn": "Arminia Bielefeld"
+   },
+   {
+    "in": "Darmstadt",
+    "tm": "达姆施塔特",
+    "fu": "Darmstadt",
+    "tn": "Darmstadt 98",
+    "c_tm": "Darmstadt 98",
+    "c_fu": "Darmstadt 98",
+    "c_tn": "Darmstadt 98"
+   },
+   {
+    "in": "Darmstadt 98",
+    "tm": "达姆施塔特",
+    "fu": "达姆施塔特",
+    "tn": "Darmstadt 98",
+    "c_tm": "Darmstadt 98",
+    "c_fu": "Darmstadt 98",
+    "c_tn": "Darmstadt 98"
+   },
+   {
+    "in": "Delfino Pescara 1936",
+    "tm": "佩斯卡拉",
+    "fu": "Delfino Pescara 1936",
+    "tn": "Pescara",
+    "c_tm": "Pescara",
+    "c_fu": "Pescara",
+    "c_tn": "Pescara"
+   },
+   {
+    "in": "Deportivo",
+    "tm": "拉科鲁尼亚",
+    "fu": "拉科鲁尼亚",
+    "tn": "Deportivo de A Coruña",
+    "c_tm": "Deportivo de A Coruña",
+    "c_fu": "Deportivo de A Coruña",
+    "c_tn": "Deportivo de A Coruña"
+   },
+   {
+    "in": "Deportivo Alaves",
+    "tm": "阿拉维斯",
+    "fu": "Deportivo Alaves",
+    "tn": "Deportivo Alavés",
+    "c_tm": "Deportivo Alavés",
+    "c_fu": "Deportivo Alavés",
+    "c_tn": "Deportivo Alavés"
+   },
+   {
+    "in": "Deportivo Alavés",
+    "tm": "阿拉维斯",
+    "fu": "阿拉维斯",
+    "tn": "Deportivo Alavés",
+    "c_tm": "Deportivo Alavés",
+    "c_fu": "Deportivo Alavés",
+    "c_tn": "Deportivo Alavés"
+   },
+   {
+    "in": "Deportivo La Coruna",
+    "tm": "拉科鲁尼亚",
+    "fu": "拉科鲁尼亚",
+    "tn": "Deportivo de A Coruña",
+    "c_tm": "Deportivo de A Coruña",
+    "c_fu": "Deportivo de A Coruña",
+    "c_tn": "Deportivo de A Coruña"
+   },
+   {
+    "in": "Deportivo La Coruña",
+    "tm": "拉科鲁尼亚",
+    "fu": "拉科鲁尼亚",
+    "tn": "Deportivo de A Coruña",
+    "c_tm": "Deportivo de A Coruña",
+    "c_fu": "Deportivo de A Coruña",
+    "c_tn": "Deportivo de A Coruña"
+   },
+   {
+    "in": "Deportivo de A Coruna",
+    "tm": "拉科鲁尼亚",
+    "fu": "拉科鲁尼亚",
+    "tn": "Deportivo de A Coruña",
+    "c_tm": "Deportivo de A Coruña",
+    "c_fu": "Deportivo de A Coruña",
+    "c_tn": "Deportivo de A Coruña"
+   },
+   {
+    "in": "Deportivo de A Coruña",
+    "tm": "拉科鲁尼亚",
+    "fu": "拉科鲁尼亚",
+    "tn": "Deportivo de A Coruña",
+    "c_tm": "Deportivo de A Coruña",
+    "c_fu": "Deportivo de A Coruña",
+    "c_tn": "Deportivo de A Coruña"
+   },
+   {
+    "in": "Dijon",
+    "tm": "第戎",
+    "fu": "Dijon",
+    "tn": "Dijon",
+    "c_tm": "Dijon",
+    "c_fu": "Dijon",
+    "c_tn": "Dijon"
+   },
+   {
+    "in": "Dijon FCO",
+    "tm": "第戎",
+    "fu": "Dijon FCO",
+    "tn": "Dijon",
+    "c_tm": "Dijon",
+    "c_fu": "Dijon",
+    "c_tn": "Dijon"
+   },
+   {
+    "in": "Dortmund",
+    "tm": "多特蒙德",
+    "fu": "多特蒙德",
+    "tn": "Borussia Dortmund",
+    "c_tm": "Borussia Dortmund",
+    "c_fu": "Borussia Dortmund",
+    "c_tn": "Borussia Dortmund"
+   },
+   {
+    "in": "Duesseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Duesseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Dusseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Dusseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Düsseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Düsseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "EA Guingamp",
+    "tm": "甘冈",
+    "fu": "EA Guingamp",
+    "tn": "Guingamp",
+    "c_tm": "Guingamp",
+    "c_fu": "Guingamp",
+    "c_tn": "Guingamp"
+   },
+   {
+    "in": "EFC",
+    "tm": "埃弗顿",
+    "fu": "EFC",
+    "tn": "Everton",
+    "c_tm": "Everton",
+    "c_fu": "Everton",
+    "c_tn": "Everton"
+   },
+   {
+    "in": "ESTAC Troyes",
+    "tm": "特鲁瓦",
+    "fu": "特鲁瓦",
+    "tn": "Troyes",
+    "c_tm": "Troyes",
+    "c_fu": "Troyes",
+    "c_tn": "Troyes"
+   },
+   {
+    "in": "Eibar",
+    "tm": "埃瓦尔",
+    "fu": "Eibar",
+    "tn": "Eibar",
+    "c_tm": "Eibar",
+    "c_fu": "Eibar",
+    "c_tn": "Eibar"
+   },
+   {
+    "in": "Ein Frankfurt",
+    "tm": "法兰克福",
+    "fu": "法兰克福",
+    "tn": "Eintracht Frankfurt",
+    "c_tm": "Eintracht Frankfurt",
+    "c_fu": "Eintracht Frankfurt",
+    "c_tn": "Eintracht Frankfurt"
+   },
+   {
+    "in": "Eintracht Frankfurt",
+    "tm": "法兰克福",
+    "fu": "法兰克福",
+    "tn": "Eintracht Frankfurt",
+    "c_tm": "Eintracht Frankfurt",
+    "c_fu": "Eintracht Frankfurt",
+    "c_tn": "Eintracht Frankfurt"
+   },
+   {
+    "in": "Elche",
+    "tm": "埃尔切",
+    "fu": "埃尔切",
+    "tn": "Elche",
+    "c_tm": "Elche",
+    "c_fu": "Elche",
+    "c_tn": "Elche"
+   },
+   {
+    "in": "Elche CF",
+    "tm": "埃尔切",
+    "fu": "Elche CF",
+    "tn": "Elche",
+    "c_tm": "Elche",
+    "c_fu": "Elche",
+    "c_tn": "Elche"
+   },
+   {
+    "in": "Elversberg",
+    "tm": "埃尔沃斯堡",
+    "fu": "Elversberg",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "Empoli",
+    "tm": "恩波利",
+    "fu": "恩波利",
+    "tn": "Empoli",
+    "c_tm": "Empoli",
+    "c_fu": "Empoli",
+    "c_tn": "Empoli"
+   },
+   {
+    "in": "Empoli FC",
+    "tm": "恩波利",
+    "fu": "Empoli FC",
+    "tn": "Empoli",
+    "c_tm": "Empoli",
+    "c_fu": "Empoli",
+    "c_tn": "Empoli"
+   },
+   {
+    "in": "Espanol",
+    "tm": "西班牙人",
+    "fu": "西班牙人",
+    "tn": "Espanyol",
+    "c_tm": "Espanyol",
+    "c_fu": "Espanyol",
+    "c_tn": "Espanyol"
+   },
+   {
+    "in": "Espanyol",
+    "tm": "西班牙人",
+    "fu": "西班牙人",
+    "tn": "Espanyol",
+    "c_tm": "Espanyol",
+    "c_fu": "Espanyol",
+    "c_tn": "Espanyol"
+   },
+   {
+    "in": "Estac Troyes",
+    "tm": "特鲁瓦",
+    "fu": "特鲁瓦",
+    "tn": "Troyes",
+    "c_tm": "Troyes",
+    "c_fu": "Troyes",
+    "c_tn": "Troyes"
+   },
+   {
+    "in": "Everton",
+    "tm": "埃弗顿",
+    "fu": "埃弗顿",
+    "tn": "Everton",
+    "c_tm": "Everton",
+    "c_fu": "Everton",
+    "c_tn": "Everton"
+   },
+   {
+    "in": "FC Augsburg",
+    "tm": "奥格斯堡",
+    "fu": "奥格斯堡",
+    "tn": "FC Augsburg",
+    "c_tm": "FC Augsburg",
+    "c_fu": "FC Augsburg",
+    "c_tn": "FC Augsburg"
+   },
+   {
+    "in": "FC Barcelona",
+    "tm": "巴塞罗那",
+    "fu": "巴塞罗那",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Barcelona",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "FC Bayern München",
+    "tm": "拜仁慕尼黑",
+    "fu": "拜仁慕尼黑",
+    "tn": "FC Bayern München",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Bayern München",
+    "c_tn": "FC Bayern München"
+   },
+   {
+    "in": "FC Crotone",
+    "tm": "克罗托内",
+    "fu": "FC Crotone",
+    "tn": "FC Crotone",
+    "c_tm": "FC Crotone",
+    "c_fu": "FC Crotone",
+    "c_tn": "FC Crotone"
+   },
+   {
+    "in": "FC Heidenheim",
+    "tm": "海登海姆",
+    "fu": "FC Heidenheim",
+    "tn": "1. FC Heidenheim",
+    "c_tm": "1. FC Heidenheim",
+    "c_fu": "1. FC Heidenheim",
+    "c_tn": "1. FC Heidenheim"
+   },
+   {
+    "in": "FC Ingolstadt 04",
+    "tm": "因戈尔施塔特",
+    "fu": "FC Ingolstadt 04",
+    "tn": "FC Ingolstadt 04",
+    "c_tm": "FC Ingolstadt 04",
+    "c_fu": "FC Ingolstadt 04",
+    "c_tn": "FC Ingolstadt 04"
+   },
+   {
+    "in": "FC Koln",
+    "tm": "科隆",
+    "fu": "科隆",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "FC Köln",
+    "tm": "科隆",
+    "fu": "科隆",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "FC Lorient",
+    "tm": "洛里昂",
+    "fu": "FC Lorient",
+    "tn": "Lorient",
+    "c_tm": "Lorient",
+    "c_fu": "Lorient",
+    "c_tn": "Lorient"
+   },
+   {
+    "in": "FC Metz",
+    "tm": "梅斯",
+    "fu": "FC Metz",
+    "tn": "Metz",
+    "c_tm": "Metz",
+    "c_fu": "Metz",
+    "c_tn": "Metz"
+   },
+   {
+    "in": "FC Nantes",
+    "tm": "南特",
+    "fu": "FC Nantes",
+    "tn": "Nantes",
+    "c_tm": "Nantes",
+    "c_fu": "Nantes",
+    "c_tn": "Nantes"
+   },
+   {
+    "in": "FC Schalke 04",
+    "tm": "沙尔克04",
+    "fu": "沙尔克04",
+    "tn": "FC Schalke 04",
+    "c_tm": "FC Schalke 04",
+    "c_fu": "FC Schalke 04",
+    "c_tn": "FC Schalke 04"
+   },
+   {
+    "in": "FC St. Pauli",
+    "tm": "圣保利",
+    "fu": "圣保利",
+    "tn": "FC St. Pauli",
+    "c_tm": "FC St. Pauli",
+    "c_fu": "FC St. Pauli",
+    "c_tn": "FC St. Pauli"
+   },
+   {
+    "in": "FCIM",
+    "tm": "国际米兰",
+    "fu": "FCIM",
+    "tn": "Inter",
+    "c_tm": "Inter",
+    "c_fu": "Inter",
+    "c_tn": "Inter"
+   },
+   {
+    "in": "FFC",
+    "tm": "富勒姆",
+    "fu": "FFC",
+    "tn": "Fulham",
+    "c_tm": "Fulham",
+    "c_fu": "Fulham",
+    "c_tn": "Fulham"
+   },
+   {
+    "in": "Fiorentina",
+    "tm": "佛罗伦萨",
+    "fu": "佛罗伦萨",
+    "tn": "Fiorentina",
+    "c_tm": "Fiorentina",
+    "c_fu": "Fiorentina",
+    "c_tn": "Fiorentina"
+   },
+   {
+    "in": "Forest",
+    "tm": "诺丁汉森林",
+    "fu": "Forest",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "Fortuna Duesseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Fortuna Duesseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Fortuna Dusseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Fortuna Dusseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Fortuna Düsseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Fortuna Düsseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Frankfurt",
+    "tm": "法兰克福",
+    "fu": "Frankfurt",
+    "tn": "Eintracht Frankfurt",
+    "c_tm": "Eintracht Frankfurt",
+    "c_fu": "Eintracht Frankfurt",
+    "c_tn": "Eintracht Frankfurt"
+   },
+   {
+    "in": "Freiburg",
+    "tm": "弗赖堡",
+    "fu": "弗赖堡",
+    "tn": "SC Freiburg",
+    "c_tm": "SC Freiburg",
+    "c_fu": "SC Freiburg",
+    "c_tn": "SC Freiburg"
+   },
+   {
+    "in": "Frosinone",
+    "tm": "弗罗西诺内",
+    "fu": "弗洛西诺内",
+    "tn": "Frosinone",
+    "c_tm": "Frosinone",
+    "c_fu": "Frosinone",
+    "c_tn": "Frosinone"
+   },
+   {
+    "in": "Frosinone Calcio",
+    "tm": "弗罗西诺内",
+    "fu": "Frosinone Calcio",
+    "tn": "Frosinone",
+    "c_tm": "Frosinone",
+    "c_fu": "Frosinone",
+    "c_tn": "Frosinone"
+   },
+   {
+    "in": "Fulham",
+    "tm": "富勒姆",
+    "fu": "富勒姆",
+    "tn": "Fulham",
+    "c_tm": "Fulham",
+    "c_fu": "Fulham",
+    "c_tn": "Fulham"
+   },
+   {
+    "in": "Furth",
+    "tm": "菲尔特",
+    "fu": "Furth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Fürth",
+    "tm": "菲尔特",
+    "fu": "Fürth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Genoa",
+    "tm": "热那亚",
+    "fu": "热那亚",
+    "tn": "Genoa",
+    "c_tm": "Genoa",
+    "c_fu": "Genoa",
+    "c_tn": "Genoa"
+   },
+   {
+    "in": "Genoa CFC",
+    "tm": "热那亚",
+    "fu": "Genoa CFC",
+    "tn": "Genoa",
+    "c_tm": "Genoa",
+    "c_fu": "Genoa",
+    "c_tn": "Genoa"
+   },
+   {
+    "in": "Getafe",
+    "tm": "赫塔费",
+    "fu": "赫塔费",
+    "tn": "Getafe",
+    "c_tm": "Getafe",
+    "c_fu": "Getafe",
+    "c_tn": "Getafe"
+   },
+   {
+    "in": "Getafe CF",
+    "tm": "赫塔费",
+    "fu": "Getafe CF",
+    "tn": "Getafe",
+    "c_tm": "Getafe",
+    "c_fu": "Getafe",
+    "c_tn": "Getafe"
+   },
+   {
+    "in": "Gijon",
+    "tm": "希洪竞技",
+    "fu": "Gijon",
+    "tn": "Sporting Gijón",
+    "c_tm": "Sporting Gijón",
+    "c_fu": "Sporting Gijón",
+    "c_tn": "Sporting Gijón"
+   },
+   {
+    "in": "Girona",
+    "tm": "赫罗纳",
+    "fu": "赫罗纳",
+    "tn": "Girona FC",
+    "c_tm": "Girona FC",
+    "c_fu": "Girona FC",
+    "c_tn": "Girona FC"
+   },
+   {
+    "in": "Girona FC",
+    "tm": "赫罗纳",
+    "fu": "赫罗纳",
+    "tn": "Girona FC",
+    "c_tm": "Girona FC",
+    "c_fu": "Girona FC",
+    "c_tn": "Girona FC"
+   },
+   {
+    "in": "Girondins de Bordeaux",
+    "tm": "波尔多",
+    "fu": "Girondins de Bordeaux",
+    "tn": "Bordeaux",
+    "c_tm": "Bordeaux",
+    "c_fu": "Bordeaux",
+    "c_tn": "Bordeaux"
+   },
+   {
+    "in": "Gladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Gladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Granada",
+    "tm": "格拉纳达",
+    "fu": "格拉纳达CF",
+    "tn": "Granada",
+    "c_tm": "Granada",
+    "c_fu": "Granada",
+    "c_tn": "Granada"
+   },
+   {
+    "in": "Granada CF",
+    "tm": "格拉纳达",
+    "fu": "Granada CF",
+    "tn": "Granada",
+    "c_tm": "Granada",
+    "c_fu": "Granada",
+    "c_tn": "Granada"
+   },
+   {
+    "in": "Greuther Fuerth",
+    "tm": "菲尔特",
+    "fu": "Greuther Fuerth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Greuther Furth",
+    "tm": "菲尔特",
+    "fu": "Greuther Furth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Greuther Fürth",
+    "tm": "菲尔特",
+    "fu": "Greuther Fürth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Guingamp",
+    "tm": "甘冈",
+    "fu": "Guingamp",
+    "tn": "Guingamp",
+    "c_tm": "Guingamp",
+    "c_fu": "Guingamp",
+    "c_tn": "Guingamp"
+   },
+   {
+    "in": "HSV",
+    "tm": "汉堡",
+    "fu": "HSV",
+    "tn": "Hamburger SV",
+    "c_tm": "Hamburger SV",
+    "c_fu": "Hamburger SV",
+    "c_tn": "Hamburger SV"
+   },
+   {
+    "in": "Hamburg",
+    "tm": "汉堡",
+    "fu": "汉堡",
+    "tn": "Hamburger SV",
+    "c_tm": "Hamburger SV",
+    "c_fu": "Hamburger SV",
+    "c_tn": "Hamburger SV"
+   },
+   {
+    "in": "Hamburger SV",
+    "tm": "汉堡",
+    "fu": "汉堡",
+    "tn": "Hamburger SV",
+    "c_tm": "Hamburger SV",
+    "c_fu": "Hamburger SV",
+    "c_tn": "Hamburger SV"
+   },
+   {
+    "in": "Hannover",
+    "tm": "汉诺威96",
+    "fu": "Hannover",
+    "tn": "Hannover 96",
+    "c_tm": "Hannover 96",
+    "c_fu": "Hannover 96",
+    "c_tn": "Hannover 96"
+   },
+   {
+    "in": "Hannover 96",
+    "tm": "汉诺威96",
+    "fu": "Hannover 96",
+    "tn": "Hannover 96",
+    "c_tm": "Hannover 96",
+    "c_fu": "Hannover 96",
+    "c_tn": "Hannover 96"
+   },
+   {
+    "in": "Heidenheim",
+    "tm": "海登海姆",
+    "fu": "海登海姆",
+    "tn": "1. FC Heidenheim",
+    "c_tm": "1. FC Heidenheim",
+    "c_fu": "1. FC Heidenheim",
+    "c_tn": "1. FC Heidenheim"
+   },
+   {
+    "in": "Hellas Verona",
+    "tm": "维罗纳",
+    "fu": "维罗纳",
+    "tn": "Hellas Verona",
+    "c_tm": "Hellas Verona",
+    "c_fu": "Hellas Verona",
+    "c_tn": "Hellas Verona"
+   },
+   {
+    "in": "Hertha",
+    "tm": "柏林赫塔",
+    "fu": "Hertha",
+    "tn": "Hertha BSC",
+    "c_tm": "Hertha BSC",
+    "c_fu": "Hertha BSC",
+    "c_tn": "Hertha BSC"
+   },
+   {
+    "in": "Hertha BSC",
+    "tm": "柏林赫塔",
+    "fu": "Hertha BSC",
+    "tn": "Hertha BSC",
+    "c_tm": "Hertha BSC",
+    "c_fu": "Hertha BSC",
+    "c_tn": "Hertha BSC"
+   },
+   {
+    "in": "Hertha Berlin",
+    "tm": "柏林赫塔",
+    "fu": "Hertha Berlin",
+    "tn": "Hertha BSC",
+    "c_tm": "Hertha BSC",
+    "c_fu": "Hertha BSC",
+    "c_tn": "Hertha BSC"
+   },
+   {
+    "in": "Hoffenheim",
+    "tm": "霍芬海姆",
+    "fu": "霍芬海姆",
+    "tn": "TSG Hoffenheim",
+    "c_tm": "TSG Hoffenheim",
+    "c_fu": "TSG Hoffenheim",
+    "c_tn": "TSG Hoffenheim"
+   },
+   {
+    "in": "Holstein Kiel",
+    "tm": "基尔",
+    "fu": "基尔",
+    "tn": "Holstein Kiel",
+    "c_tm": "Holstein Kiel",
+    "c_fu": "Holstein Kiel",
+    "c_tn": "Holstein Kiel"
+   },
+   {
+    "in": "Huddersfield",
+    "tm": "哈德斯菲尔德",
+    "fu": "Huddersfield",
+    "tn": "Huddersfield Town",
+    "c_tm": "Huddersfield Town",
+    "c_fu": "Huddersfield Town",
+    "c_tn": "Huddersfield Town"
+   },
+   {
+    "in": "Huddersfield Town",
+    "tm": "哈德斯菲尔德",
+    "fu": "Huddersfield Town",
+    "tn": "Huddersfield Town",
+    "c_tm": "Huddersfield Town",
+    "c_fu": "Huddersfield Town",
+    "c_tn": "Huddersfield Town"
+   },
+   {
+    "in": "Huesca",
+    "tm": "韦斯卡",
+    "fu": "Huesca",
+    "tn": "Huesca",
+    "c_tm": "Huesca",
+    "c_fu": "Huesca",
+    "c_tn": "Huesca"
+   },
+   {
+    "in": "Hull",
+    "tm": "赫尔城",
+    "fu": "赫尔城",
+    "tn": "Hull City",
+    "c_tm": "Hull City",
+    "c_fu": "Hull City",
+    "c_tn": "Hull City"
+   },
+   {
+    "in": "Hull City",
+    "tm": "赫尔城",
+    "fu": "赫尔城",
+    "tn": "Hull City",
+    "c_tm": "Hull City",
+    "c_fu": "Hull City",
+    "c_tn": "Hull City"
+   },
+   {
+    "in": "Hull City Tigers",
+    "tm": "赫尔城",
+    "fu": "Hull City Tigers",
+    "tn": "Hull City",
+    "c_tm": "Hull City",
+    "c_fu": "Hull City",
+    "c_tn": "Hull City"
+   },
+   {
+    "in": "Ingolstadt",
+    "tm": "因戈尔施塔特",
+    "fu": "Ingolstadt",
+    "tn": "FC Ingolstadt 04",
+    "c_tm": "FC Ingolstadt 04",
+    "c_fu": "FC Ingolstadt 04",
+    "c_tn": "FC Ingolstadt 04"
+   },
+   {
+    "in": "Inter",
+    "tm": "国际米兰",
+    "fu": "国际米兰",
+    "tn": "Inter",
+    "c_tm": "Inter",
+    "c_fu": "Inter",
+    "c_tn": "Inter"
+   },
+   {
+    "in": "Inter Milan",
+    "tm": "国际米兰",
+    "fu": "国际米兰",
+    "tn": "Inter",
+    "c_tm": "Inter",
+    "c_fu": "Inter",
+    "c_tn": "Inter"
+   },
+   {
+    "in": "Internazionale",
+    "tm": "国际米兰",
+    "fu": "Internazionale",
+    "tn": "Inter",
+    "c_tm": "Inter",
+    "c_fu": "Inter",
+    "c_tn": "Inter"
+   },
+   {
+    "in": "Ipswich",
+    "tm": "伊普斯维奇",
+    "fu": "Ipswich",
+    "tn": "Ipswich Town",
+    "c_tm": "Ipswich Town",
+    "c_fu": "Ipswich Town",
+    "c_tn": "Ipswich Town"
+   },
+   {
+    "in": "Ipswich Town",
+    "tm": "伊普斯维奇",
+    "fu": "伊普斯维奇",
+    "tn": "Ipswich Town",
+    "c_tm": "Ipswich Town",
+    "c_fu": "Ipswich Town",
+    "c_tn": "Ipswich Town"
+   },
+   {
+    "in": "Juve",
+    "tm": "尤文图斯",
+    "fu": "Juve",
+    "tn": "Juventus",
+    "c_tm": "Juventus",
+    "c_fu": "Juventus",
+    "c_tn": "Juventus"
+   },
+   {
+    "in": "Juventus",
+    "tm": "尤文图斯",
+    "fu": "尤文图斯",
+    "tn": "Juventus",
+    "c_tm": "Juventus",
+    "c_fu": "Juventus",
+    "c_tn": "Juventus"
+   },
+   {
+    "in": "Juventus FC",
+    "tm": "尤文图斯",
+    "fu": "Juventus FC",
+    "tn": "Juventus",
+    "c_tm": "Juventus",
+    "c_fu": "Juventus",
+    "c_tn": "Juventus"
+   },
+   {
+    "in": "Kiel",
+    "tm": "基尔",
+    "fu": "Kiel",
+    "tn": "Holstein Kiel",
+    "c_tm": "Holstein Kiel",
+    "c_fu": "Holstein Kiel",
+    "c_tn": "Holstein Kiel"
+   },
+   {
+    "in": "Koeln",
+    "tm": "科隆",
+    "fu": "Koeln",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "Koln",
+    "tm": "科隆",
+    "fu": "Koln",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "Köln",
+    "tm": "科隆",
+    "fu": "Köln",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "LFC",
+    "tm": "利物浦",
+    "fu": "LFC",
+    "tn": "Liverpool FC",
+    "c_tm": "Liverpool FC",
+    "c_fu": "Liverpool FC",
+    "c_tn": "Liverpool FC"
+   },
+   {
+    "in": "LOSC Lille",
+    "tm": "里尔",
+    "fu": "LOSC Lille",
+    "tn": "Lille",
+    "c_tm": "Lille",
+    "c_fu": "Lille",
+    "c_tn": "Lille"
+   },
+   {
+    "in": "LTFC",
+    "tm": "卢顿",
+    "fu": "LTFC",
+    "tn": "Luton Town",
+    "c_tm": "Luton Town",
+    "c_fu": "Luton Town",
+    "c_tn": "Luton Town"
+   },
+   {
+    "in": "La Coruna",
+    "tm": "拉科鲁尼亚",
+    "fu": "拉科鲁尼亚",
+    "tn": "Deportivo de A Coruña",
+    "c_tm": "Deportivo de A Coruña",
+    "c_fu": "Deportivo de A Coruña",
+    "c_tn": "Deportivo de A Coruña"
+   },
+   {
+    "in": "La Coruña",
+    "tm": "拉科鲁尼亚",
+    "fu": "拉科鲁尼亚",
+    "tn": "Deportivo de A Coruña",
+    "c_tm": "Deportivo de A Coruña",
+    "c_fu": "Deportivo de A Coruña",
+    "c_tn": "Deportivo de A Coruña"
+   },
+   {
+    "in": "Las Palmas",
+    "tm": "拉斯帕尔马斯",
+    "fu": "拉斯帕尔马斯",
+    "tn": "UD Las Palmas",
+    "c_tm": "UD Las Palmas",
+    "c_fu": "UD Las Palmas",
+    "c_tn": "UD Las Palmas"
+   },
+   {
+    "in": "Lazio",
+    "tm": "拉齐奥",
+    "fu": "拉齐奥",
+    "tn": "Lazio",
+    "c_tm": "Lazio",
+    "c_fu": "Lazio",
+    "c_tn": "Lazio"
+   },
+   {
+    "in": "Le Havre",
+    "tm": "勒阿弗尔",
+    "fu": "勒阿弗尔",
+    "tn": "Le Havre",
+    "c_tm": "Le Havre",
+    "c_fu": "Le Havre",
+    "c_tn": "Le Havre"
+   },
+   {
+    "in": "Le Havre AC",
+    "tm": "勒阿弗尔",
+    "fu": "Le Havre AC",
+    "tn": "Le Havre",
+    "c_tm": "Le Havre",
+    "c_fu": "Le Havre",
+    "c_tn": "Le Havre"
+   },
+   {
+    "in": "Le Mans",
+    "tm": "勒芒",
+    "fu": "勒芒",
+    "tn": "Le Mans",
+    "c_tm": "Le Mans",
+    "c_fu": "Le Mans",
+    "c_tn": "Le Mans"
+   },
+   {
+    "in": "Le Mans FC",
+    "tm": "勒芒",
+    "fu": "勒芒",
+    "tn": "Le Mans",
+    "c_tm": "Le Mans",
+    "c_fu": "Le Mans",
+    "c_tn": "Le Mans"
+   },
+   {
+    "in": "Lecce",
+    "tm": "莱切",
+    "fu": "莱切",
+    "tn": "Lecce",
+    "c_tm": "Lecce",
+    "c_fu": "Lecce",
+    "c_tn": "Lecce"
+   },
+   {
+    "in": "Leeds",
+    "tm": "利兹联",
+    "fu": "Leeds",
+    "tn": "Leeds United",
+    "c_tm": "Leeds United",
+    "c_fu": "Leeds United",
+    "c_tn": "Leeds United"
+   },
+   {
+    "in": "Leeds United",
+    "tm": "利兹联",
+    "fu": "利兹联",
+    "tn": "Leeds United",
+    "c_tm": "Leeds United",
+    "c_fu": "Leeds United",
+    "c_tn": "Leeds United"
+   },
+   {
+    "in": "Leganes",
+    "tm": "莱加内斯",
+    "fu": "Leganes",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "Leganes CF",
+    "tm": "莱加内斯",
+    "fu": "Leganes CF",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "Leganés",
+    "tm": "莱加内斯",
+    "fu": "莱加内斯",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "Leicester",
+    "tm": "莱斯特城",
+    "fu": "Leicester",
+    "tn": "Leicester City",
+    "c_tm": "Leicester City",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "Leicester City",
+    "tm": "莱斯特城",
+    "fu": "莱切斯特城",
+    "tn": "Leicester City",
+    "c_tm": "Leicester City",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "Leicester City FC",
+    "tm": "莱斯特城",
+    "fu": "Leicester City FC",
+    "tn": "Leicester City",
+    "c_tm": "Leicester City",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "Leipzig",
+    "tm": "莱比锡",
+    "fu": "Leipzig",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "Lens",
+    "tm": "朗斯",
+    "fu": "朗斯",
+    "tn": "RC Lens",
+    "c_tm": "RC Lens",
+    "c_fu": "RC Lens",
+    "c_tn": "RC Lens"
+   },
+   {
+    "in": "Levante",
+    "tm": "莱万特",
+    "fu": "莱万特",
+    "tn": "Levante UD",
+    "c_tm": "Levante UD",
+    "c_fu": "Levante UD",
+    "c_tn": "Levante UD"
+   },
+   {
+    "in": "Levante UD",
+    "tm": "莱万特",
+    "fu": "莱万特",
+    "tn": "Levante UD",
+    "c_tm": "Levante UD",
+    "c_fu": "Levante UD",
+    "c_tn": "Levante UD"
+   },
+   {
+    "in": "Leverkusen",
+    "tm": "勒沃库森",
+    "fu": "勒沃库森",
+    "tn": "Bayer 04 Leverkusen",
+    "c_tm": "Bayer 04 Leverkusen",
+    "c_fu": "Bayer 04 Leverkusen",
+    "c_tn": "Bayer 04 Leverkusen"
+   },
+   {
+    "in": "Lille",
+    "tm": "里尔",
+    "fu": "里尔",
+    "tn": "Lille",
+    "c_tm": "Lille",
+    "c_fu": "Lille",
+    "c_tn": "Lille"
+   },
+   {
+    "in": "Lille OSC",
+    "tm": "里尔",
+    "fu": "Lille OSC",
+    "tn": "Lille",
+    "c_tm": "Lille",
+    "c_fu": "Lille",
+    "c_tn": "Lille"
+   },
+   {
+    "in": "Liverpool",
+    "tm": "利物浦",
+    "fu": "利物浦",
+    "tn": "Liverpool FC",
+    "c_tm": "Liverpool FC",
+    "c_fu": "Liverpool FC",
+    "c_tn": "Liverpool FC"
+   },
+   {
+    "in": "Liverpool FC",
+    "tm": "利物浦",
+    "fu": "利物浦",
+    "tn": "Liverpool FC",
+    "c_tm": "Liverpool FC",
+    "c_fu": "Liverpool FC",
+    "c_tn": "Liverpool FC"
+   },
+   {
+    "in": "Lorient",
+    "tm": "洛里昂",
+    "fu": "洛里昂",
+    "tn": "Lorient",
+    "c_tm": "Lorient",
+    "c_fu": "Lorient",
+    "c_tn": "Lorient"
+   },
+   {
+    "in": "Luton",
+    "tm": "卢顿",
+    "fu": "Luton",
+    "tn": "Luton Town",
+    "c_tm": "Luton Town",
+    "c_fu": "Luton Town",
+    "c_tn": "Luton Town"
+   },
+   {
+    "in": "Luton Town",
+    "tm": "卢顿",
+    "fu": "卢顿",
+    "tn": "Luton Town",
+    "c_tm": "Luton Town",
+    "c_fu": "Luton Town",
+    "c_tn": "Luton Town"
+   },
+   {
+    "in": "Lyon",
+    "tm": "里昂",
+    "fu": "里昂",
+    "tn": "Olympique Lyonnais",
+    "c_tm": "Olympique Lyonnais",
+    "c_fu": "Olympique Lyonnais",
+    "c_tn": "Olympique Lyonnais"
+   },
+   {
+    "in": "M'gladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "门兴格拉德巴赫",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "MCI",
+    "tm": "曼城",
+    "fu": "MCI",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "MHSC",
+    "tm": "蒙彼利埃",
+    "fu": "MHSC",
+    "tn": "Montpellier",
+    "c_tm": "Montpellier",
+    "c_fu": "Montpellier",
+    "c_tn": "Montpellier"
+   },
+   {
+    "in": "MUFC",
+    "tm": "曼联",
+    "fu": "MUFC",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "MUN",
+    "tm": "曼联",
+    "fu": "MUN",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Magpies",
+    "tm": "纽卡斯尔",
+    "fu": "Magpies",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "Mainz",
+    "tm": "美因茨",
+    "fu": "美因茨",
+    "tn": "1. FSV Mainz 05",
+    "c_tm": "1. FSV Mainz 05",
+    "c_fu": "1. FSV Mainz 05",
+    "c_tn": "1. FSV Mainz 05"
+   },
+   {
+    "in": "Mainz 05",
+    "tm": "美因茨",
+    "fu": "美因茨",
+    "tn": "1. FSV Mainz 05",
+    "c_tm": "1. FSV Mainz 05",
+    "c_fu": "1. FSV Mainz 05",
+    "c_tn": "1. FSV Mainz 05"
+   },
+   {
+    "in": "Malaga",
+    "tm": "马拉加",
+    "fu": "马拉加",
+    "tn": "Málaga CF",
+    "c_tm": "Málaga CF",
+    "c_fu": "Málaga CF",
+    "c_tn": "Málaga CF"
+   },
+   {
+    "in": "Malaga CF",
+    "tm": "马拉加",
+    "fu": "马拉加",
+    "tn": "Málaga CF",
+    "c_tm": "Málaga CF",
+    "c_fu": "Málaga CF",
+    "c_tn": "Málaga CF"
+   },
+   {
+    "in": "Mallorca",
+    "tm": "马洛卡",
+    "fu": "马洛卡",
+    "tn": "Mallorca",
+    "c_tm": "Mallorca",
+    "c_fu": "Mallorca",
+    "c_tn": "Mallorca"
+   },
+   {
+    "in": "Man City",
+    "tm": "曼城",
+    "fu": "Man City",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "Man United",
+    "tm": "曼联",
+    "fu": "Man United",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Man Utd",
+    "tm": "曼联",
+    "fu": "Man Utd",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Manchester City",
+    "tm": "曼城",
+    "fu": "曼彻斯特城",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "Manchester United",
+    "tm": "曼联",
+    "fu": "曼彻斯特联",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Marseille",
+    "tm": "马赛",
+    "fu": "马赛",
+    "tn": "Olympique de Marseille",
+    "c_tm": "Olympique de Marseille",
+    "c_fu": "Olympique de Marseille",
+    "c_tn": "Olympique de Marseille"
+   },
+   {
+    "in": "Metz",
+    "tm": "梅斯",
+    "fu": "梅斯",
+    "tn": "Metz",
+    "c_tm": "Metz",
+    "c_fu": "Metz",
+    "c_tn": "Metz"
+   },
+   {
+    "in": "Middlesbrough",
+    "tm": "米德尔斯堡",
+    "fu": "Middlesbrough",
+    "tn": "Middlesbrough",
+    "c_tm": "Middlesbrough",
+    "c_fu": "Middlesbrough",
+    "c_tn": "Middlesbrough"
+   },
+   {
+    "in": "Milan",
+    "tm": "AC米兰",
+    "fu": "AC米兰",
+    "tn": "AC Milan",
+    "c_tm": "AC Milan",
+    "c_fu": "AC Milan",
+    "c_tn": "AC Milan"
+   },
+   {
+    "in": "Monaco",
+    "tm": "摩纳哥",
+    "fu": "摩纳哥",
+    "tn": "AS Monaco",
+    "c_tm": "AS Monaco",
+    "c_fu": "AS Monaco",
+    "c_tn": "AS Monaco"
+   },
+   {
+    "in": "Monchengladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Monchengladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Montpellier",
+    "tm": "蒙彼利埃",
+    "fu": "蒙彼利埃",
+    "tn": "Montpellier",
+    "c_tm": "Montpellier",
+    "c_fu": "Montpellier",
+    "c_tn": "Montpellier"
+   },
+   {
+    "in": "Montpellier HSC",
+    "tm": "蒙彼利埃",
+    "fu": "Montpellier HSC",
+    "tn": "Montpellier",
+    "c_tm": "Montpellier",
+    "c_fu": "Montpellier",
+    "c_tn": "Montpellier"
+   },
+   {
+    "in": "Monza",
+    "tm": "蒙扎",
+    "fu": "蒙扎",
+    "tn": "Monza",
+    "c_tm": "Monza",
+    "c_fu": "Monza",
+    "c_tn": "Monza"
+   },
+   {
+    "in": "Málaga",
+    "tm": "马拉加",
+    "fu": "马拉加",
+    "tn": "Málaga CF",
+    "c_tm": "Málaga CF",
+    "c_fu": "Málaga CF",
+    "c_tn": "Málaga CF"
+   },
+   {
+    "in": "Málaga CF",
+    "tm": "马拉加",
+    "fu": "马拉加",
+    "tn": "Málaga CF",
+    "c_tm": "Málaga CF",
+    "c_fu": "Málaga CF",
+    "c_tn": "Málaga CF"
+   },
+   {
+    "in": "Mönchengladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Mönchengladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "NFFC",
+    "tm": "诺丁汉森林",
+    "fu": "NFFC",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "NUFC",
+    "tm": "纽卡斯尔",
+    "fu": "NUFC",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "Nancy",
+    "tm": "南锡",
+    "fu": "Nancy",
+    "tn": "Nancy",
+    "c_tm": "Nancy",
+    "c_fu": "Nancy",
+    "c_tn": "Nancy"
+   },
+   {
+    "in": "Nantes",
+    "tm": "南特",
+    "fu": "南特",
+    "tn": "Nantes",
+    "c_tm": "Nantes",
+    "c_fu": "Nantes",
+    "c_tn": "Nantes"
+   },
+   {
+    "in": "Napoli",
+    "tm": "那不勒斯",
+    "fu": "那不勒斯",
+    "tn": "SSC Napoli",
+    "c_tm": "SSC Napoli",
+    "c_fu": "SSC Napoli",
+    "c_tn": "SSC Napoli"
+   },
+   {
+    "in": "Newcastle",
+    "tm": "纽卡斯尔",
+    "fu": "Newcastle",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "Newcastle United",
+    "tm": "纽卡斯尔",
+    "fu": "纽卡斯尔联",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "Nice",
+    "tm": "尼斯",
+    "fu": "尼斯",
+    "tn": "Nice",
+    "c_tm": "Nice",
+    "c_fu": "Nice",
+    "c_tn": "Nice"
+   },
+   {
+    "in": "Nimes",
+    "tm": "尼姆",
+    "fu": "Nimes",
+    "tn": "Nîmes Olympique",
+    "c_tm": "Nîmes Olympique",
+    "c_fu": "Nîmes Olympique",
+    "c_tn": "Nîmes Olympique"
+   },
+   {
+    "in": "Nimes Olympique",
+    "tm": "尼姆",
+    "fu": "Nimes Olympique",
+    "tn": "Nîmes Olympique",
+    "c_tm": "Nîmes Olympique",
+    "c_fu": "Nîmes Olympique",
+    "c_tn": "Nîmes Olympique"
+   },
+   {
+    "in": "Norwich",
+    "tm": "诺维奇",
+    "fu": "Norwich",
+    "tn": "Norwich City",
+    "c_tm": "Norwich City",
+    "c_fu": "Norwich City",
+    "c_tn": "Norwich City"
+   },
+   {
+    "in": "Norwich City",
+    "tm": "诺维奇",
+    "fu": "Norwich City",
+    "tn": "Norwich City",
+    "c_tm": "Norwich City",
+    "c_fu": "Norwich City",
+    "c_tn": "Norwich City"
+   },
+   {
+    "in": "Nott'm Forest",
+    "tm": "诺丁汉森林",
+    "fu": "Nott'm Forest",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "Nottingham Forest",
+    "tm": "诺丁汉森林",
+    "fu": "诺丁汉森林",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "Nottm Forest",
+    "tm": "诺丁汉森林",
+    "fu": "Nottm Forest",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "Nuernberg",
+    "tm": "纽伦堡",
+    "fu": "Nuernberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "Nuremberg",
+    "tm": "纽伦堡",
+    "fu": "Nuremberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "Nurnberg",
+    "tm": "纽伦堡",
+    "fu": "Nurnberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "Nîmes",
+    "tm": "尼姆",
+    "fu": "Nîmes",
+    "tn": "Nîmes Olympique",
+    "c_tm": "Nîmes Olympique",
+    "c_fu": "Nîmes Olympique",
+    "c_tn": "Nîmes Olympique"
+   },
+   {
+    "in": "Nîmes Olympique",
+    "tm": "尼姆",
+    "fu": "Nîmes Olympique",
+    "tn": "Nîmes Olympique",
+    "c_tm": "Nîmes Olympique",
+    "c_fu": "Nîmes Olympique",
+    "c_tn": "Nîmes Olympique"
+   },
+   {
+    "in": "Nürnberg",
+    "tm": "纽伦堡",
+    "fu": "Nürnberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "OGC Nice",
+    "tm": "尼斯",
+    "fu": "OGC Nice",
+    "tn": "Nice",
+    "c_tm": "Nice",
+    "c_fu": "Nice",
+    "c_tn": "Nice"
+   },
+   {
+    "in": "OL",
+    "tm": "里昂",
+    "fu": "OL",
+    "tn": "Olympique Lyonnais",
+    "c_tm": "Olympique Lyonnais",
+    "c_fu": "Olympique Lyonnais",
+    "c_tn": "Olympique Lyonnais"
+   },
+   {
+    "in": "OM",
+    "tm": "马赛",
+    "fu": "OM",
+    "tn": "Olympique de Marseille",
+    "c_tm": "Olympique de Marseille",
+    "c_fu": "Olympique de Marseille",
+    "c_tn": "Olympique de Marseille"
+   },
+   {
+    "in": "Olympique Lyonnais",
+    "tm": "里昂",
+    "fu": "里昂",
+    "tn": "Olympique Lyonnais",
+    "c_tm": "Olympique Lyonnais",
+    "c_fu": "Olympique Lyonnais",
+    "c_tn": "Olympique Lyonnais"
+   },
+   {
+    "in": "Olympique Marseille",
+    "tm": "马赛",
+    "fu": "马赛",
+    "tn": "Olympique de Marseille",
+    "c_tm": "Olympique de Marseille",
+    "c_fu": "Olympique de Marseille",
+    "c_tn": "Olympique de Marseille"
+   },
+   {
+    "in": "Olympique de Marseille",
+    "tm": "马赛",
+    "fu": "马赛",
+    "tn": "Olympique de Marseille",
+    "c_tm": "Olympique de Marseille",
+    "c_fu": "Olympique de Marseille",
+    "c_tn": "Olympique de Marseille"
+   },
+   {
+    "in": "Osasuna",
+    "tm": "奥萨苏纳",
+    "fu": "奥萨苏纳",
+    "tn": "Osasuna",
+    "c_tm": "Osasuna",
+    "c_fu": "Osasuna",
+    "c_tn": "Osasuna"
+   },
+   {
+    "in": "Oviedo",
+    "tm": "奥维耶多",
+    "fu": "Oviedo",
+    "tn": "Real Oviedo",
+    "c_tm": "Real Oviedo",
+    "c_fu": "Real Oviedo",
+    "c_tn": "Real Oviedo"
+   },
+   {
+    "in": "PSG",
+    "tm": "巴黎圣日耳曼",
+    "fu": "PSG",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Paderborn",
+    "tm": "帕德博恩",
+    "fu": "Paderborn",
+    "tn": "SC Paderborn 07",
+    "c_tm": "SC Paderborn 07",
+    "c_fu": "SC Paderborn 07",
+    "c_tn": "SC Paderborn 07"
+   },
+   {
+    "in": "Paderborn 07",
+    "tm": "帕德博恩",
+    "fu": "Paderborn 07",
+    "tn": "SC Paderborn 07",
+    "c_tm": "SC Paderborn 07",
+    "c_fu": "SC Paderborn 07",
+    "c_tn": "SC Paderborn 07"
+   },
+   {
+    "in": "Palace",
+    "tm": "水晶宫",
+    "fu": "Palace",
+    "tn": "Crystal Palace",
+    "c_tm": "Crystal Palace",
+    "c_fu": "Crystal Palace",
+    "c_tn": "Crystal Palace"
+   },
+   {
+    "in": "Palermo",
+    "tm": "巴勒莫",
+    "fu": "Palermo",
+    "tn": "Palermo",
+    "c_tm": "Palermo",
+    "c_fu": "Palermo",
+    "c_tn": "Palermo"
+   },
+   {
+    "in": "Palermo FC",
+    "tm": "巴勒莫",
+    "fu": "Palermo FC",
+    "tn": "Palermo",
+    "c_tm": "Palermo",
+    "c_fu": "Palermo",
+    "c_tn": "Palermo"
+   },
+   {
+    "in": "Paris FC",
+    "tm": "巴黎FC",
+    "fu": "巴黎FC",
+    "tn": "Paris FC",
+    "c_tm": "Paris FC",
+    "c_fu": "Paris FC",
+    "c_tn": "Paris FC"
+   },
+   {
+    "in": "Paris S-G",
+    "tm": "巴黎圣日耳曼",
+    "fu": "Paris S-G",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Paris SG",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣日尔曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Paris Saint Germain",
+    "tm": "巴黎圣日耳曼",
+    "fu": "Paris Saint Germain",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Paris Saint-Germain",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣日尔曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Parma",
+    "tm": "帕尔马",
+    "fu": "帕尔马",
+    "tn": "Parma",
+    "c_tm": "Parma",
+    "c_fu": "Parma",
+    "c_tn": "Parma"
+   },
+   {
+    "in": "Parma Calcio",
+    "tm": "帕尔马",
+    "fu": "Parma Calcio",
+    "tn": "Parma",
+    "c_tm": "Parma",
+    "c_fu": "Parma",
+    "c_tn": "Parma"
+   },
+   {
+    "in": "Parma Calcio 1913",
+    "tm": "帕尔马",
+    "fu": "Parma Calcio 1913",
+    "tn": "Parma",
+    "c_tm": "Parma",
+    "c_fu": "Parma",
+    "c_tn": "Parma"
+   },
+   {
+    "in": "Pescara",
+    "tm": "佩斯卡拉",
+    "fu": "Pescara",
+    "tn": "Pescara",
+    "c_tm": "Pescara",
+    "c_fu": "Pescara",
+    "c_tn": "Pescara"
+   },
+   {
+    "in": "Pisa",
+    "tm": "比萨",
+    "fu": "比萨",
+    "tn": "Pisa",
+    "c_tm": "Pisa",
+    "c_fu": "Pisa",
+    "c_tn": "Pisa"
+   },
+   {
+    "in": "Pisa SC",
+    "tm": "比萨",
+    "fu": "Pisa SC",
+    "tn": "Pisa",
+    "c_tm": "Pisa",
+    "c_fu": "Pisa",
+    "c_tn": "Pisa"
+   },
+   {
+    "in": "RB Leipzig",
+    "tm": "莱比锡",
+    "fu": "莱比锡红牛",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "RC Celta",
+    "tm": "塞尔塔",
+    "fu": "RC Celta",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "RC Lens",
+    "tm": "朗斯",
+    "fu": "朗斯",
+    "tn": "RC Lens",
+    "c_tm": "RC Lens",
+    "c_fu": "RC Lens",
+    "c_tn": "RC Lens"
+   },
+   {
+    "in": "RC Strasbourg",
+    "tm": "斯特拉斯堡",
+    "fu": "斯特拉斯堡",
+    "tn": "RC Strasbourg",
+    "c_tm": "RC Strasbourg",
+    "c_fu": "RC Strasbourg",
+    "c_tn": "RC Strasbourg"
+   },
+   {
+    "in": "RCD Espanyol",
+    "tm": "西班牙人",
+    "fu": "RCD Espanyol",
+    "tn": "Espanyol",
+    "c_tm": "Espanyol",
+    "c_fu": "Espanyol",
+    "c_tn": "Espanyol"
+   },
+   {
+    "in": "RCD Mallorca",
+    "tm": "马洛卡",
+    "fu": "RCD Mallorca",
+    "tn": "Mallorca",
+    "c_tm": "Mallorca",
+    "c_fu": "Mallorca",
+    "c_tn": "Mallorca"
+   },
+   {
+    "in": "RM",
+    "tm": "皇家马德里",
+    "fu": "RM",
+    "tn": "Real Madrid",
+    "c_tm": "Real Madrid",
+    "c_fu": "Real Madrid",
+    "c_tn": "Real Madrid"
+   },
+   {
+    "in": "Racing",
+    "tm": "桑坦德竞技",
+    "fu": "Racing",
+    "tn": "Real Racing Club",
+    "c_tm": "Real Racing Club",
+    "c_fu": "Real Racing Club",
+    "c_tn": "Real Racing Club"
+   },
+   {
+    "in": "Racing Santander",
+    "tm": "桑坦德竞技",
+    "fu": "Racing Santander",
+    "tn": "Real Racing Club",
+    "c_tm": "Real Racing Club",
+    "c_fu": "Real Racing Club",
+    "c_tn": "Real Racing Club"
+   },
+   {
+    "in": "RasenBallsport Leipzig",
+    "tm": "莱比锡",
+    "fu": "RasenBallsport Leipzig",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "Rayo",
+    "tm": "巴列卡诺",
+    "fu": "Rayo",
+    "tn": "Rayo Vallecano",
+    "c_tm": "Rayo Vallecano",
+    "c_fu": "Rayo Vallecano",
+    "c_tn": "Rayo Vallecano"
+   },
+   {
+    "in": "Rayo Vallecano",
+    "tm": "巴列卡诺",
+    "fu": "巴列卡诺",
+    "tn": "Rayo Vallecano",
+    "c_tm": "Rayo Vallecano",
+    "c_fu": "Rayo Vallecano",
+    "c_tn": "Rayo Vallecano"
+   },
+   {
+    "in": "Real Betis",
+    "tm": "皇家贝蒂斯",
+    "fu": "皇家贝蒂斯",
+    "tn": "Real Betis",
+    "c_tm": "Real Betis",
+    "c_fu": "Real Betis",
+    "c_tn": "Real Betis"
+   },
+   {
+    "in": "Real Madrid",
+    "tm": "皇家马德里",
+    "fu": "皇家马德里",
+    "tn": "Real Madrid",
+    "c_tm": "Real Madrid",
+    "c_fu": "Real Madrid",
+    "c_tn": "Real Madrid"
+   },
+   {
+    "in": "Real Oviedo",
+    "tm": "奥维耶多",
+    "fu": "奥维耶多",
+    "tn": "Real Oviedo",
+    "c_tm": "Real Oviedo",
+    "c_fu": "Real Oviedo",
+    "c_tn": "Real Oviedo"
+   },
+   {
+    "in": "Real Racing",
+    "tm": "桑坦德竞技",
+    "fu": "桑坦德竞技",
+    "tn": "Real Racing Club",
+    "c_tm": "Real Racing Club",
+    "c_fu": "Real Racing Club",
+    "c_tn": "Real Racing Club"
+   },
+   {
+    "in": "Real Racing Club",
+    "tm": "桑坦德竞技",
+    "fu": "桑坦德竞技",
+    "tn": "Real Racing Club",
+    "c_tm": "Real Racing Club",
+    "c_fu": "Real Racing Club",
+    "c_tn": "Real Racing Club"
+   },
+   {
+    "in": "Real Sociedad",
+    "tm": "皇家社会",
+    "fu": "皇家社会",
+    "tn": "Real Sociedad",
+    "c_tm": "Real Sociedad",
+    "c_fu": "Real Sociedad",
+    "c_tn": "Real Sociedad"
+   },
+   {
+    "in": "Real Valladolid",
+    "tm": "巴利亚多利德",
+    "fu": "瓦拉多利德",
+    "tn": "Real Valladolid",
+    "c_tm": "Real Valladolid",
+    "c_fu": "Real Valladolid",
+    "c_tn": "Real Valladolid"
+   },
+   {
+    "in": "Reims",
+    "tm": "兰斯",
+    "fu": "兰斯",
+    "tn": "Stade de Reims",
+    "c_tm": "Stade de Reims",
+    "c_fu": "Stade de Reims",
+    "c_tn": "Stade de Reims"
+   },
+   {
+    "in": "Rennes",
+    "tm": "雷恩",
+    "fu": "雷恩",
+    "tn": "Stade Rennais",
+    "c_tm": "Stade Rennais",
+    "c_fu": "Stade Rennais",
+    "c_tn": "Stade Rennais"
+   },
+   {
+    "in": "Roma",
+    "tm": "罗马",
+    "fu": "罗马",
+    "tn": "AS Roma",
+    "c_tm": "AS Roma",
+    "c_fu": "AS Roma",
+    "c_tn": "AS Roma"
+   },
+   {
+    "in": "SAFC",
+    "tm": "桑德兰",
+    "fu": "SAFC",
+    "tn": "Sunderland",
+    "c_tm": "Sunderland",
+    "c_fu": "Sunderland",
+    "c_tn": "Sunderland"
+   },
+   {
+    "in": "SC Bastia",
+    "tm": "巴斯蒂亚",
+    "fu": "SC Bastia",
+    "tn": "Bastia",
+    "c_tm": "Bastia",
+    "c_fu": "Bastia",
+    "c_tn": "Bastia"
+   },
+   {
+    "in": "SC Freiburg",
+    "tm": "弗赖堡",
+    "fu": "弗赖堡",
+    "tn": "SC Freiburg",
+    "c_tm": "SC Freiburg",
+    "c_fu": "SC Freiburg",
+    "c_tn": "SC Freiburg"
+   },
+   {
+    "in": "SC Paderborn 07",
+    "tm": "帕德博恩",
+    "fu": "SC Paderborn 07",
+    "tn": "SC Paderborn 07",
+    "c_tm": "SC Paderborn 07",
+    "c_fu": "SC Paderborn 07",
+    "c_tn": "SC Paderborn 07"
+   },
+   {
+    "in": "SCO Angers",
+    "tm": "昂热",
+    "fu": "SCO Angers",
+    "tn": "Angers",
+    "c_tm": "Angers",
+    "c_fu": "Angers",
+    "c_tn": "Angers"
+   },
+   {
+    "in": "SD Eibar",
+    "tm": "埃瓦尔",
+    "fu": "SD Eibar",
+    "tn": "Eibar",
+    "c_tm": "Eibar",
+    "c_fu": "Eibar",
+    "c_tn": "Eibar"
+   },
+   {
+    "in": "SD Huesca",
+    "tm": "韦斯卡",
+    "fu": "SD Huesca",
+    "tn": "Huesca",
+    "c_tm": "Huesca",
+    "c_fu": "Huesca",
+    "c_tn": "Huesca"
+   },
+   {
+    "in": "SM Caen",
+    "tm": "卡昂",
+    "fu": "SM Caen",
+    "tn": "Stade Malherbe Caen",
+    "c_tm": "Stade Malherbe Caen",
+    "c_fu": "Stade Malherbe Caen",
+    "c_tn": "Stade Malherbe Caen"
+   },
+   {
+    "in": "SPAL",
+    "tm": "费拉拉SPAL",
+    "fu": "SPAL",
+    "tn": "SPAL",
+    "c_tm": "SPAL",
+    "c_fu": "SPAL",
+    "c_tn": "SPAL"
+   },
+   {
+    "in": "SPAL 2013",
+    "tm": "费拉拉SPAL",
+    "fu": "SPAL 2013",
+    "tn": "SPAL",
+    "c_tm": "SPAL",
+    "c_fu": "SPAL",
+    "c_tn": "SPAL"
+   },
+   {
+    "in": "SPAL Ferrara",
+    "tm": "费拉拉SPAL",
+    "fu": "SPAL Ferrara",
+    "tn": "SPAL",
+    "c_tm": "SPAL",
+    "c_fu": "SPAL",
+    "c_tn": "SPAL"
+   },
+   {
+    "in": "SS Lazio",
+    "tm": "拉齐奥",
+    "fu": "SS Lazio",
+    "tn": "Lazio",
+    "c_tm": "Lazio",
+    "c_fu": "Lazio",
+    "c_tn": "Lazio"
+   },
+   {
+    "in": "SSC Napoli",
+    "tm": "那不勒斯",
+    "fu": "那不勒斯",
+    "tn": "SSC Napoli",
+    "c_tm": "SSC Napoli",
+    "c_fu": "SSC Napoli",
+    "c_tn": "SSC Napoli"
+   },
+   {
+    "in": "SSD Sampdoria",
+    "tm": "桑普多利亚",
+    "fu": "SSD Sampdoria",
+    "tn": "Sampdoria",
+    "c_tm": "Sampdoria",
+    "c_fu": "Sampdoria",
+    "c_tn": "Sampdoria"
+   },
+   {
+    "in": "SV 07 Elversberg",
+    "tm": "埃尔沃斯堡",
+    "fu": "SV 07 Elversberg",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "SV Darmstadt 98",
+    "tm": "达姆施塔特",
+    "fu": "SV Darmstadt 98",
+    "tn": "Darmstadt 98",
+    "c_tm": "Darmstadt 98",
+    "c_fu": "Darmstadt 98",
+    "c_tn": "Darmstadt 98"
+   },
+   {
+    "in": "SV Elversberg",
+    "tm": "埃尔沃斯堡",
+    "fu": "SV Elversberg",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "SV Werder Bremen",
+    "tm": "云达不莱梅",
+    "fu": "云达不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "Saint Etienne",
+    "tm": "圣埃蒂安",
+    "fu": "Saint Etienne",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "Saint-Etienne",
+    "tm": "圣埃蒂安",
+    "fu": "Saint-Etienne",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "Saint-Étienne",
+    "tm": "圣埃蒂安",
+    "fu": "圣埃蒂安",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "Salernitana",
+    "tm": "萨勒尼塔纳",
+    "fu": "萨勒尼塔纳",
+    "tn": "Salernitana",
+    "c_tm": "Salernitana",
+    "c_fu": "Salernitana",
+    "c_tn": "Salernitana"
+   },
+   {
+    "in": "Sampdoria",
+    "tm": "桑普多利亚",
+    "fu": "Sampdoria",
+    "tn": "Sampdoria",
+    "c_tm": "Sampdoria",
+    "c_fu": "Sampdoria",
+    "c_tn": "Sampdoria"
+   },
+   {
+    "in": "Sassuolo",
+    "tm": "萨索洛",
+    "fu": "萨索洛",
+    "tn": "Sassuolo",
+    "c_tm": "Sassuolo",
+    "c_fu": "Sassuolo",
+    "c_tn": "Sassuolo"
+   },
+   {
+    "in": "Schalke",
+    "tm": "沙尔克04",
+    "fu": "沙尔克04",
+    "tn": "FC Schalke 04",
+    "c_tm": "FC Schalke 04",
+    "c_fu": "FC Schalke 04",
+    "c_tn": "FC Schalke 04"
+   },
+   {
+    "in": "Schalke 04",
+    "tm": "沙尔克04",
+    "fu": "沙尔克04",
+    "tn": "FC Schalke 04",
+    "c_tm": "FC Schalke 04",
+    "c_fu": "FC Schalke 04",
+    "c_tn": "FC Schalke 04"
+   },
+   {
+    "in": "Sevilla",
+    "tm": "塞维利亚",
+    "fu": "塞维利亚",
+    "tn": "Sevilla",
+    "c_tm": "Sevilla",
+    "c_fu": "Sevilla",
+    "c_tn": "Sevilla"
+   },
+   {
+    "in": "Sevilla FC",
+    "tm": "塞维利亚",
+    "fu": "Sevilla FC",
+    "tn": "Sevilla",
+    "c_tm": "Sevilla",
+    "c_fu": "Sevilla",
+    "c_tn": "Sevilla"
+   },
+   {
+    "in": "Sheffield",
+    "tm": "谢菲尔德联",
+    "fu": "Sheffield",
+    "tn": "Sheffield United",
+    "c_tm": "Sheffield United",
+    "c_fu": "Sheffield United",
+    "c_tn": "Sheffield United"
+   },
+   {
+    "in": "Sheffield United",
+    "tm": "谢菲尔德联",
+    "fu": "谢菲尔德联",
+    "tn": "Sheffield United",
+    "c_tm": "Sheffield United",
+    "c_fu": "Sheffield United",
+    "c_tn": "Sheffield United"
+   },
+   {
+    "in": "Sheffield Utd",
+    "tm": "谢菲尔德联",
+    "fu": "Sheffield Utd",
+    "tn": "Sheffield United",
+    "c_tm": "Sheffield United",
+    "c_fu": "Sheffield United",
+    "c_tn": "Sheffield United"
+   },
+   {
+    "in": "Sociedad",
+    "tm": "皇家社会",
+    "fu": "Sociedad",
+    "tn": "Real Sociedad",
+    "c_tm": "Real Sociedad",
+    "c_fu": "Real Sociedad",
+    "c_tn": "Real Sociedad"
+   },
+   {
+    "in": "Soton",
+    "tm": "南安普顿",
+    "fu": "Soton",
+    "tn": "Southampton",
+    "c_tm": "Southampton",
+    "c_fu": "Southampton",
+    "c_tn": "Southampton"
+   },
+   {
+    "in": "Southampton",
+    "tm": "南安普顿",
+    "fu": "南安普敦",
+    "tn": "Southampton",
+    "c_tm": "Southampton",
+    "c_fu": "Southampton",
+    "c_tn": "Southampton"
+   },
+   {
+    "in": "SpVgg Greuther Fürth",
+    "tm": "菲尔特",
+    "fu": "SpVgg Greuther Fürth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Spal",
+    "tm": "费拉拉SPAL",
+    "fu": "Spal",
+    "tn": "SPAL",
+    "c_tm": "SPAL",
+    "c_fu": "SPAL",
+    "c_tn": "SPAL"
+   },
+   {
+    "in": "Spezia",
+    "tm": "斯佩齐亚",
+    "fu": "Spezia",
+    "tn": "Spezia",
+    "c_tm": "Spezia",
+    "c_fu": "Spezia",
+    "c_tn": "Spezia"
+   },
+   {
+    "in": "Spezia Calcio",
+    "tm": "斯佩齐亚",
+    "fu": "Spezia Calcio",
+    "tn": "Spezia",
+    "c_tm": "Spezia",
+    "c_fu": "Spezia",
+    "c_tn": "Spezia"
+   },
+   {
+    "in": "Sporting Gijon",
+    "tm": "希洪竞技",
+    "fu": "Sporting Gijon",
+    "tn": "Sporting Gijón",
+    "c_tm": "Sporting Gijón",
+    "c_fu": "Sporting Gijón",
+    "c_tn": "Sporting Gijón"
+   },
+   {
+    "in": "Sporting Gijón",
+    "tm": "希洪竞技",
+    "fu": "Sporting Gijón",
+    "tn": "Sporting Gijón",
+    "c_tm": "Sporting Gijón",
+    "c_fu": "Sporting Gijón",
+    "c_tn": "Sporting Gijón"
+   },
+   {
+    "in": "Sporting de Gijon",
+    "tm": "希洪竞技",
+    "fu": "Sporting de Gijon",
+    "tn": "Sporting Gijón",
+    "c_tm": "Sporting Gijón",
+    "c_fu": "Sporting Gijón",
+    "c_tn": "Sporting Gijón"
+   },
+   {
+    "in": "Spurs",
+    "tm": "热刺",
+    "fu": "Spurs",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "St Etienne",
+    "tm": "圣埃蒂安",
+    "fu": "St Etienne",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "St Pauli",
+    "tm": "圣保利",
+    "fu": "圣保利",
+    "tn": "FC St. Pauli",
+    "c_tm": "FC St. Pauli",
+    "c_fu": "FC St. Pauli",
+    "c_tn": "FC St. Pauli"
+   },
+   {
+    "in": "St-Étienne",
+    "tm": "圣埃蒂安",
+    "fu": "St-Étienne",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "St. Pauli",
+    "tm": "圣保利",
+    "fu": "圣保利",
+    "tn": "FC St. Pauli",
+    "c_tm": "FC St. Pauli",
+    "c_fu": "FC St. Pauli",
+    "c_tn": "FC St. Pauli"
+   },
+   {
+    "in": "Stade Brestois",
+    "tm": "布雷斯特",
+    "fu": "布雷斯特",
+    "tn": "Stade Brestois",
+    "c_tm": "Stade Brestois",
+    "c_fu": "Stade Brestois",
+    "c_tn": "Stade Brestois"
+   },
+   {
+    "in": "Stade Malherbe Caen",
+    "tm": "卡昂",
+    "fu": "Stade Malherbe Caen",
+    "tn": "Stade Malherbe Caen",
+    "c_tm": "Stade Malherbe Caen",
+    "c_fu": "Stade Malherbe Caen",
+    "c_tn": "Stade Malherbe Caen"
+   },
+   {
+    "in": "Stade Reims",
+    "tm": "兰斯",
+    "fu": "Stade Reims",
+    "tn": "Stade de Reims",
+    "c_tm": "Stade de Reims",
+    "c_fu": "Stade de Reims",
+    "c_tn": "Stade de Reims"
+   },
+   {
+    "in": "Stade Rennais",
+    "tm": "雷恩",
+    "fu": "雷恩",
+    "tn": "Stade Rennais",
+    "c_tm": "Stade Rennais",
+    "c_fu": "Stade Rennais",
+    "c_tn": "Stade Rennais"
+   },
+   {
+    "in": "Stade de Reims",
+    "tm": "兰斯",
+    "fu": "兰斯",
+    "tn": "Stade de Reims",
+    "c_tm": "Stade de Reims",
+    "c_fu": "Stade de Reims",
+    "c_tn": "Stade de Reims"
+   },
+   {
+    "in": "Stoke",
+    "tm": "斯托克城",
+    "fu": "Stoke",
+    "tn": "Stoke City",
+    "c_tm": "Stoke City",
+    "c_fu": "Stoke City",
+    "c_tn": "Stoke City"
+   },
+   {
+    "in": "Stoke City",
+    "tm": "斯托克城",
+    "fu": "Stoke City",
+    "tn": "Stoke City",
+    "c_tm": "Stoke City",
+    "c_fu": "Stoke City",
+    "c_tn": "Stoke City"
+   },
+   {
+    "in": "Strasbourg",
+    "tm": "斯特拉斯堡",
+    "fu": "斯特拉斯堡",
+    "tn": "RC Strasbourg",
+    "c_tm": "RC Strasbourg",
+    "c_fu": "RC Strasbourg",
+    "c_tn": "RC Strasbourg"
+   },
+   {
+    "in": "Stuttgart",
+    "tm": "斯图加特",
+    "fu": "斯图加特",
+    "tn": "VfB Stuttgart",
+    "c_tm": "VfB Stuttgart",
+    "c_fu": "VfB Stuttgart",
+    "c_tn": "VfB Stuttgart"
+   },
+   {
+    "in": "Sunderland",
+    "tm": "桑德兰",
+    "fu": "桑德兰",
+    "tn": "Sunderland",
+    "c_tm": "Sunderland",
+    "c_fu": "Sunderland",
+    "c_tn": "Sunderland"
+   },
+   {
+    "in": "Swansea",
+    "tm": "斯旺西",
+    "fu": "Swansea",
+    "tn": "Swansea City",
+    "c_tm": "Swansea City",
+    "c_fu": "Swansea City",
+    "c_tn": "Swansea City"
+   },
+   {
+    "in": "Swansea City",
+    "tm": "斯旺西",
+    "fu": "Swansea City",
+    "tn": "Swansea City",
+    "c_tm": "Swansea City",
+    "c_fu": "Swansea City",
+    "c_tn": "Swansea City"
+   },
+   {
+    "in": "THFC",
+    "tm": "热刺",
+    "fu": "THFC",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "TSG Hoffenheim",
+    "tm": "霍芬海姆",
+    "fu": "霍芬海姆",
+    "tn": "TSG Hoffenheim",
+    "c_tm": "TSG Hoffenheim",
+    "c_fu": "TSG Hoffenheim",
+    "c_tn": "TSG Hoffenheim"
+   },
+   {
+    "in": "Torino",
+    "tm": "都灵",
+    "fu": "都灵",
+    "tn": "Torino",
+    "c_tm": "Torino",
+    "c_fu": "Torino",
+    "c_tn": "Torino"
+   },
+   {
+    "in": "Torino FC",
+    "tm": "都灵",
+    "fu": "Torino FC",
+    "tn": "Torino",
+    "c_tm": "Torino",
+    "c_fu": "Torino",
+    "c_tn": "Torino"
+   },
+   {
+    "in": "Tottenham",
+    "tm": "热刺",
+    "fu": "Tottenham",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "Tottenham Hotspur",
+    "tm": "热刺",
+    "fu": "托特纳姆热刺",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "Toulouse",
+    "tm": "图卢兹",
+    "fu": "图卢兹",
+    "tn": "Toulouse",
+    "c_tm": "Toulouse",
+    "c_fu": "Toulouse",
+    "c_tn": "Toulouse"
+   },
+   {
+    "in": "Toulouse FC",
+    "tm": "图卢兹",
+    "fu": "Toulouse FC",
+    "tn": "Toulouse",
+    "c_tm": "Toulouse",
+    "c_fu": "Toulouse",
+    "c_tn": "Toulouse"
+   },
+   {
+    "in": "Troyes",
+    "tm": "特鲁瓦",
+    "fu": "特鲁瓦",
+    "tn": "Troyes",
+    "c_tm": "Troyes",
+    "c_fu": "Troyes",
+    "c_tn": "Troyes"
+   },
+   {
+    "in": "UC Sampdoria",
+    "tm": "桑普多利亚",
+    "fu": "UC Sampdoria",
+    "tn": "Sampdoria",
+    "c_tm": "Sampdoria",
+    "c_fu": "Sampdoria",
+    "c_tn": "Sampdoria"
+   },
+   {
+    "in": "UD Almeria",
+    "tm": "阿尔梅里亚",
+    "fu": "UD Almeria",
+    "tn": "Almería",
+    "c_tm": "Almería",
+    "c_fu": "Almería",
+    "c_tn": "Almería"
+   },
+   {
+    "in": "UD Almería",
+    "tm": "阿尔梅里亚",
+    "fu": "UD Almería",
+    "tn": "Almería",
+    "c_tm": "Almería",
+    "c_fu": "Almería",
+    "c_tn": "Almería"
+   },
+   {
+    "in": "UD Las Palmas",
+    "tm": "拉斯帕尔马斯",
+    "fu": "拉斯帕尔马斯",
+    "tn": "UD Las Palmas",
+    "c_tm": "UD Las Palmas",
+    "c_fu": "UD Las Palmas",
+    "c_tn": "UD Las Palmas"
+   },
+   {
+    "in": "UD Levante",
+    "tm": "莱万特",
+    "fu": "UD Levante",
+    "tn": "Levante UD",
+    "c_tm": "Levante UD",
+    "c_fu": "Levante UD",
+    "c_tn": "Levante UD"
+   },
+   {
+    "in": "US Cremonese",
+    "tm": "克雷莫纳",
+    "fu": "US Cremonese",
+    "tn": "Cremonese",
+    "c_tm": "Cremonese",
+    "c_fu": "Cremonese",
+    "c_tn": "Cremonese"
+   },
+   {
+    "in": "US Lecce",
+    "tm": "莱切",
+    "fu": "US Lecce",
+    "tn": "Lecce",
+    "c_tm": "Lecce",
+    "c_fu": "Lecce",
+    "c_tn": "Lecce"
+   },
+   {
+    "in": "US Sassuolo",
+    "tm": "萨索洛",
+    "fu": "US Sassuolo",
+    "tn": "Sassuolo",
+    "c_tm": "Sassuolo",
+    "c_fu": "Sassuolo",
+    "c_tn": "Sassuolo"
+   },
+   {
+    "in": "Udinese",
+    "tm": "乌迪内斯",
+    "fu": "乌迪内斯",
+    "tn": "Udinese",
+    "c_tm": "Udinese",
+    "c_fu": "Udinese",
+    "c_tn": "Udinese"
+   },
+   {
+    "in": "Udinese Calcio",
+    "tm": "乌迪内斯",
+    "fu": "Udinese Calcio",
+    "tn": "Udinese",
+    "c_tm": "Udinese",
+    "c_fu": "Udinese",
+    "c_tn": "Udinese"
+   },
+   {
+    "in": "Union Berlin",
+    "tm": "柏林联合",
+    "fu": "柏林联合",
+    "tn": "1. FC Union Berlin",
+    "c_tm": "1. FC Union Berlin",
+    "c_fu": "1. FC Union Berlin",
+    "c_tn": "1. FC Union Berlin"
+   },
+   {
+    "in": "Valencia",
+    "tm": "瓦伦西亚",
+    "fu": "巴伦西亚",
+    "tn": "Valencia",
+    "c_tm": "Valencia",
+    "c_fu": "Valencia",
+    "c_tn": "Valencia"
+   },
+   {
+    "in": "Valencia CF",
+    "tm": "瓦伦西亚",
+    "fu": "Valencia CF",
+    "tn": "Valencia",
+    "c_tm": "Valencia",
+    "c_fu": "Valencia",
+    "c_tn": "Valencia"
+   },
+   {
+    "in": "Valladolid",
+    "tm": "巴利亚多利德",
+    "fu": "Valladolid",
+    "tn": "Real Valladolid",
+    "c_tm": "Real Valladolid",
+    "c_fu": "Real Valladolid",
+    "c_tn": "Real Valladolid"
+   },
+   {
+    "in": "Venezia",
+    "tm": "威尼斯",
+    "fu": "威尼斯",
+    "tn": "Venezia",
+    "c_tm": "Venezia",
+    "c_fu": "Venezia",
+    "c_tn": "Venezia"
+   },
+   {
+    "in": "Venezia FC",
+    "tm": "威尼斯",
+    "fu": "Venezia FC",
+    "tn": "Venezia",
+    "c_tm": "Venezia",
+    "c_fu": "Venezia",
+    "c_tn": "Venezia"
+   },
+   {
+    "in": "Verona",
+    "tm": "维罗纳",
+    "fu": "维罗纳",
+    "tn": "Hellas Verona",
+    "c_tm": "Hellas Verona",
+    "c_fu": "Hellas Verona",
+    "c_tn": "Hellas Verona"
+   },
+   {
+    "in": "VfB Stuttgart",
+    "tm": "斯图加特",
+    "fu": "斯图加特",
+    "tn": "VfB Stuttgart",
+    "c_tm": "VfB Stuttgart",
+    "c_fu": "VfB Stuttgart",
+    "c_tn": "VfB Stuttgart"
+   },
+   {
+    "in": "VfL Bochum",
+    "tm": "波鸿",
+    "fu": "VfL Bochum",
+    "tn": "VfL Bochum 1848",
+    "c_tm": "VfL Bochum 1848",
+    "c_fu": "VfL Bochum 1848",
+    "c_tn": "VfL Bochum 1848"
+   },
+   {
+    "in": "VfL Bochum 1848",
+    "tm": "波鸿",
+    "fu": "波鸿",
+    "tn": "VfL Bochum 1848",
+    "c_tm": "VfL Bochum 1848",
+    "c_fu": "VfL Bochum 1848",
+    "c_tn": "VfL Bochum 1848"
+   },
+   {
+    "in": "VfL Wolfsburg",
+    "tm": "沃尔夫斯堡",
+    "fu": "沃尔夫斯堡",
+    "tn": "VfL Wolfsburg",
+    "c_tm": "VfL Wolfsburg",
+    "c_fu": "VfL Wolfsburg",
+    "c_tn": "VfL Wolfsburg"
+   },
+   {
+    "in": "Villa",
+    "tm": "阿斯顿维拉",
+    "fu": "Villa",
+    "tn": "Aston Villa",
+    "c_tm": "Aston Villa",
+    "c_fu": "Aston Villa",
+    "c_tn": "Aston Villa"
+   },
+   {
+    "in": "Villarreal",
+    "tm": "比利亚雷亚尔",
+    "fu": "比利亚雷亚尔",
+    "tn": "Villarreal",
+    "c_tm": "Villarreal",
+    "c_fu": "Villarreal",
+    "c_tn": "Villarreal"
+   },
+   {
+    "in": "Villarreal CF",
+    "tm": "比利亚雷亚尔",
+    "fu": "Villarreal CF",
+    "tn": "Villarreal",
+    "c_tm": "Villarreal",
+    "c_fu": "Villarreal",
+    "c_tn": "Villarreal"
+   },
+   {
+    "in": "WBA",
+    "tm": "西布罗姆维奇",
+    "fu": "WBA",
+    "tn": "West Bromwich Albion",
+    "c_tm": "West Bromwich Albion",
+    "c_fu": "West Bromwich Albion",
+    "c_tn": "West Bromwich Albion"
+   },
+   {
+    "in": "WHFC",
+    "tm": "西汉姆",
+    "fu": "WHFC",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "WHU",
+    "tm": "西汉姆",
+    "fu": "WHU",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "Watford",
+    "tm": "沃特福德",
+    "fu": "Watford",
+    "tn": "Watford",
+    "c_tm": "Watford",
+    "c_fu": "Watford",
+    "c_tn": "Watford"
+   },
+   {
+    "in": "Watford FC",
+    "tm": "沃特福德",
+    "fu": "Watford FC",
+    "tn": "Watford",
+    "c_tm": "Watford",
+    "c_fu": "Watford",
+    "c_tn": "Watford"
+   },
+   {
+    "in": "Werder Bremen",
+    "tm": "云达不莱梅",
+    "fu": "云达不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "West Brom",
+    "tm": "西布罗姆维奇",
+    "fu": "West Brom",
+    "tn": "West Bromwich Albion",
+    "c_tm": "West Bromwich Albion",
+    "c_fu": "West Bromwich Albion",
+    "c_tn": "West Bromwich Albion"
+   },
+   {
+    "in": "West Bromwich",
+    "tm": "西布罗姆维奇",
+    "fu": "West Bromwich",
+    "tn": "West Bromwich Albion",
+    "c_tm": "West Bromwich Albion",
+    "c_fu": "West Bromwich Albion",
+    "c_tn": "West Bromwich Albion"
+   },
+   {
+    "in": "West Bromwich Albion",
+    "tm": "西布罗姆维奇",
+    "fu": "West Bromwich Albion",
+    "tn": "West Bromwich Albion",
+    "c_tm": "West Bromwich Albion",
+    "c_fu": "West Bromwich Albion",
+    "c_tn": "West Bromwich Albion"
+   },
+   {
+    "in": "West Ham",
+    "tm": "西汉姆",
+    "fu": "West Ham",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "West Ham United",
+    "tm": "西汉姆",
+    "fu": "西汉姆联",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "Wolfsburg",
+    "tm": "沃尔夫斯堡",
+    "fu": "沃尔夫斯堡",
+    "tn": "VfL Wolfsburg",
+    "c_tm": "VfL Wolfsburg",
+    "c_fu": "VfL Wolfsburg",
+    "c_tn": "VfL Wolfsburg"
+   },
+   {
+    "in": "Wolverhampton",
+    "tm": "狼队",
+    "fu": "狼队",
+    "tn": "Wolverhampton",
+    "c_tm": "Wolverhampton",
+    "c_fu": "Wolverhampton",
+    "c_tn": "Wolverhampton"
+   },
+   {
+    "in": "Wolverhampton Wanderers",
+    "tm": "狼队",
+    "fu": "狼队",
+    "tn": "Wolverhampton",
+    "c_tm": "Wolverhampton",
+    "c_fu": "Wolverhampton",
+    "c_tn": "Wolverhampton"
+   },
+   {
+    "in": "Wolves",
+    "tm": "狼队",
+    "fu": "Wolves",
+    "tn": "Wolverhampton",
+    "c_tm": "Wolverhampton",
+    "c_fu": "Wolverhampton",
+    "c_tn": "Wolverhampton"
+   },
+   {
+    "in": "Yellow Submarine",
+    "tm": "比利亚雷亚尔",
+    "fu": "Yellow Submarine",
+    "tn": "Villarreal",
+    "c_tm": "Villarreal",
+    "c_fu": "Villarreal",
+    "c_tn": "Villarreal"
+   },
+   {
+    "in": "不来梅",
+    "tm": "云达不莱梅",
+    "fu": "不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "乌迪内斯",
+    "tm": "乌迪内斯",
+    "fu": "乌迪内斯",
+    "tn": "Udinese",
+    "c_tm": "Udinese",
+    "c_fu": "Udinese",
+    "c_tn": "Udinese"
+   },
+   {
+    "in": "云达不来梅",
+    "tm": "云达不莱梅",
+    "fu": "云达不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "云达不莱梅",
+    "tm": "云达不莱梅",
+    "fu": "云达不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "亚特兰大",
+    "tm": "亚特兰大",
+    "fu": "亚特兰大",
+    "tn": "Atalanta",
+    "c_tm": "Atalanta",
+    "c_fu": "Atalanta",
+    "c_tn": "Atalanta"
+   },
+   {
+    "in": "亚眠",
+    "tm": "亚眠",
+    "fu": "亚眠",
+    "tn": "Amiens SC",
+    "c_tm": "Amiens SC",
+    "c_fu": "Amiens SC",
+    "c_tn": "Amiens SC"
+   },
+   {
+    "in": "伊普斯",
+    "tm": "伊普斯维奇",
+    "fu": "伊普斯维奇",
+    "tn": "Ipswich Town",
+    "c_tm": "Ipswich Town",
+    "c_fu": "Ipswich Town",
+    "c_tn": "Ipswich Town"
+   },
+   {
+    "in": "伊普斯维奇",
+    "tm": "伊普斯维奇",
+    "fu": "伊普斯维奇",
+    "tn": "Ipswich Town",
+    "c_tm": "Ipswich Town",
+    "c_fu": "Ipswich Town",
+    "c_tn": "Ipswich Town"
+   },
+   {
+    "in": "伍尔弗汉普顿",
+    "tm": "狼队",
+    "fu": "伍尔弗汉普顿",
+    "tn": "Wolverhampton",
+    "c_tm": "Wolverhampton",
+    "c_fu": "Wolverhampton",
+    "c_tn": "Wolverhampton"
+   },
+   {
+    "in": "伍尔弗汉普顿流浪者",
+    "tm": "狼队",
+    "fu": "伍尔弗汉普顿流浪者",
+    "tn": "Wolverhampton",
+    "c_tm": "Wolverhampton",
+    "c_fu": "Wolverhampton",
+    "c_tn": "Wolverhampton"
+   },
+   {
+    "in": "伯恩利",
+    "tm": "伯恩利",
+    "fu": "伯恩利",
+    "tn": "Burnley",
+    "c_tm": "Burnley",
+    "c_fu": "Burnley",
+    "c_tn": "Burnley"
+   },
+   {
+    "in": "伯恩茅斯",
+    "tm": "伯恩茅斯",
+    "fu": "伯恩茅斯",
+    "tn": "Bournemouth",
+    "c_tm": "Bournemouth",
+    "c_fu": "Bournemouth",
+    "c_tn": "Bournemouth"
+   },
+   {
+    "in": "佛罗伦萨",
+    "tm": "佛罗伦萨",
+    "fu": "佛罗伦萨",
+    "tn": "Fiorentina",
+    "c_tm": "Fiorentina",
+    "c_fu": "Fiorentina",
+    "c_tn": "Fiorentina"
+   },
+   {
+    "in": "佩斯卡拉",
+    "tm": "佩斯卡拉",
+    "fu": "佩斯卡拉",
+    "tn": "Pescara",
+    "c_tm": "Pescara",
+    "c_fu": "Pescara",
+    "c_tn": "Pescara"
+   },
+   {
+    "in": "克罗托内",
+    "tm": "克罗托内",
+    "fu": "克罗托内",
+    "tn": "FC Crotone",
+    "c_tm": "FC Crotone",
+    "c_fu": "FC Crotone",
+    "c_tn": "FC Crotone"
+   },
+   {
+    "in": "克莱蒙",
+    "tm": "克莱蒙",
+    "fu": "克莱蒙",
+    "tn": "Clermont Foot",
+    "c_tm": "Clermont Foot",
+    "c_fu": "Clermont Foot",
+    "c_tn": "Clermont Foot"
+   },
+   {
+    "in": "克莱蒙特",
+    "tm": "克莱蒙",
+    "fu": "克莱蒙特",
+    "tn": "Clermont Foot",
+    "c_tm": "Clermont Foot",
+    "c_fu": "Clermont Foot",
+    "c_tn": "Clermont Foot"
+   },
+   {
+    "in": "克雷莫纳",
+    "tm": "克雷莫纳",
+    "fu": "克雷莫纳",
+    "tn": "Cremonese",
+    "c_tm": "Cremonese",
+    "c_fu": "Cremonese",
+    "c_tn": "Cremonese"
+   },
+   {
+    "in": "兰斯",
+    "tm": "兰斯",
+    "fu": "兰斯",
+    "tn": "Stade de Reims",
+    "c_tm": "Stade de Reims",
+    "c_fu": "Stade de Reims",
+    "c_tn": "Stade de Reims"
+   },
+   {
+    "in": "切尔西",
+    "tm": "切尔西",
+    "fu": "切尔西",
+    "tn": "Chelsea",
+    "c_tm": "Chelsea",
+    "c_fu": "Chelsea",
+    "c_tn": "Chelsea"
+   },
+   {
+    "in": "切沃",
+    "tm": "切沃",
+    "fu": "切沃",
+    "tn": "Chievo Verona",
+    "c_tm": "Chievo Verona",
+    "c_fu": "Chievo Verona",
+    "c_tn": "Chievo Verona"
+   },
+   {
+    "in": "利兹联",
+    "tm": "利兹联",
+    "fu": "利兹联",
+    "tn": "Leeds United",
+    "c_tm": "Leeds United",
+    "c_fu": "Leeds United",
+    "c_tn": "Leeds United"
+   },
+   {
+    "in": "利物浦",
+    "tm": "利物浦",
+    "fu": "利物浦",
+    "tn": "Liverpool FC",
+    "c_tm": "Liverpool FC",
+    "c_fu": "Liverpool FC",
+    "c_tn": "Liverpool FC"
+   },
+   {
+    "in": "加的夫城",
+    "tm": "加的夫城",
+    "fu": "加的夫城",
+    "tn": "Cardiff City",
+    "c_tm": "Cardiff City",
+    "c_fu": "Cardiff City",
+    "c_tn": "Cardiff City"
+   },
+   {
+    "in": "加的斯",
+    "tm": "加的斯",
+    "fu": "加的斯",
+    "tn": "Cádiz",
+    "c_tm": "Cádiz",
+    "c_fu": "Cádiz",
+    "c_tn": "Cádiz"
+   },
+   {
+    "in": "勒沃库森",
+    "tm": "勒沃库森",
+    "fu": "勒沃库森",
+    "tn": "Bayer 04 Leverkusen",
+    "c_tm": "Bayer 04 Leverkusen",
+    "c_fu": "Bayer 04 Leverkusen",
+    "c_tn": "Bayer 04 Leverkusen"
+   },
+   {
+    "in": "勒芒",
+    "tm": "勒芒",
+    "fu": "勒芒",
+    "tn": "Le Mans",
+    "c_tm": "Le Mans",
+    "c_fu": "Le Mans",
+    "c_tn": "Le Mans"
+   },
+   {
+    "in": "勒阿弗尔",
+    "tm": "勒阿弗尔",
+    "fu": "勒阿弗尔",
+    "tn": "Le Havre",
+    "c_tm": "Le Havre",
+    "c_fu": "Le Havre",
+    "c_tn": "Le Havre"
+   },
+   {
+    "in": "南安普敦",
+    "tm": "南安普顿",
+    "fu": "南安普敦",
+    "tn": "Southampton",
+    "c_tm": "Southampton",
+    "c_fu": "Southampton",
+    "c_tn": "Southampton"
+   },
+   {
+    "in": "南安普顿",
+    "tm": "南安普顿",
+    "fu": "南安普顿",
+    "tn": "Southampton",
+    "c_tm": "Southampton",
+    "c_fu": "Southampton",
+    "c_tn": "Southampton"
+   },
+   {
+    "in": "南特",
+    "tm": "南特",
+    "fu": "南特",
+    "tn": "Nantes",
+    "c_tm": "Nantes",
+    "c_fu": "Nantes",
+    "c_tn": "Nantes"
+   },
+   {
+    "in": "南锡",
+    "tm": "南锡",
+    "fu": "南锡",
+    "tn": "Nancy",
+    "c_tm": "Nancy",
+    "c_fu": "Nancy",
+    "c_tn": "Nancy"
+   },
+   {
+    "in": "博洛尼亚",
+    "tm": "博洛尼亚",
+    "fu": "博洛尼亚",
+    "tn": "Bologna",
+    "c_tm": "Bologna",
+    "c_fu": "Bologna",
+    "c_tn": "Bologna"
+   },
+   {
+    "in": "卡利亚里",
+    "tm": "卡利亚里",
+    "fu": "卡利亚里",
+    "tn": "Cagliari",
+    "c_tm": "Cagliari",
+    "c_fu": "Cagliari",
+    "c_tn": "Cagliari"
+   },
+   {
+    "in": "卡昂",
+    "tm": "卡昂",
+    "fu": "卡昂",
+    "tn": "Stade Malherbe Caen",
+    "c_tm": "Stade Malherbe Caen",
+    "c_fu": "Stade Malherbe Caen",
+    "c_tn": "Stade Malherbe Caen"
+   },
+   {
+    "in": "卢顿",
+    "tm": "卢顿",
+    "fu": "卢顿",
+    "tn": "Luton Town",
+    "c_tm": "Luton Town",
+    "c_fu": "Luton Town",
+    "c_tn": "Luton Town"
+   },
+   {
+    "in": "哈德斯菲尔德",
+    "tm": "哈德斯菲尔德",
+    "fu": "哈德斯菲尔德",
+    "tn": "Huddersfield Town",
+    "c_tm": "Huddersfield Town",
+    "c_fu": "Huddersfield Town",
+    "c_tn": "Huddersfield Town"
+   },
+   {
+    "in": "因戈尔施塔特",
+    "tm": "因戈尔施塔特",
+    "fu": "因戈尔施塔特",
+    "tn": "FC Ingolstadt 04",
+    "c_tm": "FC Ingolstadt 04",
+    "c_fu": "FC Ingolstadt 04",
+    "c_tn": "FC Ingolstadt 04"
+   },
+   {
+    "in": "国米",
+    "tm": "国际米兰",
+    "fu": "国米",
+    "tn": "Inter",
+    "c_tm": "Inter",
+    "c_fu": "Inter",
+    "c_tn": "Inter"
+   },
+   {
+    "in": "国际米兰",
+    "tm": "国际米兰",
+    "fu": "国际米兰",
+    "tn": "Inter",
+    "c_tm": "Inter",
+    "c_fu": "Inter",
+    "c_tn": "Inter"
+   },
+   {
+    "in": "图卢兹",
+    "tm": "图卢兹",
+    "fu": "图卢兹",
+    "tn": "Toulouse",
+    "c_tm": "Toulouse",
+    "c_fu": "Toulouse",
+    "c_tn": "Toulouse"
+   },
+   {
+    "in": "圣保利",
+    "tm": "圣保利",
+    "fu": "圣保利",
+    "tn": "FC St. Pauli",
+    "c_tm": "FC St. Pauli",
+    "c_fu": "FC St. Pauli",
+    "c_tn": "FC St. Pauli"
+   },
+   {
+    "in": "圣埃蒂安",
+    "tm": "圣埃蒂安",
+    "fu": "圣埃蒂安",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "埃尔切",
+    "tm": "埃尔切",
+    "fu": "埃尔切",
+    "tn": "Elche",
+    "c_tm": "Elche",
+    "c_fu": "Elche",
+    "c_tn": "Elche"
+   },
+   {
+    "in": "埃尔沃斯堡",
+    "tm": "埃尔沃斯堡",
+    "fu": "埃沃斯堡",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "埃弗顿",
+    "tm": "埃弗顿",
+    "fu": "埃弗顿",
+    "tn": "Everton",
+    "c_tm": "Everton",
+    "c_fu": "Everton",
+    "c_tn": "Everton"
+   },
+   {
+    "in": "埃沃斯堡",
+    "tm": "埃尔沃斯堡",
+    "fu": "埃沃斯堡",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "埃瓦尔",
+    "tm": "埃瓦尔",
+    "fu": "埃瓦尔",
+    "tn": "Eibar",
+    "c_tm": "Eibar",
+    "c_fu": "Eibar",
+    "c_tn": "Eibar"
+   },
+   {
+    "in": "基尔",
+    "tm": "基尔",
+    "fu": "基尔",
+    "tn": "Holstein Kiel",
+    "c_tm": "Holstein Kiel",
+    "c_fu": "Holstein Kiel",
+    "c_tn": "Holstein Kiel"
+   },
+   {
+    "in": "基尔高士丁",
+    "tm": "基尔",
+    "fu": "基尔高士丁",
+    "tn": "Holstein Kiel",
+    "c_tm": "Holstein Kiel",
+    "c_fu": "Holstein Kiel",
+    "c_tn": "Holstein Kiel"
+   },
+   {
+    "in": "塞尔塔",
+    "tm": "塞尔塔",
+    "fu": "维戈塞尔塔",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "塞维利亚",
+    "tm": "塞维利亚",
+    "fu": "塞维利亚",
+    "tn": "Sevilla",
+    "c_tm": "Sevilla",
+    "c_fu": "Sevilla",
+    "c_tn": "Sevilla"
+   },
+   {
+    "in": "多特蒙德",
+    "tm": "多特蒙德",
+    "fu": "多特蒙德",
+    "tn": "Borussia Dortmund",
+    "c_tm": "Borussia Dortmund",
+    "c_fu": "Borussia Dortmund",
+    "c_tn": "Borussia Dortmund"
+   },
+   {
+    "in": "奥格斯堡",
+    "tm": "奥格斯堡",
+    "fu": "奥格斯堡",
+    "tn": "FC Augsburg",
+    "c_tm": "FC Augsburg",
+    "c_fu": "FC Augsburg",
+    "c_tn": "FC Augsburg"
+   },
+   {
+    "in": "奥维耶多",
+    "tm": "奥维耶多",
+    "fu": "奥维耶多",
+    "tn": "Real Oviedo",
+    "c_tm": "Real Oviedo",
+    "c_fu": "Real Oviedo",
+    "c_tn": "Real Oviedo"
+   },
+   {
+    "in": "奥萨苏纳",
+    "tm": "奥萨苏纳",
+    "fu": "奥萨苏纳",
+    "tn": "Osasuna",
+    "c_tm": "Osasuna",
+    "c_fu": "Osasuna",
+    "c_tn": "Osasuna"
+   },
+   {
+    "in": "威尼斯",
+    "tm": "威尼斯",
+    "fu": "威尼斯",
+    "tn": "Venezia",
+    "c_tm": "Venezia",
+    "c_fu": "Venezia",
+    "c_tn": "Venezia"
+   },
+   {
+    "in": "富勒姆",
+    "tm": "富勒姆",
+    "fu": "富勒姆",
+    "tn": "Fulham",
+    "c_tm": "Fulham",
+    "c_fu": "Fulham",
+    "c_tn": "Fulham"
+   },
+   {
+    "in": "尤文",
+    "tm": "尤文图斯",
+    "fu": "尤文",
+    "tn": "Juventus",
+    "c_tm": "Juventus",
+    "c_fu": "Juventus",
+    "c_tn": "Juventus"
+   },
+   {
+    "in": "尤文图斯",
+    "tm": "尤文图斯",
+    "fu": "尤文图斯",
+    "tn": "Juventus",
+    "c_tm": "Juventus",
+    "c_fu": "Juventus",
+    "c_tn": "Juventus"
+   },
+   {
+    "in": "尼姆",
+    "tm": "尼姆",
+    "fu": "尼姆",
+    "tn": "Nîmes Olympique",
+    "c_tm": "Nîmes Olympique",
+    "c_fu": "Nîmes Olympique",
+    "c_tn": "Nîmes Olympique"
+   },
+   {
+    "in": "尼斯",
+    "tm": "尼斯",
+    "fu": "尼斯",
+    "tn": "Nice",
+    "c_tm": "Nice",
+    "c_fu": "Nice",
+    "c_tn": "Nice"
+   },
+   {
+    "in": "巴伦西亚",
+    "tm": "瓦伦西亚",
+    "fu": "巴伦西亚",
+    "tn": "Valencia",
+    "c_tm": "Valencia",
+    "c_fu": "Valencia",
+    "c_tn": "Valencia"
+   },
+   {
+    "in": "巴列卡诺",
+    "tm": "巴列卡诺",
+    "fu": "巴列卡诺",
+    "tn": "Rayo Vallecano",
+    "c_tm": "Rayo Vallecano",
+    "c_fu": "Rayo Vallecano",
+    "c_tn": "Rayo Vallecano"
+   },
+   {
+    "in": "巴利亚多利德",
+    "tm": "巴利亚多利德",
+    "fu": "瓦拉多利德",
+    "tn": "Real Valladolid",
+    "c_tm": "Real Valladolid",
+    "c_fu": "Real Valladolid",
+    "c_tn": "Real Valladolid"
+   },
+   {
+    "in": "巴勒莫",
+    "tm": "巴勒莫",
+    "fu": "巴勒莫",
+    "tn": "Palermo",
+    "c_tm": "Palermo",
+    "c_fu": "Palermo",
+    "c_tn": "Palermo"
+   },
+   {
+    "in": "巴塞罗那",
+    "tm": "巴塞罗那",
+    "fu": "巴塞罗那",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Barcelona",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "巴斯蒂亚",
+    "tm": "巴斯蒂亚",
+    "fu": "巴斯蒂亚",
+    "tn": "Bastia",
+    "c_tm": "Bastia",
+    "c_fu": "Bastia",
+    "c_tn": "Bastia"
+   },
+   {
+    "in": "巴萨",
+    "tm": "巴塞罗那",
+    "fu": "巴萨",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Barcelona",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "巴黎FC",
+    "tm": "巴黎FC",
+    "fu": "巴黎FC",
+    "tn": "Paris FC",
+    "c_tm": "Paris FC",
+    "c_fu": "Paris FC",
+    "c_tn": "Paris FC"
+   },
+   {
+    "in": "巴黎圣日尔曼",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣日尔曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "巴黎圣日耳曼",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣日尔曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "巴黎圣曼",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "布伦特",
+    "tm": "布伦特福德",
+    "fu": "布伦特福德",
+    "tn": "Brentford",
+    "c_tm": "Brentford",
+    "c_fu": "Brentford",
+    "c_tn": "Brentford"
+   },
+   {
+    "in": "布伦特福德",
+    "tm": "布伦特福德",
+    "fu": "布伦特福德",
+    "tn": "Brentford",
+    "c_tm": "Brentford",
+    "c_fu": "Brentford",
+    "c_tn": "Brentford"
+   },
+   {
+    "in": "布莱顿",
+    "tm": "布莱顿",
+    "fu": "布赖顿",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "布赖顿",
+    "tm": "布莱顿",
+    "fu": "布赖顿",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "布雷斯特",
+    "tm": "布雷斯特",
+    "fu": "布雷斯特",
+    "tn": "Stade Brestois",
+    "c_tm": "Stade Brestois",
+    "c_fu": "Stade Brestois",
+    "c_tn": "Stade Brestois"
+   },
+   {
+    "in": "布雷西亚",
+    "tm": "布雷西亚",
+    "fu": "布雷西亚",
+    "tn": "Brescia",
+    "c_tm": "Brescia",
+    "c_fu": "Brescia",
+    "c_tn": "Brescia"
+   },
+   {
+    "in": "希洪竞技",
+    "tm": "希洪竞技",
+    "fu": "希洪竞技",
+    "tn": "Sporting Gijón",
+    "c_tm": "Sporting Gijón",
+    "c_fu": "Sporting Gijón",
+    "c_tn": "Sporting Gijón"
+   },
+   {
+    "in": "帕尔马",
+    "tm": "帕尔马",
+    "fu": "帕尔马",
+    "tn": "Parma",
+    "c_tm": "Parma",
+    "c_fu": "Parma",
+    "c_tn": "Parma"
+   },
+   {
+    "in": "帕德博恩",
+    "tm": "帕德博恩",
+    "fu": "帕德博恩",
+    "tn": "SC Paderborn 07",
+    "c_tm": "SC Paderborn 07",
+    "c_fu": "SC Paderborn 07",
+    "c_tn": "SC Paderborn 07"
+   },
+   {
+    "in": "弗洛西诺内",
+    "tm": "弗罗西诺内",
+    "fu": "弗洛西诺内",
+    "tn": "Frosinone",
+    "c_tm": "Frosinone",
+    "c_fu": "Frosinone",
+    "c_tn": "Frosinone"
+   },
+   {
+    "in": "弗罗西诺内",
+    "tm": "弗罗西诺内",
+    "fu": "弗洛西诺内",
+    "tn": "Frosinone",
+    "c_tm": "Frosinone",
+    "c_fu": "Frosinone",
+    "c_tn": "Frosinone"
+   },
+   {
+    "in": "弗赖堡",
+    "tm": "弗赖堡",
+    "fu": "弗赖堡",
+    "tn": "SC Freiburg",
+    "c_tm": "SC Freiburg",
+    "c_fu": "SC Freiburg",
+    "c_tn": "SC Freiburg"
+   },
+   {
+    "in": "恩波利",
+    "tm": "恩波利",
+    "fu": "恩波利",
+    "tn": "Empoli",
+    "c_tm": "Empoli",
+    "c_fu": "Empoli",
+    "c_tn": "Empoli"
+   },
+   {
+    "in": "托特纳姆热刺",
+    "tm": "热刺",
+    "fu": "托特纳姆热刺",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "拉斯帕尔马斯",
+    "tm": "拉斯帕尔马斯",
+    "fu": "拉斯帕尔马斯",
+    "tn": "UD Las Palmas",
+    "c_tm": "UD Las Palmas",
+    "c_fu": "UD Las Palmas",
+    "c_tn": "UD Las Palmas"
+   },
+   {
+    "in": "拉科鲁尼亚",
+    "tm": "拉科鲁尼亚",
+    "fu": "拉科鲁尼亚",
+    "tn": "Deportivo de A Coruña",
+    "c_tm": "Deportivo de A Coruña",
+    "c_fu": "Deportivo de A Coruña",
+    "c_tn": "Deportivo de A Coruña"
+   },
+   {
+    "in": "拉齐奥",
+    "tm": "拉齐奥",
+    "fu": "拉齐奥",
+    "tn": "Lazio",
+    "c_tm": "Lazio",
+    "c_fu": "Lazio",
+    "c_tn": "Lazio"
+   },
+   {
+    "in": "拜仁",
+    "tm": "拜仁慕尼黑",
+    "fu": "拜仁",
+    "tn": "FC Bayern München",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Bayern München",
+    "c_tn": "FC Bayern München"
+   },
+   {
+    "in": "拜仁慕尼黑",
+    "tm": "拜仁慕尼黑",
+    "fu": "拜仁慕尼黑",
+    "tn": "FC Bayern München",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Bayern München",
+    "c_tn": "FC Bayern München"
+   },
+   {
+    "in": "摩纳哥",
+    "tm": "摩纳哥",
+    "fu": "摩纳哥",
+    "tn": "AS Monaco",
+    "c_tm": "AS Monaco",
+    "c_fu": "AS Monaco",
+    "c_tn": "AS Monaco"
+   },
+   {
+    "in": "斯佩齐亚",
+    "tm": "斯佩齐亚",
+    "fu": "斯佩齐亚",
+    "tn": "Spezia",
+    "c_tm": "Spezia",
+    "c_fu": "Spezia",
+    "c_tn": "Spezia"
+   },
+   {
+    "in": "斯图加特",
+    "tm": "斯图加特",
+    "fu": "斯图加特",
+    "tn": "VfB Stuttgart",
+    "c_tm": "VfB Stuttgart",
+    "c_fu": "VfB Stuttgart",
+    "c_tn": "VfB Stuttgart"
+   },
+   {
+    "in": "斯托克城",
+    "tm": "斯托克城",
+    "fu": "斯托克城",
+    "tn": "Stoke City",
+    "c_tm": "Stoke City",
+    "c_fu": "Stoke City",
+    "c_tn": "Stoke City"
+   },
+   {
+    "in": "斯旺西",
+    "tm": "斯旺西",
+    "fu": "斯旺西",
+    "tn": "Swansea City",
+    "c_tm": "Swansea City",
+    "c_fu": "Swansea City",
+    "c_tn": "Swansea City"
+   },
+   {
+    "in": "斯特拉斯",
+    "tm": "斯特拉斯堡",
+    "fu": "斯特拉斯堡",
+    "tn": "RC Strasbourg",
+    "c_tm": "RC Strasbourg",
+    "c_fu": "RC Strasbourg",
+    "c_tn": "RC Strasbourg"
+   },
+   {
+    "in": "斯特拉斯堡",
+    "tm": "斯特拉斯堡",
+    "fu": "斯特拉斯堡",
+    "tn": "RC Strasbourg",
+    "c_tm": "RC Strasbourg",
+    "c_fu": "RC Strasbourg",
+    "c_tn": "RC Strasbourg"
+   },
+   {
+    "in": "昂热",
+    "tm": "昂热",
+    "fu": "昂热",
+    "tn": "Angers",
+    "c_tm": "Angers",
+    "c_fu": "Angers",
+    "c_tn": "Angers"
+   },
+   {
+    "in": "曼城",
+    "tm": "曼城",
+    "fu": "曼彻斯特城",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "曼彻斯特城",
+    "tm": "曼城",
+    "fu": "曼彻斯特城",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "曼彻斯特联",
+    "tm": "曼联",
+    "fu": "曼彻斯特联",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "曼联",
+    "tm": "曼联",
+    "fu": "曼彻斯特联",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "朗斯",
+    "tm": "朗斯",
+    "fu": "朗斯",
+    "tn": "RC Lens",
+    "c_tm": "RC Lens",
+    "c_fu": "RC Lens",
+    "c_tn": "RC Lens"
+   },
+   {
+    "in": "杜塞尔多夫",
+    "tm": "杜塞尔多夫",
+    "fu": "杜塞尔多夫",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "柏林联合",
+    "tm": "柏林联合",
+    "fu": "柏林联合",
+    "tn": "1. FC Union Berlin",
+    "c_tm": "1. FC Union Berlin",
+    "c_fu": "1. FC Union Berlin",
+    "c_tn": "1. FC Union Berlin"
+   },
+   {
+    "in": "柏林赫塔",
+    "tm": "柏林赫塔",
+    "fu": "柏林赫塔",
+    "tn": "Hertha BSC",
+    "c_tm": "Hertha BSC",
+    "c_fu": "Hertha BSC",
+    "c_tn": "Hertha BSC"
+   },
+   {
+    "in": "格拉纳达",
+    "tm": "格拉纳达",
+    "fu": "格拉纳达CF",
+    "tn": "Granada",
+    "c_tm": "Granada",
+    "c_fu": "Granada",
+    "c_tn": "Granada"
+   },
+   {
+    "in": "格拉纳达CF",
+    "tm": "格拉纳达",
+    "fu": "格拉纳达CF",
+    "tn": "Granada",
+    "c_tm": "Granada",
+    "c_fu": "Granada",
+    "c_tn": "Granada"
+   },
+   {
+    "in": "桑坦德竞技",
+    "tm": "桑坦德竞技",
+    "fu": "桑坦德竞技",
+    "tn": "Real Racing Club",
+    "c_tm": "Real Racing Club",
+    "c_fu": "Real Racing Club",
+    "c_tn": "Real Racing Club"
+   },
+   {
+    "in": "桑德兰",
+    "tm": "桑德兰",
+    "fu": "桑德兰",
+    "tn": "Sunderland",
+    "c_tm": "Sunderland",
+    "c_fu": "Sunderland",
+    "c_tn": "Sunderland"
+   },
+   {
+    "in": "桑普多利亚",
+    "tm": "桑普多利亚",
+    "fu": "桑普多利亚",
+    "tn": "Sampdoria",
+    "c_tm": "Sampdoria",
+    "c_fu": "Sampdoria",
+    "c_tn": "Sampdoria"
+   },
+   {
+    "in": "梅斯",
+    "tm": "梅斯",
+    "fu": "梅斯",
+    "tn": "Metz",
+    "c_tm": "Metz",
+    "c_fu": "Metz",
+    "c_tn": "Metz"
+   },
+   {
+    "in": "欧塞尔",
+    "tm": "欧塞尔",
+    "fu": "欧塞尔",
+    "tn": "Auxerre",
+    "c_tm": "Auxerre",
+    "c_fu": "Auxerre",
+    "c_tn": "Auxerre"
+   },
+   {
+    "in": "比利亚雷",
+    "tm": "比利亚雷亚尔",
+    "fu": "比利亚雷",
+    "tn": "Villarreal",
+    "c_tm": "Villarreal",
+    "c_fu": "Villarreal",
+    "c_tn": "Villarreal"
+   },
+   {
+    "in": "比利亚雷亚尔",
+    "tm": "比利亚雷亚尔",
+    "fu": "比利亚雷亚尔",
+    "tn": "Villarreal",
+    "c_tm": "Villarreal",
+    "c_fu": "Villarreal",
+    "c_tn": "Villarreal"
+   },
+   {
+    "in": "比勒费尔德",
+    "tm": "比勒费尔德",
+    "fu": "比勒费尔德",
+    "tn": "Arminia Bielefeld",
+    "c_tm": "Arminia Bielefeld",
+    "c_fu": "Arminia Bielefeld",
+    "c_tn": "Arminia Bielefeld"
+   },
+   {
+    "in": "比萨",
+    "tm": "比萨",
+    "fu": "比萨",
+    "tn": "Pisa",
+    "c_tm": "Pisa",
+    "c_fu": "Pisa",
+    "c_tn": "Pisa"
+   },
+   {
+    "in": "毕尔巴鄂",
+    "tm": "毕尔巴鄂",
+    "fu": "毕尔巴鄂竞技",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "毕尔巴鄂竞技",
+    "tm": "毕尔巴鄂",
+    "fu": "毕尔巴鄂竞技",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "水晶宫",
+    "tm": "水晶宫",
+    "fu": "水晶宫",
+    "tn": "Crystal Palace",
+    "c_tm": "Crystal Palace",
+    "c_fu": "Crystal Palace",
+    "c_tn": "Crystal Palace"
+   },
+   {
+    "in": "汉堡",
+    "tm": "汉堡",
+    "fu": "汉堡",
+    "tn": "Hamburger SV",
+    "c_tm": "Hamburger SV",
+    "c_fu": "Hamburger SV",
+    "c_tn": "Hamburger SV"
+   },
+   {
+    "in": "汉诺威96",
+    "tm": "汉诺威96",
+    "fu": "汉诺威96",
+    "tn": "Hannover 96",
+    "c_tm": "Hannover 96",
+    "c_fu": "Hannover 96",
+    "c_tn": "Hannover 96"
+   },
+   {
+    "in": "沃尔夫斯堡",
+    "tm": "沃尔夫斯堡",
+    "fu": "沃尔夫斯堡",
+    "tn": "VfL Wolfsburg",
+    "c_tm": "VfL Wolfsburg",
+    "c_fu": "VfL Wolfsburg",
+    "c_tn": "VfL Wolfsburg"
+   },
+   {
+    "in": "沃特福德",
+    "tm": "沃特福德",
+    "fu": "沃特福德",
+    "tn": "Watford",
+    "c_tm": "Watford",
+    "c_fu": "Watford",
+    "c_tn": "Watford"
+   },
+   {
+    "in": "沙尔克04",
+    "tm": "沙尔克04",
+    "fu": "沙尔克04",
+    "tn": "FC Schalke 04",
+    "c_tm": "FC Schalke 04",
+    "c_fu": "FC Schalke 04",
+    "c_tn": "FC Schalke 04"
+   },
+   {
+    "in": "法兰克福",
+    "tm": "法兰克福",
+    "fu": "法兰克福",
+    "tn": "Eintracht Frankfurt",
+    "c_tm": "Eintracht Frankfurt",
+    "c_fu": "Eintracht Frankfurt",
+    "c_tn": "Eintracht Frankfurt"
+   },
+   {
+    "in": "波尔多",
+    "tm": "波尔多",
+    "fu": "波尔多",
+    "tn": "Bordeaux",
+    "c_tm": "Bordeaux",
+    "c_fu": "Bordeaux",
+    "c_tn": "Bordeaux"
+   },
+   {
+    "in": "波鸿",
+    "tm": "波鸿",
+    "fu": "波鸿",
+    "tn": "VfL Bochum 1848",
+    "c_tm": "VfL Bochum 1848",
+    "c_fu": "VfL Bochum 1848",
+    "c_tn": "VfL Bochum 1848"
+   },
+   {
+    "in": "洛里昂",
+    "tm": "洛里昂",
+    "fu": "洛里昂",
+    "tn": "Lorient",
+    "c_tm": "Lorient",
+    "c_fu": "Lorient",
+    "c_tn": "Lorient"
+   },
+   {
+    "in": "海登海姆",
+    "tm": "海登海姆",
+    "fu": "海登海姆",
+    "tn": "1. FC Heidenheim",
+    "c_tm": "1. FC Heidenheim",
+    "c_fu": "1. FC Heidenheim",
+    "c_tn": "1. FC Heidenheim"
+   },
+   {
+    "in": "热刺",
+    "tm": "热刺",
+    "fu": "托特纳姆热刺",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "热那亚",
+    "tm": "热那亚",
+    "fu": "热那亚",
+    "tn": "Genoa",
+    "c_tm": "Genoa",
+    "c_fu": "Genoa",
+    "c_tn": "Genoa"
+   },
+   {
+    "in": "特鲁瓦",
+    "tm": "特鲁瓦",
+    "fu": "特鲁瓦",
+    "tn": "Troyes",
+    "c_tm": "Troyes",
+    "c_fu": "Troyes",
+    "c_tn": "Troyes"
+   },
+   {
+    "in": "狼队",
+    "tm": "狼队",
+    "fu": "狼队",
+    "tn": "Wolverhampton",
+    "c_tm": "Wolverhampton",
+    "c_fu": "Wolverhampton",
+    "c_tn": "Wolverhampton"
+   },
+   {
+    "in": "瓦伦西亚",
+    "tm": "瓦伦西亚",
+    "fu": "巴伦西亚",
+    "tn": "Valencia",
+    "c_tm": "Valencia",
+    "c_fu": "Valencia",
+    "c_tn": "Valencia"
+   },
+   {
+    "in": "甘冈",
+    "tm": "甘冈",
+    "fu": "甘冈",
+    "tn": "Guingamp",
+    "c_tm": "Guingamp",
+    "c_fu": "Guingamp",
+    "c_tn": "Guingamp"
+   },
+   {
+    "in": "皇家奥维耶多",
+    "tm": "奥维耶多",
+    "fu": "皇家奥维耶多",
+    "tn": "Real Oviedo",
+    "c_tm": "Real Oviedo",
+    "c_fu": "Real Oviedo",
+    "c_tn": "Real Oviedo"
+   },
+   {
+    "in": "皇家社会",
+    "tm": "皇家社会",
+    "fu": "皇家社会",
+    "tn": "Real Sociedad",
+    "c_tm": "Real Sociedad",
+    "c_fu": "Real Sociedad",
+    "c_tn": "Real Sociedad"
+   },
+   {
+    "in": "皇家贝蒂斯",
+    "tm": "皇家贝蒂斯",
+    "fu": "皇家贝蒂斯",
+    "tn": "Real Betis",
+    "c_tm": "Real Betis",
+    "c_fu": "Real Betis",
+    "c_tn": "Real Betis"
+   },
+   {
+    "in": "皇家马德里",
+    "tm": "皇家马德里",
+    "fu": "皇家马德里",
+    "tn": "Real Madrid",
+    "c_tm": "Real Madrid",
+    "c_fu": "Real Madrid",
+    "c_tn": "Real Madrid"
+   },
+   {
+    "in": "皇马",
+    "tm": "皇家马德里",
+    "fu": "皇家马德里",
+    "tn": "Real Madrid",
+    "c_tm": "Real Madrid",
+    "c_fu": "Real Madrid",
+    "c_tn": "Real Madrid"
+   },
+   {
+    "in": "科莫",
+    "tm": "科莫",
+    "fu": "科莫",
+    "tn": "Como",
+    "c_tm": "Como",
+    "c_fu": "Como",
+    "c_tn": "Como"
+   },
+   {
+    "in": "科隆",
+    "tm": "科隆",
+    "fu": "科隆",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "第戎",
+    "tm": "第戎",
+    "fu": "第戎",
+    "tn": "Dijon",
+    "c_tm": "Dijon",
+    "c_fu": "Dijon",
+    "c_tn": "Dijon"
+   },
+   {
+    "in": "米兰",
+    "tm": "AC米兰",
+    "fu": "米兰",
+    "tn": "AC Milan",
+    "c_tm": "AC Milan",
+    "c_fu": "AC Milan",
+    "c_tn": "AC Milan"
+   },
+   {
+    "in": "米德尔斯堡",
+    "tm": "米德尔斯堡",
+    "fu": "米德尔斯堡",
+    "tn": "Middlesbrough",
+    "c_tm": "Middlesbrough",
+    "c_fu": "Middlesbrough",
+    "c_tn": "Middlesbrough"
+   },
+   {
+    "in": "纽伦堡",
+    "tm": "纽伦堡",
+    "fu": "纽伦堡",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "纽卡斯尔",
+    "tm": "纽卡斯尔",
+    "fu": "纽卡斯尔联",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "纽卡斯尔联",
+    "tm": "纽卡斯尔",
+    "fu": "纽卡斯尔联",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "维戈塞尔塔",
+    "tm": "塞尔塔",
+    "fu": "维戈塞尔塔",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "维拉",
+    "tm": "阿斯顿维拉",
+    "fu": "维拉",
+    "tn": "Aston Villa",
+    "c_tm": "Aston Villa",
+    "c_fu": "Aston Villa",
+    "c_tn": "Aston Villa"
+   },
+   {
+    "in": "维罗纳",
+    "tm": "维罗纳",
+    "fu": "维罗纳",
+    "tn": "Hellas Verona",
+    "c_tm": "Hellas Verona",
+    "c_fu": "Hellas Verona",
+    "c_tn": "Hellas Verona"
+   },
+   {
+    "in": "罗马",
+    "tm": "罗马",
+    "fu": "罗马",
+    "tn": "AS Roma",
+    "c_tm": "AS Roma",
+    "c_fu": "AS Roma",
+    "c_tn": "AS Roma"
+   },
+   {
+    "in": "美因茨",
+    "tm": "美因茨",
+    "fu": "美因茨",
+    "tn": "1. FSV Mainz 05",
+    "c_tm": "1. FSV Mainz 05",
+    "c_fu": "1. FSV Mainz 05",
+    "c_tn": "1. FSV Mainz 05"
+   },
+   {
+    "in": "考文垂",
+    "tm": "考文垂",
+    "fu": "考文垂",
+    "tn": "Coventry City",
+    "c_tm": "Coventry City",
+    "c_fu": "Coventry City",
+    "c_tn": "Coventry City"
+   },
+   {
+    "in": "莱万特",
+    "tm": "莱万特",
+    "fu": "莱万特",
+    "tn": "Levante UD",
+    "c_tm": "Levante UD",
+    "c_fu": "Levante UD",
+    "c_tn": "Levante UD"
+   },
+   {
+    "in": "莱切",
+    "tm": "莱切",
+    "fu": "莱切",
+    "tn": "Lecce",
+    "c_tm": "Lecce",
+    "c_fu": "Lecce",
+    "c_tn": "Lecce"
+   },
+   {
+    "in": "莱切斯特城",
+    "tm": "莱斯特城",
+    "fu": "莱切斯特城",
+    "tn": "Leicester City",
+    "c_tm": "Leicester City",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "莱加内斯",
+    "tm": "莱加内斯",
+    "fu": "莱加内斯",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "莱斯特城",
+    "tm": "莱斯特城",
+    "fu": "莱斯特城",
+    "tn": "Leicester City",
+    "c_tm": "Leicester City",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "莱比锡",
+    "tm": "莱比锡",
+    "fu": "莱比锡红牛",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "莱比锡红牛",
+    "tm": "莱比锡",
+    "fu": "莱比锡红牛",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "菲尔特",
+    "tm": "菲尔特",
+    "fu": "菲尔特",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "萨勒尼塔纳",
+    "tm": "萨勒尼塔纳",
+    "fu": "萨勒尼塔纳",
+    "tn": "Salernitana",
+    "c_tm": "Salernitana",
+    "c_fu": "Salernitana",
+    "c_tn": "Salernitana"
+   },
+   {
+    "in": "萨索洛",
+    "tm": "萨索洛",
+    "fu": "萨索洛",
+    "tn": "Sassuolo",
+    "c_tm": "Sassuolo",
+    "c_fu": "Sassuolo",
+    "c_tn": "Sassuolo"
+   },
+   {
+    "in": "蒙彼利埃",
+    "tm": "蒙彼利埃",
+    "fu": "蒙彼利埃",
+    "tn": "Montpellier",
+    "c_tm": "Montpellier",
+    "c_fu": "Montpellier",
+    "c_tn": "Montpellier"
+   },
+   {
+    "in": "蒙扎",
+    "tm": "蒙扎",
+    "fu": "蒙扎",
+    "tn": "Monza",
+    "c_tm": "Monza",
+    "c_fu": "Monza",
+    "c_tn": "Monza"
+   },
+   {
+    "in": "西布罗姆维奇",
+    "tm": "西布罗姆维奇",
+    "fu": "西布罗姆维奇",
+    "tn": "West Bromwich Albion",
+    "c_tm": "West Bromwich Albion",
+    "c_fu": "West Bromwich Albion",
+    "c_tn": "West Bromwich Albion"
+   },
+   {
+    "in": "西汉姆",
+    "tm": "西汉姆",
+    "fu": "西汉姆联",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "西汉姆联",
+    "tm": "西汉姆",
+    "fu": "西汉姆联",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "西班牙人",
+    "tm": "西班牙人",
+    "fu": "西班牙人",
+    "tn": "Espanyol",
+    "c_tm": "Espanyol",
+    "c_fu": "Espanyol",
+    "c_tn": "Espanyol"
+   },
+   {
+    "in": "诺丁汉",
+    "tm": "诺丁汉森林",
+    "fu": "诺丁汉森林",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "诺丁汉森林",
+    "tm": "诺丁汉森林",
+    "fu": "诺丁汉森林",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "诺维奇",
+    "tm": "诺维奇",
+    "fu": "诺维奇",
+    "tn": "Norwich City",
+    "c_tm": "Norwich City",
+    "c_fu": "Norwich City",
+    "c_tn": "Norwich City"
+   },
+   {
+    "in": "谢菲尔德联",
+    "tm": "谢菲尔德联",
+    "fu": "谢菲尔德联",
+    "tn": "Sheffield United",
+    "c_tm": "Sheffield United",
+    "c_fu": "Sheffield United",
+    "c_tn": "Sheffield United"
+   },
+   {
+    "in": "贝内文托",
+    "tm": "贝内文托",
+    "fu": "贝内文托",
+    "tn": "Benevento",
+    "c_tm": "Benevento",
+    "c_fu": "Benevento",
+    "c_tn": "Benevento"
+   },
+   {
+    "in": "费拉拉SPAL",
+    "tm": "费拉拉SPAL",
+    "fu": "费拉拉SPAL",
+    "tn": "SPAL",
+    "c_tm": "SPAL",
+    "c_fu": "SPAL",
+    "c_tn": "SPAL"
+   },
+   {
+    "in": "赫塔菲",
+    "tm": "赫塔费",
+    "fu": "赫塔菲",
+    "tn": "Getafe",
+    "c_tm": "Getafe",
+    "c_fu": "Getafe",
+    "c_tn": "Getafe"
+   },
+   {
+    "in": "赫塔费",
+    "tm": "赫塔费",
+    "fu": "赫塔费",
+    "tn": "Getafe",
+    "c_tm": "Getafe",
+    "c_fu": "Getafe",
+    "c_tn": "Getafe"
+   },
+   {
+    "in": "赫尔城",
+    "tm": "赫尔城",
+    "fu": "赫尔城",
+    "tn": "Hull City",
+    "c_tm": "Hull City",
+    "c_fu": "Hull City",
+    "c_tn": "Hull City"
+   },
+   {
+    "in": "赫罗纳",
+    "tm": "赫罗纳",
+    "fu": "赫罗纳",
+    "tn": "Girona FC",
+    "c_tm": "Girona FC",
+    "c_fu": "Girona FC",
+    "c_tn": "Girona FC"
+   },
+   {
+    "in": "达姆施塔特",
+    "tm": "达姆施塔特",
+    "fu": "达姆施塔特",
+    "tn": "Darmstadt 98",
+    "c_tm": "Darmstadt 98",
+    "c_fu": "Darmstadt 98",
+    "c_tn": "Darmstadt 98"
+   },
+   {
+    "in": "那不勒斯",
+    "tm": "那不勒斯",
+    "fu": "那不勒斯",
+    "tn": "SSC Napoli",
+    "c_tm": "SSC Napoli",
+    "c_fu": "SSC Napoli",
+    "c_tn": "SSC Napoli"
+   },
+   {
+    "in": "都灵",
+    "tm": "都灵",
+    "fu": "都灵",
+    "tn": "Torino",
+    "c_tm": "Torino",
+    "c_fu": "Torino",
+    "c_tn": "Torino"
+   },
+   {
+    "in": "里尔",
+    "tm": "里尔",
+    "fu": "里尔",
+    "tn": "Lille",
+    "c_tm": "Lille",
+    "c_fu": "Lille",
+    "c_tn": "Lille"
+   },
+   {
+    "in": "里昂",
+    "tm": "里昂",
+    "fu": "里昂",
+    "tn": "Olympique Lyonnais",
+    "c_tm": "Olympique Lyonnais",
+    "c_fu": "Olympique Lyonnais",
+    "c_tn": "Olympique Lyonnais"
+   },
+   {
+    "in": "门兴格拉德巴赫",
+    "tm": "门兴格拉德巴赫",
+    "fu": "门兴格拉德巴赫",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "阿尔梅里亚",
+    "tm": "阿尔梅里亚",
+    "fu": "阿尔梅里亚",
+    "tn": "Almería",
+    "c_tm": "Almería",
+    "c_fu": "Almería",
+    "c_tn": "Almería"
+   },
+   {
+    "in": "阿拉维斯",
+    "tm": "阿拉维斯",
+    "fu": "阿拉维斯",
+    "tn": "Deportivo Alavés",
+    "c_tm": "Deportivo Alavés",
+    "c_fu": "Deportivo Alavés",
+    "c_tn": "Deportivo Alavés"
+   },
+   {
+    "in": "阿斯顿维拉",
+    "tm": "阿斯顿维拉",
+    "fu": "阿斯顿维拉",
+    "tn": "Aston Villa",
+    "c_tm": "Aston Villa",
+    "c_fu": "Aston Villa",
+    "c_tn": "Aston Villa"
+   },
+   {
+    "in": "阿森纳",
+    "tm": "阿森纳",
+    "fu": "阿森纳",
+    "tn": "Arsenal",
+    "c_tm": "Arsenal",
+    "c_fu": "Arsenal",
+    "c_tn": "Arsenal"
+   },
+   {
+    "in": "阿雅克肖",
+    "tm": "阿雅克肖",
+    "fu": "阿雅克肖",
+    "tn": "Ajaccio",
+    "c_tm": "Ajaccio",
+    "c_fu": "Ajaccio",
+    "c_tn": "Ajaccio"
+   },
+   {
+    "in": "雷恩",
+    "tm": "雷恩",
+    "fu": "雷恩",
+    "tn": "Stade Rennais",
+    "c_tm": "Stade Rennais",
+    "c_fu": "Stade Rennais",
+    "c_tn": "Stade Rennais"
+   },
+   {
+    "in": "霍芬海姆",
+    "tm": "霍芬海姆",
+    "fu": "霍芬海姆",
+    "tn": "TSG Hoffenheim",
+    "c_tm": "TSG Hoffenheim",
+    "c_fu": "TSG Hoffenheim",
+    "c_tn": "TSG Hoffenheim"
+   },
+   {
+    "in": "韦斯卡",
+    "tm": "韦斯卡",
+    "fu": "韦斯卡",
+    "tn": "Huesca",
+    "c_tm": "Huesca",
+    "c_fu": "Huesca",
+    "c_tn": "Huesca"
+   },
+   {
+    "in": "马德里竞技",
+    "tm": "马德里竞技",
+    "fu": "马德里竞技",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "马拉加",
+    "tm": "马拉加",
+    "fu": "马拉加",
+    "tn": "Málaga CF",
+    "c_tm": "Málaga CF",
+    "c_fu": "Málaga CF",
+    "c_tn": "Málaga CF"
+   },
+   {
+    "in": "马洛卡",
+    "tm": "马洛卡",
+    "fu": "马洛卡",
+    "tn": "Mallorca",
+    "c_tm": "Mallorca",
+    "c_fu": "Mallorca",
+    "c_tn": "Mallorca"
+   },
+   {
+    "in": "马赛",
+    "tm": "马赛",
+    "fu": "马赛",
+    "tn": "Olympique de Marseille",
+    "c_tm": "Olympique de Marseille",
+    "c_fu": "Olympique de Marseille",
+    "c_tn": "Olympique de Marseille"
+   }
+  ],
+  "OLD_AGREE_NEW_DIFF": [],
+  "OLD_DISAGREE": [
+   {
+    "in": "AC",
+    "tm": "阿森纳",
+    "fu": "AC米兰",
+    "tn": "AC Milan",
+    "c_tm": "Arsenal",
+    "c_fu": "AC Milan",
+    "c_tn": "AC Milan"
+   },
+   {
+    "in": "Ath Madrid",
+    "tm": null,
+    "fu": "Ath Madrid",
+    "tn": "Atlético Madrid",
+    "c_tm": null,
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "Athletico Madrid",
+    "tm": "毕尔巴鄂",
+    "fu": "Athletico Madrid",
+    "tn": "Atlético Madrid",
+    "c_tm": "Athletic Club",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "Atl. Madrid",
+    "tm": "皇家马德里",
+    "fu": "Atl. Madrid",
+    "tn": "Atlético Madrid",
+    "c_tm": "Real Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "Cesc Fabregas",
+    "tm": null,
+    "fu": "Cesc Fabregas",
+    "tn": "Como",
+    "c_tm": null,
+    "c_fu": "Como",
+    "c_tn": "Como"
+   },
+   {
+    "in": "FC Cologne",
+    "tm": "克罗托内",
+    "fu": "FC Cologne",
+    "tn": "1. FC Köln",
+    "c_tm": "FC Crotone",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "FCB",
+    "tm": "拜仁慕尼黑",
+    "fu": "FCB",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "Havre",
+    "tm": null,
+    "fu": "Havre",
+    "tn": "Le Havre",
+    "c_tm": null,
+    "c_fu": "Le Havre",
+    "c_tn": "Le Havre"
+   },
+   {
+    "in": "M United",
+    "tm": null,
+    "fu": "M United",
+    "tn": "Manchester United",
+    "c_tm": null,
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Manchester Utd",
+    "tm": "曼城",
+    "fu": "Manchester Utd",
+    "tn": "Manchester United",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Nottingham",
+    "tm": null,
+    "fu": "Nottingham",
+    "tn": "Nottingham Forest",
+    "c_tm": null,
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "US Salernitana",
+    "tm": "萨勒尼塔纳",
+    "fu": "US Salernitana",
+    "tn": "US Salernitana 1919",
+    "c_tm": "Salernitana",
+    "c_fu": "US Salernitana 1919",
+    "c_tn": "US Salernitana 1919"
+   },
+   {
+    "in": "US Salernitana 1919",
+    "tm": "萨勒尼塔纳",
+    "fu": "US Salernitana 1919",
+    "tn": "US Salernitana 1919",
+    "c_tm": "Salernitana",
+    "c_fu": "US Salernitana 1919",
+    "c_tn": "US Salernitana 1919"
+   },
+   {
+    "in": "Vallecano",
+    "tm": null,
+    "fu": "巴列卡诺",
+    "tn": "Rayo Vallecano",
+    "c_tm": null,
+    "c_fu": "Rayo Vallecano",
+    "c_tn": "Rayo Vallecano"
+   },
+   {
+    "in": "埃尔弗斯贝格",
+    "tm": null,
+    "fu": "埃沃斯堡",
+    "tn": "SV 07 Elversberg",
+    "c_tm": null,
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "巴拉多利德",
+    "tm": null,
+    "fu": "巴拉多利德",
+    "tn": "Real Valladolid",
+    "c_tm": null,
+    "c_fu": "Real Valladolid",
+    "c_tn": "Real Valladolid"
+   },
+   {
+    "in": "瓦拉多利德",
+    "tm": null,
+    "fu": "瓦拉多利德",
+    "tn": "Real Valladolid",
+    "c_tm": null,
+    "c_fu": "Real Valladolid",
+    "c_tn": "Real Valladolid"
+   },
+   {
+    "in": "莱切斯特",
+    "tm": "莱切",
+    "fu": "莱切斯特",
+    "tn": "Leicester City",
+    "c_tm": "Lecce",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "谢菲联",
+    "tm": null,
+    "fu": "谢菲联",
+    "tn": "Sheffield United",
+    "c_tm": null,
+    "c_fu": "Sheffield United",
+    "c_tn": "Sheffield United"
+   },
+   {
+    "in": "马略卡",
+    "tm": null,
+    "fu": "马洛卡",
+    "tn": "Mallorca",
+    "c_tm": null,
+    "c_fu": "Mallorca",
+    "c_tn": "Mallorca"
+   },
+   {
+    "in": "马竞",
+    "tm": null,
+    "fu": "马竞",
+    "tn": "Atlético Madrid",
+    "c_tm": null,
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   }
+  ],
+  "NEW_UNRESOLVED": [
+   {
+    "in": "不伦瑞克",
+    "tm": "不伦瑞克",
+    "fu": "不伦瑞克",
+    "tn": null,
+    "c_tm": "__UNRESOLVED__:不伦瑞克",
+    "c_fu": "__UNRESOLVED__:不伦瑞克",
+    "c_tn": null
+   },
+   {
+    "in": "敦刻尔克",
+    "tm": null,
+    "fu": "敦刻尔克",
+    "tn": null,
+    "c_tm": null,
+    "c_fu": "__UNRESOLVED__:敦刻尔克",
+    "c_tn": null
+   },
+   {
+    "in": "罗德兹",
+    "tm": null,
+    "fu": "罗德兹",
+    "tn": null,
+    "c_tm": null,
+    "c_fu": "__UNRESOLVED__:罗德兹",
+    "c_tn": null
+   }
+  ],
+  "RAW_ONLY_DIFF": [
+   {
+    "in": "1. FC Koln",
+    "tm": "科隆",
+    "fu": "1. FC Koln",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "1. FC Nurnberg",
+    "tm": "纽伦堡",
+    "fu": "1. FC Nurnberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "1. FC Nürnberg",
+    "tm": "纽伦堡",
+    "fu": "1. FC Nürnberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "AC Ajaccio",
+    "tm": "阿雅克肖",
+    "fu": "AC Ajaccio",
+    "tn": "Ajaccio",
+    "c_tm": "Ajaccio",
+    "c_fu": "Ajaccio",
+    "c_tn": "Ajaccio"
+   },
+   {
+    "in": "AC Chievo Verona",
+    "tm": "切沃",
+    "fu": "AC Chievo Verona",
+    "tn": "Chievo Verona",
+    "c_tm": "Chievo Verona",
+    "c_fu": "Chievo Verona",
+    "c_tn": "Chievo Verona"
+   },
+   {
+    "in": "AC Monza",
+    "tm": "蒙扎",
+    "fu": "AC Monza",
+    "tn": "Monza",
+    "c_tm": "Monza",
+    "c_fu": "Monza",
+    "c_tn": "Monza"
+   },
+   {
+    "in": "AC Pisa",
+    "tm": "比萨",
+    "fu": "AC Pisa",
+    "tn": "Pisa",
+    "c_tm": "Pisa",
+    "c_fu": "Pisa",
+    "c_tn": "Pisa"
+   },
+   {
+    "in": "ACF Fiorentina",
+    "tm": "佛罗伦萨",
+    "fu": "ACF Fiorentina",
+    "tn": "Fiorentina",
+    "c_tm": "Fiorentina",
+    "c_fu": "Fiorentina",
+    "c_tn": "Fiorentina"
+   },
+   {
+    "in": "AFC",
+    "tm": "阿森纳",
+    "fu": "AFC",
+    "tn": "Arsenal",
+    "c_tm": "Arsenal",
+    "c_fu": "Arsenal",
+    "c_tn": "Arsenal"
+   },
+   {
+    "in": "AFC Bournemouth",
+    "tm": "伯恩茅斯",
+    "fu": "AFC Bournemouth",
+    "tn": "Bournemouth",
+    "c_tm": "Bournemouth",
+    "c_fu": "Bournemouth",
+    "c_tn": "Bournemouth"
+   },
+   {
+    "in": "AJ Auxerre",
+    "tm": "欧塞尔",
+    "fu": "AJ Auxerre",
+    "tn": "Auxerre",
+    "c_tm": "Auxerre",
+    "c_fu": "Auxerre",
+    "c_tn": "Auxerre"
+   },
+   {
+    "in": "AS Nancy",
+    "tm": "南锡",
+    "fu": "AS Nancy",
+    "tn": "Nancy",
+    "c_tm": "Nancy",
+    "c_fu": "Nancy",
+    "c_tn": "Nancy"
+   },
+   {
+    "in": "AS Nancy-Lorraine",
+    "tm": "南锡",
+    "fu": "AS Nancy-Lorraine",
+    "tn": "Nancy",
+    "c_tm": "Nancy",
+    "c_fu": "Nancy",
+    "c_tn": "Nancy"
+   },
+   {
+    "in": "ASSE",
+    "tm": "圣埃蒂安",
+    "fu": "ASSE",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "ATM",
+    "tm": "马德里竞技",
+    "fu": "ATM",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "AVFC",
+    "tm": "阿斯顿维拉",
+    "fu": "AVFC",
+    "tn": "Aston Villa",
+    "c_tm": "Aston Villa",
+    "c_fu": "Aston Villa",
+    "c_tn": "Aston Villa"
+   },
+   {
+    "in": "Ajaccio",
+    "tm": "阿雅克肖",
+    "fu": "Ajaccio",
+    "tn": "Ajaccio",
+    "c_tm": "Ajaccio",
+    "c_fu": "Ajaccio",
+    "c_tn": "Ajaccio"
+   },
+   {
+    "in": "Alavés",
+    "tm": "阿拉维斯",
+    "fu": "Alavés",
+    "tn": "Deportivo Alavés",
+    "c_tm": "Deportivo Alavés",
+    "c_fu": "Deportivo Alavés",
+    "c_tn": "Deportivo Alavés"
+   },
+   {
+    "in": "Almeria",
+    "tm": "阿尔梅里亚",
+    "fu": "Almeria",
+    "tn": "Almería",
+    "c_tm": "Almería",
+    "c_fu": "Almería",
+    "c_tn": "Almería"
+   },
+   {
+    "in": "Amiens",
+    "tm": "亚眠",
+    "fu": "Amiens",
+    "tn": "Amiens SC",
+    "c_tm": "Amiens SC",
+    "c_fu": "Amiens SC",
+    "c_tn": "Amiens SC"
+   },
+   {
+    "in": "Amiens SC",
+    "tm": "亚眠",
+    "fu": "Amiens SC",
+    "tn": "Amiens SC",
+    "c_tm": "Amiens SC",
+    "c_fu": "Amiens SC",
+    "c_tn": "Amiens SC"
+   },
+   {
+    "in": "Angers SCO",
+    "tm": "昂热",
+    "fu": "Angers SCO",
+    "tn": "Angers",
+    "c_tm": "Angers",
+    "c_fu": "Angers",
+    "c_tn": "Angers"
+   },
+   {
+    "in": "Arminia Bielefeld",
+    "tm": "比勒费尔德",
+    "fu": "Arminia Bielefeld",
+    "tn": "Arminia Bielefeld",
+    "c_tm": "Arminia Bielefeld",
+    "c_fu": "Arminia Bielefeld",
+    "c_tn": "Arminia Bielefeld"
+   },
+   {
+    "in": "Atalanta BC",
+    "tm": "亚特兰大",
+    "fu": "Atalanta BC",
+    "tn": "Atalanta",
+    "c_tm": "Atalanta",
+    "c_fu": "Atalanta",
+    "c_tn": "Atalanta"
+   },
+   {
+    "in": "Ath Bilbao",
+    "tm": "毕尔巴鄂",
+    "fu": "Ath Bilbao",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Athletic",
+    "tm": "毕尔巴鄂",
+    "fu": "Athletic",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Athletic Bilbao",
+    "tm": "毕尔巴鄂",
+    "fu": "毕尔巴鄂竞技",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Athletic Club",
+    "tm": "毕尔巴鄂",
+    "fu": "毕尔巴鄂竞技",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Atleti",
+    "tm": "马德里竞技",
+    "fu": "Atleti",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "Atletico",
+    "tm": "马德里竞技",
+    "fu": "Atletico",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "Atletico Madrid",
+    "tm": "马德里竞技",
+    "fu": "Atletico Madrid",
+    "tn": "Atlético Madrid",
+    "c_tm": "Atlético Madrid",
+    "c_fu": "Atlético Madrid",
+    "c_tn": "Atlético Madrid"
+   },
+   {
+    "in": "B Dortmund",
+    "tm": "多特蒙德",
+    "fu": "B Dortmund",
+    "tn": "Borussia Dortmund",
+    "c_tm": "Borussia Dortmund",
+    "c_fu": "Borussia Dortmund",
+    "c_tn": "Borussia Dortmund"
+   },
+   {
+    "in": "BHA",
+    "tm": "布莱顿",
+    "fu": "BHA",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "BMG",
+    "tm": "门兴格拉德巴赫",
+    "fu": "BMG",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "BVB",
+    "tm": "多特蒙德",
+    "fu": "BVB",
+    "tn": "Borussia Dortmund",
+    "c_tm": "Borussia Dortmund",
+    "c_fu": "Borussia Dortmund",
+    "c_tn": "Borussia Dortmund"
+   },
+   {
+    "in": "Barca",
+    "tm": "巴塞罗那",
+    "fu": "Barca",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Barcelona",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "Barça",
+    "tm": "巴塞罗那",
+    "fu": "Barça",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Barcelona",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "Bastia",
+    "tm": "巴斯蒂亚",
+    "fu": "Bastia",
+    "tn": "Bastia",
+    "c_tm": "Bastia",
+    "c_fu": "Bastia",
+    "c_tn": "Bastia"
+   },
+   {
+    "in": "Bayer",
+    "tm": "勒沃库森",
+    "fu": "Bayer",
+    "tn": "Bayer 04 Leverkusen",
+    "c_tm": "Bayer 04 Leverkusen",
+    "c_fu": "Bayer 04 Leverkusen",
+    "c_tn": "Bayer 04 Leverkusen"
+   },
+   {
+    "in": "Bayern",
+    "tm": "拜仁慕尼黑",
+    "fu": "Bayern",
+    "tn": "FC Bayern München",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Bayern München",
+    "c_tn": "FC Bayern München"
+   },
+   {
+    "in": "Bayern Munchen",
+    "tm": "拜仁慕尼黑",
+    "fu": "Bayern Munchen",
+    "tn": "FC Bayern München",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Bayern München",
+    "c_tn": "FC Bayern München"
+   },
+   {
+    "in": "Benevento",
+    "tm": "贝内文托",
+    "fu": "Benevento",
+    "tn": "Benevento",
+    "c_tm": "Benevento",
+    "c_fu": "Benevento",
+    "c_tn": "Benevento"
+   },
+   {
+    "in": "Benevento Calcio",
+    "tm": "贝内文托",
+    "fu": "Benevento Calcio",
+    "tn": "Benevento",
+    "c_tm": "Benevento",
+    "c_fu": "Benevento",
+    "c_tn": "Benevento"
+   },
+   {
+    "in": "Betis",
+    "tm": "皇家贝蒂斯",
+    "fu": "Betis",
+    "tn": "Real Betis",
+    "c_tm": "Real Betis",
+    "c_fu": "Real Betis",
+    "c_tn": "Real Betis"
+   },
+   {
+    "in": "Bielefeld",
+    "tm": "比勒费尔德",
+    "fu": "Bielefeld",
+    "tn": "Arminia Bielefeld",
+    "c_tm": "Arminia Bielefeld",
+    "c_fu": "Arminia Bielefeld",
+    "c_tn": "Arminia Bielefeld"
+   },
+   {
+    "in": "Bilbao",
+    "tm": "毕尔巴鄂",
+    "fu": "Bilbao",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "Bochum",
+    "tm": "波鸿",
+    "fu": "Bochum",
+    "tn": "VfL Bochum 1848",
+    "c_tm": "VfL Bochum 1848",
+    "c_fu": "VfL Bochum 1848",
+    "c_tn": "VfL Bochum 1848"
+   },
+   {
+    "in": "Bologna FC",
+    "tm": "博洛尼亚",
+    "fu": "Bologna FC",
+    "tn": "Bologna",
+    "c_tm": "Bologna",
+    "c_fu": "Bologna",
+    "c_tn": "Bologna"
+   },
+   {
+    "in": "Bordeaux",
+    "tm": "波尔多",
+    "fu": "Bordeaux",
+    "tn": "Bordeaux",
+    "c_tm": "Bordeaux",
+    "c_fu": "Bordeaux",
+    "c_tn": "Bordeaux"
+   },
+   {
+    "in": "Boro",
+    "tm": "米德尔斯堡",
+    "fu": "Boro",
+    "tn": "Middlesbrough",
+    "c_tm": "Middlesbrough",
+    "c_fu": "Middlesbrough",
+    "c_tn": "Middlesbrough"
+   },
+   {
+    "in": "Borussia M.Gladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Borussia M.Gladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Borussia Monchengladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Borussia Monchengladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Bremen",
+    "tm": "云达不莱梅",
+    "fu": "Bremen",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "Brentford FC",
+    "tm": "布伦特福德",
+    "fu": "Brentford FC",
+    "tn": "Brentford",
+    "c_tm": "Brentford",
+    "c_fu": "Brentford",
+    "c_tn": "Brentford"
+   },
+   {
+    "in": "Brescia",
+    "tm": "布雷西亚",
+    "fu": "Brescia",
+    "tn": "Brescia",
+    "c_tm": "Brescia",
+    "c_fu": "Brescia",
+    "c_tn": "Brescia"
+   },
+   {
+    "in": "Brescia Calcio",
+    "tm": "布雷西亚",
+    "fu": "Brescia Calcio",
+    "tn": "Brescia",
+    "c_tm": "Brescia",
+    "c_fu": "Brescia",
+    "c_tn": "Brescia"
+   },
+   {
+    "in": "Brestois",
+    "tm": "布雷斯特",
+    "fu": "Brestois",
+    "tn": "Stade Brestois",
+    "c_tm": "Stade Brestois",
+    "c_fu": "Stade Brestois",
+    "c_tn": "Stade Brestois"
+   },
+   {
+    "in": "Brighton",
+    "tm": "布莱顿",
+    "fu": "布赖顿",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "Brighton & Hove Albion",
+    "tm": "布莱顿",
+    "fu": "布赖顿",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "Brighton and Hove Albion",
+    "tm": "布莱顿",
+    "fu": "Brighton and Hove Albion",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "Burnley FC",
+    "tm": "伯恩利",
+    "fu": "Burnley FC",
+    "tn": "Burnley",
+    "c_tm": "Burnley",
+    "c_fu": "Burnley",
+    "c_tn": "Burnley"
+   },
+   {
+    "in": "CA Osasuna",
+    "tm": "奥萨苏纳",
+    "fu": "CA Osasuna",
+    "tn": "Osasuna",
+    "c_tm": "Osasuna",
+    "c_fu": "Osasuna",
+    "c_tn": "Osasuna"
+   },
+   {
+    "in": "CD Leganes",
+    "tm": "莱加内斯",
+    "fu": "CD Leganes",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "CD Leganés",
+    "tm": "莱加内斯",
+    "fu": "CD Leganés",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "CFC",
+    "tm": "切尔西",
+    "fu": "CFC",
+    "tn": "Chelsea",
+    "c_tm": "Chelsea",
+    "c_fu": "Chelsea",
+    "c_tn": "Chelsea"
+   },
+   {
+    "in": "CPFC",
+    "tm": "水晶宫",
+    "fu": "CPFC",
+    "tn": "Crystal Palace",
+    "c_tm": "Crystal Palace",
+    "c_fu": "Crystal Palace",
+    "c_tn": "Crystal Palace"
+   },
+   {
+    "in": "Cadiz CF",
+    "tm": "加的斯",
+    "fu": "Cadiz CF",
+    "tn": "Cádiz",
+    "c_tm": "Cádiz",
+    "c_fu": "Cádiz",
+    "c_tn": "Cádiz"
+   },
+   {
+    "in": "Caen",
+    "tm": "卡昂",
+    "fu": "Caen",
+    "tn": "Stade Malherbe Caen",
+    "c_tm": "Stade Malherbe Caen",
+    "c_fu": "Stade Malherbe Caen",
+    "c_tn": "Stade Malherbe Caen"
+   },
+   {
+    "in": "Cagliari Calcio",
+    "tm": "卡利亚里",
+    "fu": "Cagliari Calcio",
+    "tn": "Cagliari",
+    "c_tm": "Cagliari",
+    "c_fu": "Cagliari",
+    "c_tn": "Cagliari"
+   },
+   {
+    "in": "Cardiff",
+    "tm": "加的夫城",
+    "fu": "Cardiff",
+    "tn": "Cardiff City",
+    "c_tm": "Cardiff City",
+    "c_fu": "Cardiff City",
+    "c_tn": "Cardiff City"
+   },
+   {
+    "in": "Cardiff City",
+    "tm": "加的夫城",
+    "fu": "Cardiff City",
+    "tn": "Cardiff City",
+    "c_tm": "Cardiff City",
+    "c_fu": "Cardiff City",
+    "c_tn": "Cardiff City"
+   },
+   {
+    "in": "Celta",
+    "tm": "塞尔塔",
+    "fu": "Celta",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "Celta Vigo",
+    "tm": "塞尔塔",
+    "fu": "维戈塞尔塔",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "Chievo",
+    "tm": "切沃",
+    "fu": "Chievo",
+    "tn": "Chievo Verona",
+    "c_tm": "Chievo Verona",
+    "c_fu": "Chievo Verona",
+    "c_tn": "Chievo Verona"
+   },
+   {
+    "in": "Chievo Verona",
+    "tm": "切沃",
+    "fu": "Chievo Verona",
+    "tn": "Chievo Verona",
+    "c_tm": "Chievo Verona",
+    "c_fu": "Chievo Verona",
+    "c_tn": "Chievo Verona"
+   },
+   {
+    "in": "Clermont Foot 63",
+    "tm": "克莱蒙",
+    "fu": "Clermont Foot 63",
+    "tn": "Clermont Foot",
+    "c_tm": "Clermont Foot",
+    "c_fu": "Clermont Foot",
+    "c_tn": "Clermont Foot"
+   },
+   {
+    "in": "Como 1907",
+    "tm": "科莫",
+    "fu": "Como 1907",
+    "tn": "Como",
+    "c_tm": "Como",
+    "c_fu": "Como",
+    "c_tn": "Como"
+   },
+   {
+    "in": "Coventry",
+    "tm": "考文垂",
+    "fu": "Coventry",
+    "tn": "Coventry City",
+    "c_tm": "Coventry City",
+    "c_fu": "Coventry City",
+    "c_tn": "Coventry City"
+   },
+   {
+    "in": "Crotone",
+    "tm": "克罗托内",
+    "fu": "Crotone",
+    "tn": "FC Crotone",
+    "c_tm": "FC Crotone",
+    "c_fu": "FC Crotone",
+    "c_tn": "FC Crotone"
+   },
+   {
+    "in": "Cádiz CF",
+    "tm": "加的斯",
+    "fu": "Cádiz CF",
+    "tn": "Cádiz",
+    "c_tm": "Cádiz",
+    "c_fu": "Cádiz",
+    "c_tn": "Cádiz"
+   },
+   {
+    "in": "DSC Arminia Bielefeld",
+    "tm": "比勒费尔德",
+    "fu": "DSC Arminia Bielefeld",
+    "tn": "Arminia Bielefeld",
+    "c_tm": "Arminia Bielefeld",
+    "c_fu": "Arminia Bielefeld",
+    "c_tn": "Arminia Bielefeld"
+   },
+   {
+    "in": "Darmstadt",
+    "tm": "达姆施塔特",
+    "fu": "Darmstadt",
+    "tn": "Darmstadt 98",
+    "c_tm": "Darmstadt 98",
+    "c_fu": "Darmstadt 98",
+    "c_tn": "Darmstadt 98"
+   },
+   {
+    "in": "Delfino Pescara 1936",
+    "tm": "佩斯卡拉",
+    "fu": "Delfino Pescara 1936",
+    "tn": "Pescara",
+    "c_tm": "Pescara",
+    "c_fu": "Pescara",
+    "c_tn": "Pescara"
+   },
+   {
+    "in": "Deportivo Alaves",
+    "tm": "阿拉维斯",
+    "fu": "Deportivo Alaves",
+    "tn": "Deportivo Alavés",
+    "c_tm": "Deportivo Alavés",
+    "c_fu": "Deportivo Alavés",
+    "c_tn": "Deportivo Alavés"
+   },
+   {
+    "in": "Dijon",
+    "tm": "第戎",
+    "fu": "Dijon",
+    "tn": "Dijon",
+    "c_tm": "Dijon",
+    "c_fu": "Dijon",
+    "c_tn": "Dijon"
+   },
+   {
+    "in": "Dijon FCO",
+    "tm": "第戎",
+    "fu": "Dijon FCO",
+    "tn": "Dijon",
+    "c_tm": "Dijon",
+    "c_fu": "Dijon",
+    "c_tn": "Dijon"
+   },
+   {
+    "in": "Duesseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Duesseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Dusseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Dusseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Düsseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Düsseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "EA Guingamp",
+    "tm": "甘冈",
+    "fu": "EA Guingamp",
+    "tn": "Guingamp",
+    "c_tm": "Guingamp",
+    "c_fu": "Guingamp",
+    "c_tn": "Guingamp"
+   },
+   {
+    "in": "EFC",
+    "tm": "埃弗顿",
+    "fu": "EFC",
+    "tn": "Everton",
+    "c_tm": "Everton",
+    "c_fu": "Everton",
+    "c_tn": "Everton"
+   },
+   {
+    "in": "Eibar",
+    "tm": "埃瓦尔",
+    "fu": "Eibar",
+    "tn": "Eibar",
+    "c_tm": "Eibar",
+    "c_fu": "Eibar",
+    "c_tn": "Eibar"
+   },
+   {
+    "in": "Elche CF",
+    "tm": "埃尔切",
+    "fu": "Elche CF",
+    "tn": "Elche",
+    "c_tm": "Elche",
+    "c_fu": "Elche",
+    "c_tn": "Elche"
+   },
+   {
+    "in": "Elversberg",
+    "tm": "埃尔沃斯堡",
+    "fu": "Elversberg",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "Empoli FC",
+    "tm": "恩波利",
+    "fu": "Empoli FC",
+    "tn": "Empoli",
+    "c_tm": "Empoli",
+    "c_fu": "Empoli",
+    "c_tn": "Empoli"
+   },
+   {
+    "in": "FC Crotone",
+    "tm": "克罗托内",
+    "fu": "FC Crotone",
+    "tn": "FC Crotone",
+    "c_tm": "FC Crotone",
+    "c_fu": "FC Crotone",
+    "c_tn": "FC Crotone"
+   },
+   {
+    "in": "FC Heidenheim",
+    "tm": "海登海姆",
+    "fu": "FC Heidenheim",
+    "tn": "1. FC Heidenheim",
+    "c_tm": "1. FC Heidenheim",
+    "c_fu": "1. FC Heidenheim",
+    "c_tn": "1. FC Heidenheim"
+   },
+   {
+    "in": "FC Ingolstadt 04",
+    "tm": "因戈尔施塔特",
+    "fu": "FC Ingolstadt 04",
+    "tn": "FC Ingolstadt 04",
+    "c_tm": "FC Ingolstadt 04",
+    "c_fu": "FC Ingolstadt 04",
+    "c_tn": "FC Ingolstadt 04"
+   },
+   {
+    "in": "FC Lorient",
+    "tm": "洛里昂",
+    "fu": "FC Lorient",
+    "tn": "Lorient",
+    "c_tm": "Lorient",
+    "c_fu": "Lorient",
+    "c_tn": "Lorient"
+   },
+   {
+    "in": "FC Metz",
+    "tm": "梅斯",
+    "fu": "FC Metz",
+    "tn": "Metz",
+    "c_tm": "Metz",
+    "c_fu": "Metz",
+    "c_tn": "Metz"
+   },
+   {
+    "in": "FC Nantes",
+    "tm": "南特",
+    "fu": "FC Nantes",
+    "tn": "Nantes",
+    "c_tm": "Nantes",
+    "c_fu": "Nantes",
+    "c_tn": "Nantes"
+   },
+   {
+    "in": "FCIM",
+    "tm": "国际米兰",
+    "fu": "FCIM",
+    "tn": "Inter",
+    "c_tm": "Inter",
+    "c_fu": "Inter",
+    "c_tn": "Inter"
+   },
+   {
+    "in": "FFC",
+    "tm": "富勒姆",
+    "fu": "FFC",
+    "tn": "Fulham",
+    "c_tm": "Fulham",
+    "c_fu": "Fulham",
+    "c_tn": "Fulham"
+   },
+   {
+    "in": "Forest",
+    "tm": "诺丁汉森林",
+    "fu": "Forest",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "Fortuna Duesseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Fortuna Duesseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Fortuna Dusseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Fortuna Dusseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Fortuna Düsseldorf",
+    "tm": "杜塞尔多夫",
+    "fu": "Fortuna Düsseldorf",
+    "tn": "Fortuna Düsseldorf",
+    "c_tm": "Fortuna Düsseldorf",
+    "c_fu": "Fortuna Düsseldorf",
+    "c_tn": "Fortuna Düsseldorf"
+   },
+   {
+    "in": "Frankfurt",
+    "tm": "法兰克福",
+    "fu": "Frankfurt",
+    "tn": "Eintracht Frankfurt",
+    "c_tm": "Eintracht Frankfurt",
+    "c_fu": "Eintracht Frankfurt",
+    "c_tn": "Eintracht Frankfurt"
+   },
+   {
+    "in": "Frosinone",
+    "tm": "弗罗西诺内",
+    "fu": "弗洛西诺内",
+    "tn": "Frosinone",
+    "c_tm": "Frosinone",
+    "c_fu": "Frosinone",
+    "c_tn": "Frosinone"
+   },
+   {
+    "in": "Frosinone Calcio",
+    "tm": "弗罗西诺内",
+    "fu": "Frosinone Calcio",
+    "tn": "Frosinone",
+    "c_tm": "Frosinone",
+    "c_fu": "Frosinone",
+    "c_tn": "Frosinone"
+   },
+   {
+    "in": "Furth",
+    "tm": "菲尔特",
+    "fu": "Furth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Fürth",
+    "tm": "菲尔特",
+    "fu": "Fürth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Genoa CFC",
+    "tm": "热那亚",
+    "fu": "Genoa CFC",
+    "tn": "Genoa",
+    "c_tm": "Genoa",
+    "c_fu": "Genoa",
+    "c_tn": "Genoa"
+   },
+   {
+    "in": "Getafe CF",
+    "tm": "赫塔费",
+    "fu": "Getafe CF",
+    "tn": "Getafe",
+    "c_tm": "Getafe",
+    "c_fu": "Getafe",
+    "c_tn": "Getafe"
+   },
+   {
+    "in": "Gijon",
+    "tm": "希洪竞技",
+    "fu": "Gijon",
+    "tn": "Sporting Gijón",
+    "c_tm": "Sporting Gijón",
+    "c_fu": "Sporting Gijón",
+    "c_tn": "Sporting Gijón"
+   },
+   {
+    "in": "Girondins de Bordeaux",
+    "tm": "波尔多",
+    "fu": "Girondins de Bordeaux",
+    "tn": "Bordeaux",
+    "c_tm": "Bordeaux",
+    "c_fu": "Bordeaux",
+    "c_tn": "Bordeaux"
+   },
+   {
+    "in": "Gladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Gladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Granada",
+    "tm": "格拉纳达",
+    "fu": "格拉纳达CF",
+    "tn": "Granada",
+    "c_tm": "Granada",
+    "c_fu": "Granada",
+    "c_tn": "Granada"
+   },
+   {
+    "in": "Granada CF",
+    "tm": "格拉纳达",
+    "fu": "Granada CF",
+    "tn": "Granada",
+    "c_tm": "Granada",
+    "c_fu": "Granada",
+    "c_tn": "Granada"
+   },
+   {
+    "in": "Greuther Fuerth",
+    "tm": "菲尔特",
+    "fu": "Greuther Fuerth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Greuther Furth",
+    "tm": "菲尔特",
+    "fu": "Greuther Furth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Greuther Fürth",
+    "tm": "菲尔特",
+    "fu": "Greuther Fürth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Guingamp",
+    "tm": "甘冈",
+    "fu": "Guingamp",
+    "tn": "Guingamp",
+    "c_tm": "Guingamp",
+    "c_fu": "Guingamp",
+    "c_tn": "Guingamp"
+   },
+   {
+    "in": "HSV",
+    "tm": "汉堡",
+    "fu": "HSV",
+    "tn": "Hamburger SV",
+    "c_tm": "Hamburger SV",
+    "c_fu": "Hamburger SV",
+    "c_tn": "Hamburger SV"
+   },
+   {
+    "in": "Hannover",
+    "tm": "汉诺威96",
+    "fu": "Hannover",
+    "tn": "Hannover 96",
+    "c_tm": "Hannover 96",
+    "c_fu": "Hannover 96",
+    "c_tn": "Hannover 96"
+   },
+   {
+    "in": "Hannover 96",
+    "tm": "汉诺威96",
+    "fu": "Hannover 96",
+    "tn": "Hannover 96",
+    "c_tm": "Hannover 96",
+    "c_fu": "Hannover 96",
+    "c_tn": "Hannover 96"
+   },
+   {
+    "in": "Hertha",
+    "tm": "柏林赫塔",
+    "fu": "Hertha",
+    "tn": "Hertha BSC",
+    "c_tm": "Hertha BSC",
+    "c_fu": "Hertha BSC",
+    "c_tn": "Hertha BSC"
+   },
+   {
+    "in": "Hertha BSC",
+    "tm": "柏林赫塔",
+    "fu": "Hertha BSC",
+    "tn": "Hertha BSC",
+    "c_tm": "Hertha BSC",
+    "c_fu": "Hertha BSC",
+    "c_tn": "Hertha BSC"
+   },
+   {
+    "in": "Hertha Berlin",
+    "tm": "柏林赫塔",
+    "fu": "Hertha Berlin",
+    "tn": "Hertha BSC",
+    "c_tm": "Hertha BSC",
+    "c_fu": "Hertha BSC",
+    "c_tn": "Hertha BSC"
+   },
+   {
+    "in": "Huddersfield",
+    "tm": "哈德斯菲尔德",
+    "fu": "Huddersfield",
+    "tn": "Huddersfield Town",
+    "c_tm": "Huddersfield Town",
+    "c_fu": "Huddersfield Town",
+    "c_tn": "Huddersfield Town"
+   },
+   {
+    "in": "Huddersfield Town",
+    "tm": "哈德斯菲尔德",
+    "fu": "Huddersfield Town",
+    "tn": "Huddersfield Town",
+    "c_tm": "Huddersfield Town",
+    "c_fu": "Huddersfield Town",
+    "c_tn": "Huddersfield Town"
+   },
+   {
+    "in": "Huesca",
+    "tm": "韦斯卡",
+    "fu": "Huesca",
+    "tn": "Huesca",
+    "c_tm": "Huesca",
+    "c_fu": "Huesca",
+    "c_tn": "Huesca"
+   },
+   {
+    "in": "Hull City Tigers",
+    "tm": "赫尔城",
+    "fu": "Hull City Tigers",
+    "tn": "Hull City",
+    "c_tm": "Hull City",
+    "c_fu": "Hull City",
+    "c_tn": "Hull City"
+   },
+   {
+    "in": "Ingolstadt",
+    "tm": "因戈尔施塔特",
+    "fu": "Ingolstadt",
+    "tn": "FC Ingolstadt 04",
+    "c_tm": "FC Ingolstadt 04",
+    "c_fu": "FC Ingolstadt 04",
+    "c_tn": "FC Ingolstadt 04"
+   },
+   {
+    "in": "Internazionale",
+    "tm": "国际米兰",
+    "fu": "Internazionale",
+    "tn": "Inter",
+    "c_tm": "Inter",
+    "c_fu": "Inter",
+    "c_tn": "Inter"
+   },
+   {
+    "in": "Ipswich",
+    "tm": "伊普斯维奇",
+    "fu": "Ipswich",
+    "tn": "Ipswich Town",
+    "c_tm": "Ipswich Town",
+    "c_fu": "Ipswich Town",
+    "c_tn": "Ipswich Town"
+   },
+   {
+    "in": "Juve",
+    "tm": "尤文图斯",
+    "fu": "Juve",
+    "tn": "Juventus",
+    "c_tm": "Juventus",
+    "c_fu": "Juventus",
+    "c_tn": "Juventus"
+   },
+   {
+    "in": "Juventus FC",
+    "tm": "尤文图斯",
+    "fu": "Juventus FC",
+    "tn": "Juventus",
+    "c_tm": "Juventus",
+    "c_fu": "Juventus",
+    "c_tn": "Juventus"
+   },
+   {
+    "in": "Kiel",
+    "tm": "基尔",
+    "fu": "Kiel",
+    "tn": "Holstein Kiel",
+    "c_tm": "Holstein Kiel",
+    "c_fu": "Holstein Kiel",
+    "c_tn": "Holstein Kiel"
+   },
+   {
+    "in": "Koeln",
+    "tm": "科隆",
+    "fu": "Koeln",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "Koln",
+    "tm": "科隆",
+    "fu": "Koln",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "Köln",
+    "tm": "科隆",
+    "fu": "Köln",
+    "tn": "1. FC Köln",
+    "c_tm": "1. FC Köln",
+    "c_fu": "1. FC Köln",
+    "c_tn": "1. FC Köln"
+   },
+   {
+    "in": "LFC",
+    "tm": "利物浦",
+    "fu": "LFC",
+    "tn": "Liverpool FC",
+    "c_tm": "Liverpool FC",
+    "c_fu": "Liverpool FC",
+    "c_tn": "Liverpool FC"
+   },
+   {
+    "in": "LOSC Lille",
+    "tm": "里尔",
+    "fu": "LOSC Lille",
+    "tn": "Lille",
+    "c_tm": "Lille",
+    "c_fu": "Lille",
+    "c_tn": "Lille"
+   },
+   {
+    "in": "LTFC",
+    "tm": "卢顿",
+    "fu": "LTFC",
+    "tn": "Luton Town",
+    "c_tm": "Luton Town",
+    "c_fu": "Luton Town",
+    "c_tn": "Luton Town"
+   },
+   {
+    "in": "Le Havre AC",
+    "tm": "勒阿弗尔",
+    "fu": "Le Havre AC",
+    "tn": "Le Havre",
+    "c_tm": "Le Havre",
+    "c_fu": "Le Havre",
+    "c_tn": "Le Havre"
+   },
+   {
+    "in": "Leeds",
+    "tm": "利兹联",
+    "fu": "Leeds",
+    "tn": "Leeds United",
+    "c_tm": "Leeds United",
+    "c_fu": "Leeds United",
+    "c_tn": "Leeds United"
+   },
+   {
+    "in": "Leganes",
+    "tm": "莱加内斯",
+    "fu": "Leganes",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "Leganes CF",
+    "tm": "莱加内斯",
+    "fu": "Leganes CF",
+    "tn": "Leganés",
+    "c_tm": "Leganés",
+    "c_fu": "Leganés",
+    "c_tn": "Leganés"
+   },
+   {
+    "in": "Leicester",
+    "tm": "莱斯特城",
+    "fu": "Leicester",
+    "tn": "Leicester City",
+    "c_tm": "Leicester City",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "Leicester City",
+    "tm": "莱斯特城",
+    "fu": "莱切斯特城",
+    "tn": "Leicester City",
+    "c_tm": "Leicester City",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "Leicester City FC",
+    "tm": "莱斯特城",
+    "fu": "Leicester City FC",
+    "tn": "Leicester City",
+    "c_tm": "Leicester City",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "Leipzig",
+    "tm": "莱比锡",
+    "fu": "Leipzig",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "Lille OSC",
+    "tm": "里尔",
+    "fu": "Lille OSC",
+    "tn": "Lille",
+    "c_tm": "Lille",
+    "c_fu": "Lille",
+    "c_tn": "Lille"
+   },
+   {
+    "in": "Luton",
+    "tm": "卢顿",
+    "fu": "Luton",
+    "tn": "Luton Town",
+    "c_tm": "Luton Town",
+    "c_fu": "Luton Town",
+    "c_tn": "Luton Town"
+   },
+   {
+    "in": "MCI",
+    "tm": "曼城",
+    "fu": "MCI",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "MHSC",
+    "tm": "蒙彼利埃",
+    "fu": "MHSC",
+    "tn": "Montpellier",
+    "c_tm": "Montpellier",
+    "c_fu": "Montpellier",
+    "c_tn": "Montpellier"
+   },
+   {
+    "in": "MUFC",
+    "tm": "曼联",
+    "fu": "MUFC",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "MUN",
+    "tm": "曼联",
+    "fu": "MUN",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Magpies",
+    "tm": "纽卡斯尔",
+    "fu": "Magpies",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "Man City",
+    "tm": "曼城",
+    "fu": "Man City",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "Man United",
+    "tm": "曼联",
+    "fu": "Man United",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Man Utd",
+    "tm": "曼联",
+    "fu": "Man Utd",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Manchester City",
+    "tm": "曼城",
+    "fu": "曼彻斯特城",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "Manchester United",
+    "tm": "曼联",
+    "fu": "曼彻斯特联",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "Middlesbrough",
+    "tm": "米德尔斯堡",
+    "fu": "Middlesbrough",
+    "tn": "Middlesbrough",
+    "c_tm": "Middlesbrough",
+    "c_fu": "Middlesbrough",
+    "c_tn": "Middlesbrough"
+   },
+   {
+    "in": "Monchengladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Monchengladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "Montpellier HSC",
+    "tm": "蒙彼利埃",
+    "fu": "Montpellier HSC",
+    "tn": "Montpellier",
+    "c_tm": "Montpellier",
+    "c_fu": "Montpellier",
+    "c_tn": "Montpellier"
+   },
+   {
+    "in": "Mönchengladbach",
+    "tm": "门兴格拉德巴赫",
+    "fu": "Mönchengladbach",
+    "tn": "Borussia M'gladbach",
+    "c_tm": "Borussia M'gladbach",
+    "c_fu": "Borussia M'gladbach",
+    "c_tn": "Borussia M'gladbach"
+   },
+   {
+    "in": "NFFC",
+    "tm": "诺丁汉森林",
+    "fu": "NFFC",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "NUFC",
+    "tm": "纽卡斯尔",
+    "fu": "NUFC",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "Nancy",
+    "tm": "南锡",
+    "fu": "Nancy",
+    "tn": "Nancy",
+    "c_tm": "Nancy",
+    "c_fu": "Nancy",
+    "c_tn": "Nancy"
+   },
+   {
+    "in": "Newcastle",
+    "tm": "纽卡斯尔",
+    "fu": "Newcastle",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "Newcastle United",
+    "tm": "纽卡斯尔",
+    "fu": "纽卡斯尔联",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "Nimes",
+    "tm": "尼姆",
+    "fu": "Nimes",
+    "tn": "Nîmes Olympique",
+    "c_tm": "Nîmes Olympique",
+    "c_fu": "Nîmes Olympique",
+    "c_tn": "Nîmes Olympique"
+   },
+   {
+    "in": "Nimes Olympique",
+    "tm": "尼姆",
+    "fu": "Nimes Olympique",
+    "tn": "Nîmes Olympique",
+    "c_tm": "Nîmes Olympique",
+    "c_fu": "Nîmes Olympique",
+    "c_tn": "Nîmes Olympique"
+   },
+   {
+    "in": "Norwich",
+    "tm": "诺维奇",
+    "fu": "Norwich",
+    "tn": "Norwich City",
+    "c_tm": "Norwich City",
+    "c_fu": "Norwich City",
+    "c_tn": "Norwich City"
+   },
+   {
+    "in": "Norwich City",
+    "tm": "诺维奇",
+    "fu": "Norwich City",
+    "tn": "Norwich City",
+    "c_tm": "Norwich City",
+    "c_fu": "Norwich City",
+    "c_tn": "Norwich City"
+   },
+   {
+    "in": "Nott'm Forest",
+    "tm": "诺丁汉森林",
+    "fu": "Nott'm Forest",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "Nottm Forest",
+    "tm": "诺丁汉森林",
+    "fu": "Nottm Forest",
+    "tn": "Nottingham Forest",
+    "c_tm": "Nottingham Forest",
+    "c_fu": "Nottingham Forest",
+    "c_tn": "Nottingham Forest"
+   },
+   {
+    "in": "Nuernberg",
+    "tm": "纽伦堡",
+    "fu": "Nuernberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "Nuremberg",
+    "tm": "纽伦堡",
+    "fu": "Nuremberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "Nurnberg",
+    "tm": "纽伦堡",
+    "fu": "Nurnberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "Nîmes",
+    "tm": "尼姆",
+    "fu": "Nîmes",
+    "tn": "Nîmes Olympique",
+    "c_tm": "Nîmes Olympique",
+    "c_fu": "Nîmes Olympique",
+    "c_tn": "Nîmes Olympique"
+   },
+   {
+    "in": "Nîmes Olympique",
+    "tm": "尼姆",
+    "fu": "Nîmes Olympique",
+    "tn": "Nîmes Olympique",
+    "c_tm": "Nîmes Olympique",
+    "c_fu": "Nîmes Olympique",
+    "c_tn": "Nîmes Olympique"
+   },
+   {
+    "in": "Nürnberg",
+    "tm": "纽伦堡",
+    "fu": "Nürnberg",
+    "tn": "1. FC Nürnberg",
+    "c_tm": "1. FC Nürnberg",
+    "c_fu": "1. FC Nürnberg",
+    "c_tn": "1. FC Nürnberg"
+   },
+   {
+    "in": "OGC Nice",
+    "tm": "尼斯",
+    "fu": "OGC Nice",
+    "tn": "Nice",
+    "c_tm": "Nice",
+    "c_fu": "Nice",
+    "c_tn": "Nice"
+   },
+   {
+    "in": "OL",
+    "tm": "里昂",
+    "fu": "OL",
+    "tn": "Olympique Lyonnais",
+    "c_tm": "Olympique Lyonnais",
+    "c_fu": "Olympique Lyonnais",
+    "c_tn": "Olympique Lyonnais"
+   },
+   {
+    "in": "OM",
+    "tm": "马赛",
+    "fu": "OM",
+    "tn": "Olympique de Marseille",
+    "c_tm": "Olympique de Marseille",
+    "c_fu": "Olympique de Marseille",
+    "c_tn": "Olympique de Marseille"
+   },
+   {
+    "in": "Oviedo",
+    "tm": "奥维耶多",
+    "fu": "Oviedo",
+    "tn": "Real Oviedo",
+    "c_tm": "Real Oviedo",
+    "c_fu": "Real Oviedo",
+    "c_tn": "Real Oviedo"
+   },
+   {
+    "in": "PSG",
+    "tm": "巴黎圣日耳曼",
+    "fu": "PSG",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Paderborn",
+    "tm": "帕德博恩",
+    "fu": "Paderborn",
+    "tn": "SC Paderborn 07",
+    "c_tm": "SC Paderborn 07",
+    "c_fu": "SC Paderborn 07",
+    "c_tn": "SC Paderborn 07"
+   },
+   {
+    "in": "Paderborn 07",
+    "tm": "帕德博恩",
+    "fu": "Paderborn 07",
+    "tn": "SC Paderborn 07",
+    "c_tm": "SC Paderborn 07",
+    "c_fu": "SC Paderborn 07",
+    "c_tn": "SC Paderborn 07"
+   },
+   {
+    "in": "Palace",
+    "tm": "水晶宫",
+    "fu": "Palace",
+    "tn": "Crystal Palace",
+    "c_tm": "Crystal Palace",
+    "c_fu": "Crystal Palace",
+    "c_tn": "Crystal Palace"
+   },
+   {
+    "in": "Palermo",
+    "tm": "巴勒莫",
+    "fu": "Palermo",
+    "tn": "Palermo",
+    "c_tm": "Palermo",
+    "c_fu": "Palermo",
+    "c_tn": "Palermo"
+   },
+   {
+    "in": "Palermo FC",
+    "tm": "巴勒莫",
+    "fu": "Palermo FC",
+    "tn": "Palermo",
+    "c_tm": "Palermo",
+    "c_fu": "Palermo",
+    "c_tn": "Palermo"
+   },
+   {
+    "in": "Paris S-G",
+    "tm": "巴黎圣日耳曼",
+    "fu": "Paris S-G",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Paris SG",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣日尔曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Paris Saint Germain",
+    "tm": "巴黎圣日耳曼",
+    "fu": "Paris Saint Germain",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Paris Saint-Germain",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣日尔曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "Parma Calcio",
+    "tm": "帕尔马",
+    "fu": "Parma Calcio",
+    "tn": "Parma",
+    "c_tm": "Parma",
+    "c_fu": "Parma",
+    "c_tn": "Parma"
+   },
+   {
+    "in": "Parma Calcio 1913",
+    "tm": "帕尔马",
+    "fu": "Parma Calcio 1913",
+    "tn": "Parma",
+    "c_tm": "Parma",
+    "c_fu": "Parma",
+    "c_tn": "Parma"
+   },
+   {
+    "in": "Pescara",
+    "tm": "佩斯卡拉",
+    "fu": "Pescara",
+    "tn": "Pescara",
+    "c_tm": "Pescara",
+    "c_fu": "Pescara",
+    "c_tn": "Pescara"
+   },
+   {
+    "in": "Pisa SC",
+    "tm": "比萨",
+    "fu": "Pisa SC",
+    "tn": "Pisa",
+    "c_tm": "Pisa",
+    "c_fu": "Pisa",
+    "c_tn": "Pisa"
+   },
+   {
+    "in": "RB Leipzig",
+    "tm": "莱比锡",
+    "fu": "莱比锡红牛",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "RC Celta",
+    "tm": "塞尔塔",
+    "fu": "RC Celta",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "RCD Espanyol",
+    "tm": "西班牙人",
+    "fu": "RCD Espanyol",
+    "tn": "Espanyol",
+    "c_tm": "Espanyol",
+    "c_fu": "Espanyol",
+    "c_tn": "Espanyol"
+   },
+   {
+    "in": "RCD Mallorca",
+    "tm": "马洛卡",
+    "fu": "RCD Mallorca",
+    "tn": "Mallorca",
+    "c_tm": "Mallorca",
+    "c_fu": "Mallorca",
+    "c_tn": "Mallorca"
+   },
+   {
+    "in": "RM",
+    "tm": "皇家马德里",
+    "fu": "RM",
+    "tn": "Real Madrid",
+    "c_tm": "Real Madrid",
+    "c_fu": "Real Madrid",
+    "c_tn": "Real Madrid"
+   },
+   {
+    "in": "Racing",
+    "tm": "桑坦德竞技",
+    "fu": "Racing",
+    "tn": "Real Racing Club",
+    "c_tm": "Real Racing Club",
+    "c_fu": "Real Racing Club",
+    "c_tn": "Real Racing Club"
+   },
+   {
+    "in": "Racing Santander",
+    "tm": "桑坦德竞技",
+    "fu": "Racing Santander",
+    "tn": "Real Racing Club",
+    "c_tm": "Real Racing Club",
+    "c_fu": "Real Racing Club",
+    "c_tn": "Real Racing Club"
+   },
+   {
+    "in": "RasenBallsport Leipzig",
+    "tm": "莱比锡",
+    "fu": "RasenBallsport Leipzig",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "Rayo",
+    "tm": "巴列卡诺",
+    "fu": "Rayo",
+    "tn": "Rayo Vallecano",
+    "c_tm": "Rayo Vallecano",
+    "c_fu": "Rayo Vallecano",
+    "c_tn": "Rayo Vallecano"
+   },
+   {
+    "in": "Real Valladolid",
+    "tm": "巴利亚多利德",
+    "fu": "瓦拉多利德",
+    "tn": "Real Valladolid",
+    "c_tm": "Real Valladolid",
+    "c_fu": "Real Valladolid",
+    "c_tn": "Real Valladolid"
+   },
+   {
+    "in": "SAFC",
+    "tm": "桑德兰",
+    "fu": "SAFC",
+    "tn": "Sunderland",
+    "c_tm": "Sunderland",
+    "c_fu": "Sunderland",
+    "c_tn": "Sunderland"
+   },
+   {
+    "in": "SC Bastia",
+    "tm": "巴斯蒂亚",
+    "fu": "SC Bastia",
+    "tn": "Bastia",
+    "c_tm": "Bastia",
+    "c_fu": "Bastia",
+    "c_tn": "Bastia"
+   },
+   {
+    "in": "SC Paderborn 07",
+    "tm": "帕德博恩",
+    "fu": "SC Paderborn 07",
+    "tn": "SC Paderborn 07",
+    "c_tm": "SC Paderborn 07",
+    "c_fu": "SC Paderborn 07",
+    "c_tn": "SC Paderborn 07"
+   },
+   {
+    "in": "SCO Angers",
+    "tm": "昂热",
+    "fu": "SCO Angers",
+    "tn": "Angers",
+    "c_tm": "Angers",
+    "c_fu": "Angers",
+    "c_tn": "Angers"
+   },
+   {
+    "in": "SD Eibar",
+    "tm": "埃瓦尔",
+    "fu": "SD Eibar",
+    "tn": "Eibar",
+    "c_tm": "Eibar",
+    "c_fu": "Eibar",
+    "c_tn": "Eibar"
+   },
+   {
+    "in": "SD Huesca",
+    "tm": "韦斯卡",
+    "fu": "SD Huesca",
+    "tn": "Huesca",
+    "c_tm": "Huesca",
+    "c_fu": "Huesca",
+    "c_tn": "Huesca"
+   },
+   {
+    "in": "SM Caen",
+    "tm": "卡昂",
+    "fu": "SM Caen",
+    "tn": "Stade Malherbe Caen",
+    "c_tm": "Stade Malherbe Caen",
+    "c_fu": "Stade Malherbe Caen",
+    "c_tn": "Stade Malherbe Caen"
+   },
+   {
+    "in": "SPAL",
+    "tm": "费拉拉SPAL",
+    "fu": "SPAL",
+    "tn": "SPAL",
+    "c_tm": "SPAL",
+    "c_fu": "SPAL",
+    "c_tn": "SPAL"
+   },
+   {
+    "in": "SPAL 2013",
+    "tm": "费拉拉SPAL",
+    "fu": "SPAL 2013",
+    "tn": "SPAL",
+    "c_tm": "SPAL",
+    "c_fu": "SPAL",
+    "c_tn": "SPAL"
+   },
+   {
+    "in": "SPAL Ferrara",
+    "tm": "费拉拉SPAL",
+    "fu": "SPAL Ferrara",
+    "tn": "SPAL",
+    "c_tm": "SPAL",
+    "c_fu": "SPAL",
+    "c_tn": "SPAL"
+   },
+   {
+    "in": "SS Lazio",
+    "tm": "拉齐奥",
+    "fu": "SS Lazio",
+    "tn": "Lazio",
+    "c_tm": "Lazio",
+    "c_fu": "Lazio",
+    "c_tn": "Lazio"
+   },
+   {
+    "in": "SSD Sampdoria",
+    "tm": "桑普多利亚",
+    "fu": "SSD Sampdoria",
+    "tn": "Sampdoria",
+    "c_tm": "Sampdoria",
+    "c_fu": "Sampdoria",
+    "c_tn": "Sampdoria"
+   },
+   {
+    "in": "SV 07 Elversberg",
+    "tm": "埃尔沃斯堡",
+    "fu": "SV 07 Elversberg",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "SV Darmstadt 98",
+    "tm": "达姆施塔特",
+    "fu": "SV Darmstadt 98",
+    "tn": "Darmstadt 98",
+    "c_tm": "Darmstadt 98",
+    "c_fu": "Darmstadt 98",
+    "c_tn": "Darmstadt 98"
+   },
+   {
+    "in": "SV Elversberg",
+    "tm": "埃尔沃斯堡",
+    "fu": "SV Elversberg",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "SV Werder Bremen",
+    "tm": "云达不莱梅",
+    "fu": "云达不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "Saint Etienne",
+    "tm": "圣埃蒂安",
+    "fu": "Saint Etienne",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "Saint-Etienne",
+    "tm": "圣埃蒂安",
+    "fu": "Saint-Etienne",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "Sampdoria",
+    "tm": "桑普多利亚",
+    "fu": "Sampdoria",
+    "tn": "Sampdoria",
+    "c_tm": "Sampdoria",
+    "c_fu": "Sampdoria",
+    "c_tn": "Sampdoria"
+   },
+   {
+    "in": "Sevilla FC",
+    "tm": "塞维利亚",
+    "fu": "Sevilla FC",
+    "tn": "Sevilla",
+    "c_tm": "Sevilla",
+    "c_fu": "Sevilla",
+    "c_tn": "Sevilla"
+   },
+   {
+    "in": "Sheffield",
+    "tm": "谢菲尔德联",
+    "fu": "Sheffield",
+    "tn": "Sheffield United",
+    "c_tm": "Sheffield United",
+    "c_fu": "Sheffield United",
+    "c_tn": "Sheffield United"
+   },
+   {
+    "in": "Sheffield Utd",
+    "tm": "谢菲尔德联",
+    "fu": "Sheffield Utd",
+    "tn": "Sheffield United",
+    "c_tm": "Sheffield United",
+    "c_fu": "Sheffield United",
+    "c_tn": "Sheffield United"
+   },
+   {
+    "in": "Sociedad",
+    "tm": "皇家社会",
+    "fu": "Sociedad",
+    "tn": "Real Sociedad",
+    "c_tm": "Real Sociedad",
+    "c_fu": "Real Sociedad",
+    "c_tn": "Real Sociedad"
+   },
+   {
+    "in": "Soton",
+    "tm": "南安普顿",
+    "fu": "Soton",
+    "tn": "Southampton",
+    "c_tm": "Southampton",
+    "c_fu": "Southampton",
+    "c_tn": "Southampton"
+   },
+   {
+    "in": "Southampton",
+    "tm": "南安普顿",
+    "fu": "南安普敦",
+    "tn": "Southampton",
+    "c_tm": "Southampton",
+    "c_fu": "Southampton",
+    "c_tn": "Southampton"
+   },
+   {
+    "in": "SpVgg Greuther Fürth",
+    "tm": "菲尔特",
+    "fu": "SpVgg Greuther Fürth",
+    "tn": "SpVgg Greuther Fürth",
+    "c_tm": "SpVgg Greuther Fürth",
+    "c_fu": "SpVgg Greuther Fürth",
+    "c_tn": "SpVgg Greuther Fürth"
+   },
+   {
+    "in": "Spal",
+    "tm": "费拉拉SPAL",
+    "fu": "Spal",
+    "tn": "SPAL",
+    "c_tm": "SPAL",
+    "c_fu": "SPAL",
+    "c_tn": "SPAL"
+   },
+   {
+    "in": "Spezia",
+    "tm": "斯佩齐亚",
+    "fu": "Spezia",
+    "tn": "Spezia",
+    "c_tm": "Spezia",
+    "c_fu": "Spezia",
+    "c_tn": "Spezia"
+   },
+   {
+    "in": "Spezia Calcio",
+    "tm": "斯佩齐亚",
+    "fu": "Spezia Calcio",
+    "tn": "Spezia",
+    "c_tm": "Spezia",
+    "c_fu": "Spezia",
+    "c_tn": "Spezia"
+   },
+   {
+    "in": "Sporting Gijon",
+    "tm": "希洪竞技",
+    "fu": "Sporting Gijon",
+    "tn": "Sporting Gijón",
+    "c_tm": "Sporting Gijón",
+    "c_fu": "Sporting Gijón",
+    "c_tn": "Sporting Gijón"
+   },
+   {
+    "in": "Sporting Gijón",
+    "tm": "希洪竞技",
+    "fu": "Sporting Gijón",
+    "tn": "Sporting Gijón",
+    "c_tm": "Sporting Gijón",
+    "c_fu": "Sporting Gijón",
+    "c_tn": "Sporting Gijón"
+   },
+   {
+    "in": "Sporting de Gijon",
+    "tm": "希洪竞技",
+    "fu": "Sporting de Gijon",
+    "tn": "Sporting Gijón",
+    "c_tm": "Sporting Gijón",
+    "c_fu": "Sporting Gijón",
+    "c_tn": "Sporting Gijón"
+   },
+   {
+    "in": "Spurs",
+    "tm": "热刺",
+    "fu": "Spurs",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "St Etienne",
+    "tm": "圣埃蒂安",
+    "fu": "St Etienne",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "St-Étienne",
+    "tm": "圣埃蒂安",
+    "fu": "St-Étienne",
+    "tn": "Saint-Étienne",
+    "c_tm": "Saint-Étienne",
+    "c_fu": "Saint-Étienne",
+    "c_tn": "Saint-Étienne"
+   },
+   {
+    "in": "Stade Malherbe Caen",
+    "tm": "卡昂",
+    "fu": "Stade Malherbe Caen",
+    "tn": "Stade Malherbe Caen",
+    "c_tm": "Stade Malherbe Caen",
+    "c_fu": "Stade Malherbe Caen",
+    "c_tn": "Stade Malherbe Caen"
+   },
+   {
+    "in": "Stade Reims",
+    "tm": "兰斯",
+    "fu": "Stade Reims",
+    "tn": "Stade de Reims",
+    "c_tm": "Stade de Reims",
+    "c_fu": "Stade de Reims",
+    "c_tn": "Stade de Reims"
+   },
+   {
+    "in": "Stoke",
+    "tm": "斯托克城",
+    "fu": "Stoke",
+    "tn": "Stoke City",
+    "c_tm": "Stoke City",
+    "c_fu": "Stoke City",
+    "c_tn": "Stoke City"
+   },
+   {
+    "in": "Stoke City",
+    "tm": "斯托克城",
+    "fu": "Stoke City",
+    "tn": "Stoke City",
+    "c_tm": "Stoke City",
+    "c_fu": "Stoke City",
+    "c_tn": "Stoke City"
+   },
+   {
+    "in": "Swansea",
+    "tm": "斯旺西",
+    "fu": "Swansea",
+    "tn": "Swansea City",
+    "c_tm": "Swansea City",
+    "c_fu": "Swansea City",
+    "c_tn": "Swansea City"
+   },
+   {
+    "in": "Swansea City",
+    "tm": "斯旺西",
+    "fu": "Swansea City",
+    "tn": "Swansea City",
+    "c_tm": "Swansea City",
+    "c_fu": "Swansea City",
+    "c_tn": "Swansea City"
+   },
+   {
+    "in": "THFC",
+    "tm": "热刺",
+    "fu": "THFC",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "Torino FC",
+    "tm": "都灵",
+    "fu": "Torino FC",
+    "tn": "Torino",
+    "c_tm": "Torino",
+    "c_fu": "Torino",
+    "c_tn": "Torino"
+   },
+   {
+    "in": "Tottenham",
+    "tm": "热刺",
+    "fu": "Tottenham",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "Tottenham Hotspur",
+    "tm": "热刺",
+    "fu": "托特纳姆热刺",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "Toulouse FC",
+    "tm": "图卢兹",
+    "fu": "Toulouse FC",
+    "tn": "Toulouse",
+    "c_tm": "Toulouse",
+    "c_fu": "Toulouse",
+    "c_tn": "Toulouse"
+   },
+   {
+    "in": "UC Sampdoria",
+    "tm": "桑普多利亚",
+    "fu": "UC Sampdoria",
+    "tn": "Sampdoria",
+    "c_tm": "Sampdoria",
+    "c_fu": "Sampdoria",
+    "c_tn": "Sampdoria"
+   },
+   {
+    "in": "UD Almeria",
+    "tm": "阿尔梅里亚",
+    "fu": "UD Almeria",
+    "tn": "Almería",
+    "c_tm": "Almería",
+    "c_fu": "Almería",
+    "c_tn": "Almería"
+   },
+   {
+    "in": "UD Almería",
+    "tm": "阿尔梅里亚",
+    "fu": "UD Almería",
+    "tn": "Almería",
+    "c_tm": "Almería",
+    "c_fu": "Almería",
+    "c_tn": "Almería"
+   },
+   {
+    "in": "UD Levante",
+    "tm": "莱万特",
+    "fu": "UD Levante",
+    "tn": "Levante UD",
+    "c_tm": "Levante UD",
+    "c_fu": "Levante UD",
+    "c_tn": "Levante UD"
+   },
+   {
+    "in": "US Cremonese",
+    "tm": "克雷莫纳",
+    "fu": "US Cremonese",
+    "tn": "Cremonese",
+    "c_tm": "Cremonese",
+    "c_fu": "Cremonese",
+    "c_tn": "Cremonese"
+   },
+   {
+    "in": "US Lecce",
+    "tm": "莱切",
+    "fu": "US Lecce",
+    "tn": "Lecce",
+    "c_tm": "Lecce",
+    "c_fu": "Lecce",
+    "c_tn": "Lecce"
+   },
+   {
+    "in": "US Sassuolo",
+    "tm": "萨索洛",
+    "fu": "US Sassuolo",
+    "tn": "Sassuolo",
+    "c_tm": "Sassuolo",
+    "c_fu": "Sassuolo",
+    "c_tn": "Sassuolo"
+   },
+   {
+    "in": "Udinese Calcio",
+    "tm": "乌迪内斯",
+    "fu": "Udinese Calcio",
+    "tn": "Udinese",
+    "c_tm": "Udinese",
+    "c_fu": "Udinese",
+    "c_tn": "Udinese"
+   },
+   {
+    "in": "Valencia",
+    "tm": "瓦伦西亚",
+    "fu": "巴伦西亚",
+    "tn": "Valencia",
+    "c_tm": "Valencia",
+    "c_fu": "Valencia",
+    "c_tn": "Valencia"
+   },
+   {
+    "in": "Valencia CF",
+    "tm": "瓦伦西亚",
+    "fu": "Valencia CF",
+    "tn": "Valencia",
+    "c_tm": "Valencia",
+    "c_fu": "Valencia",
+    "c_tn": "Valencia"
+   },
+   {
+    "in": "Valladolid",
+    "tm": "巴利亚多利德",
+    "fu": "Valladolid",
+    "tn": "Real Valladolid",
+    "c_tm": "Real Valladolid",
+    "c_fu": "Real Valladolid",
+    "c_tn": "Real Valladolid"
+   },
+   {
+    "in": "Venezia FC",
+    "tm": "威尼斯",
+    "fu": "Venezia FC",
+    "tn": "Venezia",
+    "c_tm": "Venezia",
+    "c_fu": "Venezia",
+    "c_tn": "Venezia"
+   },
+   {
+    "in": "VfL Bochum",
+    "tm": "波鸿",
+    "fu": "VfL Bochum",
+    "tn": "VfL Bochum 1848",
+    "c_tm": "VfL Bochum 1848",
+    "c_fu": "VfL Bochum 1848",
+    "c_tn": "VfL Bochum 1848"
+   },
+   {
+    "in": "Villa",
+    "tm": "阿斯顿维拉",
+    "fu": "Villa",
+    "tn": "Aston Villa",
+    "c_tm": "Aston Villa",
+    "c_fu": "Aston Villa",
+    "c_tn": "Aston Villa"
+   },
+   {
+    "in": "Villarreal CF",
+    "tm": "比利亚雷亚尔",
+    "fu": "Villarreal CF",
+    "tn": "Villarreal",
+    "c_tm": "Villarreal",
+    "c_fu": "Villarreal",
+    "c_tn": "Villarreal"
+   },
+   {
+    "in": "WBA",
+    "tm": "西布罗姆维奇",
+    "fu": "WBA",
+    "tn": "West Bromwich Albion",
+    "c_tm": "West Bromwich Albion",
+    "c_fu": "West Bromwich Albion",
+    "c_tn": "West Bromwich Albion"
+   },
+   {
+    "in": "WHFC",
+    "tm": "西汉姆",
+    "fu": "WHFC",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "WHU",
+    "tm": "西汉姆",
+    "fu": "WHU",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "Watford",
+    "tm": "沃特福德",
+    "fu": "Watford",
+    "tn": "Watford",
+    "c_tm": "Watford",
+    "c_fu": "Watford",
+    "c_tn": "Watford"
+   },
+   {
+    "in": "Watford FC",
+    "tm": "沃特福德",
+    "fu": "Watford FC",
+    "tn": "Watford",
+    "c_tm": "Watford",
+    "c_fu": "Watford",
+    "c_tn": "Watford"
+   },
+   {
+    "in": "Werder Bremen",
+    "tm": "云达不莱梅",
+    "fu": "云达不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "West Brom",
+    "tm": "西布罗姆维奇",
+    "fu": "West Brom",
+    "tn": "West Bromwich Albion",
+    "c_tm": "West Bromwich Albion",
+    "c_fu": "West Bromwich Albion",
+    "c_tn": "West Bromwich Albion"
+   },
+   {
+    "in": "West Bromwich",
+    "tm": "西布罗姆维奇",
+    "fu": "West Bromwich",
+    "tn": "West Bromwich Albion",
+    "c_tm": "West Bromwich Albion",
+    "c_fu": "West Bromwich Albion",
+    "c_tn": "West Bromwich Albion"
+   },
+   {
+    "in": "West Bromwich Albion",
+    "tm": "西布罗姆维奇",
+    "fu": "West Bromwich Albion",
+    "tn": "West Bromwich Albion",
+    "c_tm": "West Bromwich Albion",
+    "c_fu": "West Bromwich Albion",
+    "c_tn": "West Bromwich Albion"
+   },
+   {
+    "in": "West Ham",
+    "tm": "西汉姆",
+    "fu": "West Ham",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "West Ham United",
+    "tm": "西汉姆",
+    "fu": "西汉姆联",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "Wolves",
+    "tm": "狼队",
+    "fu": "Wolves",
+    "tn": "Wolverhampton",
+    "c_tm": "Wolverhampton",
+    "c_fu": "Wolverhampton",
+    "c_tn": "Wolverhampton"
+   },
+   {
+    "in": "Yellow Submarine",
+    "tm": "比利亚雷亚尔",
+    "fu": "Yellow Submarine",
+    "tn": "Villarreal",
+    "c_tm": "Villarreal",
+    "c_fu": "Villarreal",
+    "c_tn": "Villarreal"
+   },
+   {
+    "in": "不来梅",
+    "tm": "云达不莱梅",
+    "fu": "不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "云达不来梅",
+    "tm": "云达不莱梅",
+    "fu": "云达不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "云达不莱梅",
+    "tm": "云达不莱梅",
+    "fu": "云达不来梅",
+    "tn": "SV Werder Bremen",
+    "c_tm": "SV Werder Bremen",
+    "c_fu": "SV Werder Bremen",
+    "c_tn": "SV Werder Bremen"
+   },
+   {
+    "in": "伍尔弗汉普顿",
+    "tm": "狼队",
+    "fu": "伍尔弗汉普顿",
+    "tn": "Wolverhampton",
+    "c_tm": "Wolverhampton",
+    "c_fu": "Wolverhampton",
+    "c_tn": "Wolverhampton"
+   },
+   {
+    "in": "伍尔弗汉普顿流浪者",
+    "tm": "狼队",
+    "fu": "伍尔弗汉普顿流浪者",
+    "tn": "Wolverhampton",
+    "c_tm": "Wolverhampton",
+    "c_fu": "Wolverhampton",
+    "c_tn": "Wolverhampton"
+   },
+   {
+    "in": "克莱蒙特",
+    "tm": "克莱蒙",
+    "fu": "克莱蒙特",
+    "tn": "Clermont Foot",
+    "c_tm": "Clermont Foot",
+    "c_fu": "Clermont Foot",
+    "c_tn": "Clermont Foot"
+   },
+   {
+    "in": "南安普敦",
+    "tm": "南安普顿",
+    "fu": "南安普敦",
+    "tn": "Southampton",
+    "c_tm": "Southampton",
+    "c_fu": "Southampton",
+    "c_tn": "Southampton"
+   },
+   {
+    "in": "国米",
+    "tm": "国际米兰",
+    "fu": "国米",
+    "tn": "Inter",
+    "c_tm": "Inter",
+    "c_fu": "Inter",
+    "c_tn": "Inter"
+   },
+   {
+    "in": "埃尔沃斯堡",
+    "tm": "埃尔沃斯堡",
+    "fu": "埃沃斯堡",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "埃沃斯堡",
+    "tm": "埃尔沃斯堡",
+    "fu": "埃沃斯堡",
+    "tn": "SV 07 Elversberg",
+    "c_tm": "SV 07 Elversberg",
+    "c_fu": "SV 07 Elversberg",
+    "c_tn": "SV 07 Elversberg"
+   },
+   {
+    "in": "基尔高士丁",
+    "tm": "基尔",
+    "fu": "基尔高士丁",
+    "tn": "Holstein Kiel",
+    "c_tm": "Holstein Kiel",
+    "c_fu": "Holstein Kiel",
+    "c_tn": "Holstein Kiel"
+   },
+   {
+    "in": "塞尔塔",
+    "tm": "塞尔塔",
+    "fu": "维戈塞尔塔",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "尤文",
+    "tm": "尤文图斯",
+    "fu": "尤文",
+    "tn": "Juventus",
+    "c_tm": "Juventus",
+    "c_fu": "Juventus",
+    "c_tn": "Juventus"
+   },
+   {
+    "in": "巴伦西亚",
+    "tm": "瓦伦西亚",
+    "fu": "巴伦西亚",
+    "tn": "Valencia",
+    "c_tm": "Valencia",
+    "c_fu": "Valencia",
+    "c_tn": "Valencia"
+   },
+   {
+    "in": "巴利亚多利德",
+    "tm": "巴利亚多利德",
+    "fu": "瓦拉多利德",
+    "tn": "Real Valladolid",
+    "c_tm": "Real Valladolid",
+    "c_fu": "Real Valladolid",
+    "c_tn": "Real Valladolid"
+   },
+   {
+    "in": "巴萨",
+    "tm": "巴塞罗那",
+    "fu": "巴萨",
+    "tn": "FC Barcelona",
+    "c_tm": "FC Barcelona",
+    "c_fu": "FC Barcelona",
+    "c_tn": "FC Barcelona"
+   },
+   {
+    "in": "巴黎圣日尔曼",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣日尔曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "巴黎圣日耳曼",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣日尔曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "巴黎圣曼",
+    "tm": "巴黎圣日耳曼",
+    "fu": "巴黎圣曼",
+    "tn": "Paris Saint-Germain",
+    "c_tm": "Paris Saint-Germain",
+    "c_fu": "Paris Saint-Germain",
+    "c_tn": "Paris Saint-Germain"
+   },
+   {
+    "in": "布莱顿",
+    "tm": "布莱顿",
+    "fu": "布赖顿",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "布赖顿",
+    "tm": "布莱顿",
+    "fu": "布赖顿",
+    "tn": "Brighton & Hove Albion",
+    "c_tm": "Brighton & Hove Albion",
+    "c_fu": "Brighton & Hove Albion",
+    "c_tn": "Brighton & Hove Albion"
+   },
+   {
+    "in": "弗洛西诺内",
+    "tm": "弗罗西诺内",
+    "fu": "弗洛西诺内",
+    "tn": "Frosinone",
+    "c_tm": "Frosinone",
+    "c_fu": "Frosinone",
+    "c_tn": "Frosinone"
+   },
+   {
+    "in": "弗罗西诺内",
+    "tm": "弗罗西诺内",
+    "fu": "弗洛西诺内",
+    "tn": "Frosinone",
+    "c_tm": "Frosinone",
+    "c_fu": "Frosinone",
+    "c_tn": "Frosinone"
+   },
+   {
+    "in": "托特纳姆热刺",
+    "tm": "热刺",
+    "fu": "托特纳姆热刺",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "拜仁",
+    "tm": "拜仁慕尼黑",
+    "fu": "拜仁",
+    "tn": "FC Bayern München",
+    "c_tm": "FC Bayern München",
+    "c_fu": "FC Bayern München",
+    "c_tn": "FC Bayern München"
+   },
+   {
+    "in": "曼城",
+    "tm": "曼城",
+    "fu": "曼彻斯特城",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "曼彻斯特城",
+    "tm": "曼城",
+    "fu": "曼彻斯特城",
+    "tn": "Manchester City",
+    "c_tm": "Manchester City",
+    "c_fu": "Manchester City",
+    "c_tn": "Manchester City"
+   },
+   {
+    "in": "曼彻斯特联",
+    "tm": "曼联",
+    "fu": "曼彻斯特联",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "曼联",
+    "tm": "曼联",
+    "fu": "曼彻斯特联",
+    "tn": "Manchester United",
+    "c_tm": "Manchester United",
+    "c_fu": "Manchester United",
+    "c_tn": "Manchester United"
+   },
+   {
+    "in": "格拉纳达",
+    "tm": "格拉纳达",
+    "fu": "格拉纳达CF",
+    "tn": "Granada",
+    "c_tm": "Granada",
+    "c_fu": "Granada",
+    "c_tn": "Granada"
+   },
+   {
+    "in": "格拉纳达CF",
+    "tm": "格拉纳达",
+    "fu": "格拉纳达CF",
+    "tn": "Granada",
+    "c_tm": "Granada",
+    "c_fu": "Granada",
+    "c_tn": "Granada"
+   },
+   {
+    "in": "比利亚雷",
+    "tm": "比利亚雷亚尔",
+    "fu": "比利亚雷",
+    "tn": "Villarreal",
+    "c_tm": "Villarreal",
+    "c_fu": "Villarreal",
+    "c_tn": "Villarreal"
+   },
+   {
+    "in": "毕尔巴鄂",
+    "tm": "毕尔巴鄂",
+    "fu": "毕尔巴鄂竞技",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "毕尔巴鄂竞技",
+    "tm": "毕尔巴鄂",
+    "fu": "毕尔巴鄂竞技",
+    "tn": "Athletic Club",
+    "c_tm": "Athletic Club",
+    "c_fu": "Athletic Club",
+    "c_tn": "Athletic Club"
+   },
+   {
+    "in": "热刺",
+    "tm": "热刺",
+    "fu": "托特纳姆热刺",
+    "tn": "Tottenham Hotspur",
+    "c_tm": "Tottenham Hotspur",
+    "c_fu": "Tottenham Hotspur",
+    "c_tn": "Tottenham Hotspur"
+   },
+   {
+    "in": "瓦伦西亚",
+    "tm": "瓦伦西亚",
+    "fu": "巴伦西亚",
+    "tn": "Valencia",
+    "c_tm": "Valencia",
+    "c_fu": "Valencia",
+    "c_tn": "Valencia"
+   },
+   {
+    "in": "皇家奥维耶多",
+    "tm": "奥维耶多",
+    "fu": "皇家奥维耶多",
+    "tn": "Real Oviedo",
+    "c_tm": "Real Oviedo",
+    "c_fu": "Real Oviedo",
+    "c_tn": "Real Oviedo"
+   },
+   {
+    "in": "米兰",
+    "tm": "AC米兰",
+    "fu": "米兰",
+    "tn": "AC Milan",
+    "c_tm": "AC Milan",
+    "c_fu": "AC Milan",
+    "c_tn": "AC Milan"
+   },
+   {
+    "in": "纽卡斯尔",
+    "tm": "纽卡斯尔",
+    "fu": "纽卡斯尔联",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "纽卡斯尔联",
+    "tm": "纽卡斯尔",
+    "fu": "纽卡斯尔联",
+    "tn": "Newcastle United",
+    "c_tm": "Newcastle United",
+    "c_fu": "Newcastle United",
+    "c_tn": "Newcastle United"
+   },
+   {
+    "in": "维戈塞尔塔",
+    "tm": "塞尔塔",
+    "fu": "维戈塞尔塔",
+    "tn": "Celta Vigo",
+    "c_tm": "Celta Vigo",
+    "c_fu": "Celta Vigo",
+    "c_tn": "Celta Vigo"
+   },
+   {
+    "in": "维拉",
+    "tm": "阿斯顿维拉",
+    "fu": "维拉",
+    "tn": "Aston Villa",
+    "c_tm": "Aston Villa",
+    "c_fu": "Aston Villa",
+    "c_tn": "Aston Villa"
+   },
+   {
+    "in": "莱切斯特城",
+    "tm": "莱斯特城",
+    "fu": "莱切斯特城",
+    "tn": "Leicester City",
+    "c_tm": "Leicester City",
+    "c_fu": "Leicester City",
+    "c_tn": "Leicester City"
+   },
+   {
+    "in": "莱比锡",
+    "tm": "莱比锡",
+    "fu": "莱比锡红牛",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "莱比锡红牛",
+    "tm": "莱比锡",
+    "fu": "莱比锡红牛",
+    "tn": "RB Leipzig",
+    "c_tm": "RB Leipzig",
+    "c_fu": "RB Leipzig",
+    "c_tn": "RB Leipzig"
+   },
+   {
+    "in": "西汉姆",
+    "tm": "西汉姆",
+    "fu": "西汉姆联",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "西汉姆联",
+    "tm": "西汉姆",
+    "fu": "西汉姆联",
+    "tn": "West Ham United",
+    "c_tm": "West Ham United",
+    "c_fu": "West Ham United",
+    "c_tn": "West Ham United"
+   },
+   {
+    "in": "赫塔菲",
+    "tm": "赫塔费",
+    "fu": "赫塔菲",
+    "tn": "Getafe",
+    "c_tm": "Getafe",
+    "c_fu": "Getafe",
+    "c_tn": "Getafe"
+   }
+  ]
+ }
+}

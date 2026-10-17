@@ -159,14 +159,26 @@ def check_database(max_retries=3, retry_delay=1.0):
     print("\n🗄️ 【数据库检查】")
     print("-" * 70)
     
+    # 注：odds_timing.db 不列入启动必检——它是 data_store.ingest_odds_timing_txt 的按需
+    # TXT 导入通道，空置（0 字节）属正常态；时序赔率现网存量在 odds.db.*_history（C-20260927-009）
     databases = {
         'odds.db': {
             'path': os.path.join(DATA_DIR, 'odds.db'),
             'tables': ['matches', 'wdl_history', 'handicap_history', 'total_goals_history', 'score_history'],
-            'league_column': 'match_type',  # odds.db 使用 match_type
+            'league_column': 'match_type',  # odds.db.matches 用 match_type 列做联赛分布
         },
-        # 注：odds_timing.db 不列入启动必检——它是 data_store.ingest_odds_timing_txt 的按需
-        # TXT 导入通道，空置（0 字节）属正常态；时序赔率现网存量在 odds.db.*_history（C-20260927-009）
+        'five_leagues.db': {
+            'path': os.path.join(DATA_DIR, 'five_leagues.db'),
+            # 训练编排核心库：matches/training_runs/anomaly_matches/prediction_history/model_versions/feature_importance
+            'tables': ['matches', 'training_runs', 'anomaly_matches', 'prediction_history', 'model_versions', 'feature_importance'],
+            'league_column': None,  # schema 用 competitionId 关联 competitions 表，无 league 列
+            'extra_check': 'competitions',  # 替代分布查询：5 行表明五大联赛齐全
+        },
+        'anomaly_samples.db': {
+            'path': os.path.join(DATA_DIR, 'anomaly_samples.db'),
+            'tables': ['anomaly_samples'],
+            'league_column': None,  # schema 无联赛列，仅 anomaly_type 维度
+        },
     }
     
     db_check_results = []
@@ -209,7 +221,9 @@ def check_database(max_retries=3, retry_delay=1.0):
             try:
                 logger.info(f"数据库检查尝试 {attempt}/{max_retries}")
                 
-                conn = sqlite3.connect(db_path)
+                # C-20260928-036：改 mode=ro 只读 URI，避免产生 -wal/-shm 写痕与生产服务锁竞争
+                db_uri = f'file:{db_path}?mode=ro'
+                conn = sqlite3.connect(db_uri, uri=True)
                 cursor = conn.cursor()
                 
                 # 检查表是否存在并获取记录数
@@ -238,22 +252,38 @@ def check_database(max_retries=3, retry_delay=1.0):
                 
                 db_result['tables'] = tables_result
                 
-                # 获取联赛分布
-                league_col = db_info.get('league_column', 'league')
-                try:
-                    cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='matches'")
-                    if cursor.fetchone():
-                        cursor.execute(f"SELECT [{league_col}], COUNT(*) FROM matches GROUP BY [{league_col}] ORDER BY COUNT(*) DESC")
-                        leagues = cursor.fetchall()
-                        if leagues:
-                            db_result['league_distribution'] = [(l, c) for l, c in leagues]
-                            print(f"\n      📊 联赛分布:")
-                            for league, count in leagues:
-                                print(f"        • {league}: {count} 场")
-                                logger.info(f"    联赛 {league}: {count} 场")
-                except Exception as e:
-                    logger.warning(f"获取联赛分布失败: {e}")
-                    last_error = str(e)
+                # 获取联赛分布（C-20260928-036：league_column=None 时跳过，适配 five_leagues.db/anomaly_samples.db schema）
+                league_col = db_info.get('league_column')
+                if league_col:
+                    try:
+                        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='matches'")
+                        if cursor.fetchone():
+                            cursor.execute(f"SELECT [{league_col}], COUNT(*) FROM matches GROUP BY [{league_col}] ORDER BY COUNT(*) DESC")
+                            leagues = cursor.fetchall()
+                            if leagues:
+                                db_result['league_distribution'] = [(l, c) for l, c in leagues]
+                                print(f"\n      📊 联赛分布:")
+                                for league, count in leagues:
+                                    print(f"        • {league}: {count} 场")
+                                    logger.info(f"    联赛 {league}: {count} 场")
+                    except Exception as e:
+                        logger.warning(f"获取联赛分布失败: {e}")
+                        last_error = str(e)
+
+                # 替代检查：competitions 表行数（five_leagues.db 用 competitionId 关联，5 行表明五大联赛齐全）
+                extra_table = db_info.get('extra_check')
+                if extra_table:
+                    try:
+                        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (extra_table,))
+                        if cursor.fetchone():
+                            cursor.execute(f"SELECT COUNT(*) FROM [{extra_table}]")
+                            extra_cnt = cursor.fetchone()[0]
+                            print(f"\n      📊 {extra_table} 表行数: {extra_cnt}")
+                            logger.info(f"    {extra_table} 表 {extra_cnt} 行（替代联赛分布查询）")
+                            db_result.setdefault('extra_distribution', []).append((extra_table, extra_cnt))
+                    except Exception as e:
+                        logger.warning(f"获取 {extra_table} 行数失败: {e}")
+                        last_error = str(e)
                 
                 conn.close()
                 
@@ -400,11 +430,11 @@ def generate_context_file(all_data):
                 lines.append(f"- [{d['id']}] {d['topic']}")
                 lines.append(f"  - {d['content'][:80]}")
         
-        # 近期变更
+        # 近期变更（C-20260928-036：标题与切片对齐，log_retrieval 已按 30 天过滤，此处仅展示最近 5 条）
         change = all_data.get('change_log', {})
         recent_changes = change.get('recent_changes', [])
         if recent_changes:
-            lines.append(f"\n## 🔧 近期变更 (近30天, {len(recent_changes)}条)")
+            lines.append(f"\n## 🔧 近期变更 (近30天 {len(recent_changes)} 条，展示最近 5 条)")
             for c in recent_changes[-5:]:
                 lines.append(f"- [{c['date']}] [{c['type']}] {c['description'][:60]}")
         

@@ -4,7 +4,7 @@ generate_post_match_report.py — 模块 A4：自动复盘报告生成器（P0�
 
 ===============================================
 背景（已归档：原模型改进实施方案 v1.0 §三/A4 + AI复盘闭环落地指南 §2.2）：
-  每场已完赛预测比赛自动生成 8 章节 markdown 复盘报告，人工只看结论。
+  每场已完赛预测比赛自动生成 7 章节 markdown 复盘报告，人工只看结论。
   复用 generate_unified_report.py 报告框架（章节结构 + markdown 表格 + 中文队名归一）。
 
 数据链路（对齐 A1/A2/A3）：
@@ -15,15 +15,14 @@ generate_post_match_report.py — 模块 A4：自动复盘报告生成器（P0�
   - 归因缺失时自动调用 AttributionEngine.run() 补算
   - 关键事件时间线：--collect 时实时采集 SofaScore incidents（可降级为提示）
 
-报告 8 章节（对齐指南 §2.2）：
-  一、比赛结果 + 关键事件时间线
+报告 7 章节（C-20261001-005 对齐实际产物；v1.0 docstring 原写 8 章已过时）：
+  一、比赛结果
   二、预测 vs 实际对比（WDL/比分Top1/Top5/让球/进球数Top1/Top3）
-  三、预测质量评分（单场 RPS/LogLoss/概率排名/校准偏差）
-  四、AI 自动归因分析（权重排序 + 证据）
-  五、数据质量检查（data_quality_score + 覆盖率）
-  六、经验教训与改进建议（短/中/长期）
-  七、因子库更新建议（L1/L2/L3 + 可信度）
-  八、审核签字区
+  三、AI 自动归因分析（权重排序 + 证据）
+  四、数据质量检查（data_quality_score + 覆盖率）
+  五、经验教训与改进建议（短/中/长期）
+  六、因子库更新建议（L1/L2/L3 + 可信度）
+  七、自动审核
 
 输出路径：
   docs/post_match/{YYYYMMDD}/{联赛}_{主队}_vs_{客队}_复盘.md
@@ -44,6 +43,7 @@ import json
 import logging
 import math
 import re
+import unicodedata
 import sqlite3
 import sys
 from datetime import datetime
@@ -57,6 +57,7 @@ sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 sys.path.insert(0, str(PROJECT_DIR / "collection"))
 
 from post_match_schema import ensure_post_match_schema  # noqa: E402
+from post_match_cache import get_post_data  # noqa: E402  C-20261002-001
 from feature_utils import canonical_team_name  # noqa: E402
 from attribution_engine import (  # noqa: E402
     AttributionEngine,
@@ -66,6 +67,7 @@ from attribution_engine import (  # noqa: E402
     get_event_id,
     get_odds_timeline,
     get_understat_xg,
+    resolve_matches_row,
 )
 
 REPORT_VERSION = "v1.0"
@@ -84,68 +86,74 @@ def _get_conn() -> sqlite3.Connection:
 
 
 def _resolve_actual_hcp(conn: sqlite3.Connection, review: sqlite3.Row) -> Optional[str]:
-    """C-20260921-042: 让球实际结果 fallback——当 post_match_review.actual_hcp 为 NULL 时，
-    从 matches 表的 handicap 盘口 + actual_score 比分自动推算。
+    """C-20260921-042（v2）: 让球实际结果判定。
 
-    口径对齐 run_post_match_pipeline.hcp_from_handicap()：
-      handicap 以主队为基准（负=主队让球），调整后主队得分 = home + handicap
-      > 客队 → 上盘赢；== → 走水；< → 下盘赢
-    也兼容 matches.actual_handicap 已是赛果文本的情况。
+    优先级：① 竞彩官方赛果 matches.actual_handicap（'(-1)平' 等，权威，可覆写历史错误值）；
+            ② post_match_review.actual_hcp 已有值；③ handicap 盘口 + 比分推导。
+    口径：上盘赢/走水/下盘赢（与 run_post_match_pipeline.hcp_result_label 一致）。
+
+    历史问题：matches.handicap 部分场次被亚盘 0.25 档污染，导致 review.actual_hcp 曾写错
+    （如「1:0、让 -1」被写成上盘赢，实为走水）；今将 actual_handicap 提为最高优先级修正之。
     """
-    if review["actual_hcp"]:
-        return review["actual_hcp"]
-
-    score = review["actual_score"]
-    if not score or ":" not in str(score):
-        return None
-    parts = str(score).split(":")
-    if len(parts) != 2:
-        return None
-    try:
-        home_goals, away_goals = int(parts[0]), int(parts[1])
-    except ValueError:
-        return None
-
+    # 1. 优先竞彩官方赛果文本（不受 matches.handicap 亚盘污染影响，可修正错误值）
     cur = conn.cursor()
-    cur.execute(
-        "SELECT handicap, actual_handicap FROM matches WHERE match_id=?",
-        (review["match_id"],),
-    )
-    row = cur.fetchone()
-    if not row:
-        return None
+    # C-20261016-110b: 跨源键错位回退（英文键 review 查不到 matches 中文键行）
+    mrow = resolve_matches_row(conn, review["match_id"], review_row=dict(review))
+    result = None
 
-    # 优先用 actual_handicap（sporttery_collector 已计算的赛果文本）
-    actual_hcp_text = row[1] if row[1] else None
+    actual_hcp_text = None
+    if mrow:
+        actual_hcp_text = mrow.get("actual_handicap") or None
     if actual_hcp_text:
-        # actual_handicap 可能是 "(-1)胜" 格式，映射到 上盘赢/走水/下盘赢
         ah = str(actual_hcp_text)
-        if "胜" in ah and "负" not in ah:
-            return "上盘赢"
-        if "负" in ah and "胜" not in ah:
-            return "下盘赢"
         if "平" in ah or "走" in ah:
-            return "走水"
+            result = "走水"
+        elif "胜" in ah:
+            result = "上盘赢"
+        elif "负" in ah:
+            result = "下盘赢"
 
-    # 从 handicap 盘口值 + 比分 计算
-    hcp_line = row[0]
-    if hcp_line is None:
-        return None
-    try:
-        hcp_val = float(hcp_line)
-    except (ValueError, TypeError):
-        # 中文串如 "受让半球" 无法直接解析
-        return None
+    # 2. 已有值（历史复盘）
+    if result is None and review["actual_hcp"]:
+        result = review["actual_hcp"]
 
-    adjusted = home_goals + hcp_val
-    if adjusted > away_goals:
-        result = "上盘赢"
-    elif adjusted == away_goals:
-        result = "走水"
-    else:
-        result = "下盘赢"
+    # 3. handicap 盘口 + 比分推导
+    if result is None:
+        score = review["actual_score"]
+        if not score or ":" not in str(score):
+            return None
+        parts = str(score).split(":")
+        if len(parts) != 2:
+            return None
+        try:
+            home_goals, away_goals = int(parts[0]), int(parts[1])
+        except ValueError:
+            return None
 
-    # 回写 DB（幂等 UPDATE）
+        hcp_line = mrow.get("handicap") if mrow else None
+        if hcp_line is None:
+            return None
+        try:
+            hcp_val = float(hcp_line)
+        except (ValueError, TypeError):
+            # 中文串如 "受让半球" 无法直接解析
+            return None
+
+        # C-20261013-064：亚盘非整数盘禁止推导让球胜平负（口径错位）
+        # 竞彩官方让球胜平负为整数盘（-1/+1等），亚盘 0.25 档（-0.25/+0.75等）
+        # 属于不同体系，用其推导会产生错误结论
+        if not hcp_val.is_integer():
+            return None
+
+        adjusted = home_goals + hcp_val
+        if adjusted > away_goals:
+            result = "上盘赢"
+        elif adjusted == away_goals:
+            result = "走水"
+        else:
+            result = "下盘赢"
+
+    # 回写 DB（幂等 UPDATE；①/③ 解析结果都落库，可覆写历史错误值）
     cur.execute(
         "UPDATE post_match_review SET actual_hcp=? WHERE match_id=?",
         (result, review["match_id"]),
@@ -256,6 +264,21 @@ def load_predictions(conn: sqlite3.Connection, match_id: str) -> Dict[str, Any]:
         for pt, prediction, probability in cur.fetchall():
             pred[pt] = {"prediction": prediction, "probability": float(probability) if probability is not None else None}
 
+    # C-20261011-040: 主发布者缺 TG_top1/TG_top3 时（历史断层，如 v2.0 时代未回写），
+    # 回退读取该类型任意最新发布行（含 prematch_md_backfill 回填行）。
+    for pt in ("TG_top1", "TG_top3"):
+        if pt in pred:
+            continue
+        cur.execute(
+            "SELECT prediction, probability FROM model_predictions "
+            "WHERE match_id=? AND prediction_type=? ORDER BY id DESC LIMIT 1",
+            (match_id, pt),
+        )
+        _row = cur.fetchone()
+        if _row:
+            pred[pt] = {"prediction": _row["prediction"],
+                        "probability": float(_row["probability"]) if _row["probability"] is not None else None}
+
     # WDL 三向
     wdl = {}
     for pt in ("WDL_home", "WDL_draw", "WDL_away"):
@@ -330,9 +353,10 @@ def compute_review_fields(conn: sqlite3.Connection, review: sqlite3.Row, pred: D
     fields["score_top1_hit"] = (1 if (top1 and actual_score and top1 == actual_score) else 0) if (top1 and actual_score) else None
     fields["score_top5_cover"] = (1 if (actual_score and actual_score in top5) else 0) if (top5 and actual_score) else None
 
-    # 让球（C-20260921-042: actual_hcp 为 NULL 时自动从 matches 表推算）
+    # 让球（C-20260921-042: _resolve_actual_hcp 内部按 ①actual_handicap 优先，
+    # 可覆写亚盘污染期间写错的历史 actual_hcp 值）
     pred_hcp = pred.get("pred_hcp")
-    actual_hcp = _resolve_actual_hcp(conn, review) if not review["actual_hcp"] else review["actual_hcp"]
+    actual_hcp = _resolve_actual_hcp(conn, review)
     fields["actual_hcp_resolved"] = actual_hcp  # 供报告渲染使用
     fields["hcp_correct"] = (1 if (pred_hcp and actual_hcp and pred_hcp == actual_hcp) else 0) if (pred_hcp and actual_hcp) else None
 
@@ -368,7 +392,11 @@ def compute_review_fields(conn: sqlite3.Connection, review: sqlite3.Row, pred: D
 
 
 def _calibration_gap(conn: Optional[sqlite3.Connection], pt: str, p: float) -> Optional[Dict[str, Any]]:
-    """实际结果概率 vs 概率档历史命中率（复用 A3 分桶口径）。"""
+    """实际结果概率 vs 概率档历史命中率（A3 分桶口径，C-20261016-106 双窗）。
+
+    优先校准后(post-Platt)窗口；post 样本不足(n<10)时回退 pre 旧账并显式标记
+    「未校准时代样本，仅参考」——防止旧样本替新模型背书。
+    """
     if conn is None:
         return None
     hit_rates = get_bucket_hit_rates(conn)
@@ -381,12 +409,29 @@ def _calibration_gap(conn: Optional[sqlite3.Connection], pt: str, p: float) -> O
     else:
         bkey = "0.40"
     key = f"{pt}_{bkey}"
-    if key not in hit_rates:
-        return {"note": "insufficient-history", "bucket": key, "model_prob": round(p, 4)}
-    gap = p - hit_rates[key]
-    return {"bucket": key, "model_prob": round(p, 4),
-            "bucket_hit_rate": round(hit_rates[key], 4),
-            "gap": round(gap, 4)}
+    post_rates, pre_rates = hit_rates.get("post", {}), hit_rates.get("pre", {})
+    post_n = hit_rates.get("post_n", {}).get(key, 0)
+    pre_n = hit_rates.get("pre_n", {}).get(key, 0)
+    out: Dict[str, Any] = {"bucket": key, "model_prob": round(p, 4)}
+    if key in pre_rates:
+        out["bucket_hit_rate_pre"] = round(pre_rates[key], 4)
+        out["bucket_n_pre"] = pre_n
+    if key in post_rates:
+        rate = post_rates[key]
+        out["bucket_hit_rate_post"] = round(rate, 4)
+        out["bucket_n_post"] = post_n
+        out["bucket_hit_rate"] = round(rate, 4)
+        out["gap"] = round(p - rate, 4)
+        out["era"] = "post-calibration"
+        return out
+    if key in pre_rates:
+        rate = pre_rates[key]
+        out["bucket_hit_rate"] = round(rate, 4)
+        out["gap"] = round(p - rate, 4)
+        out["era"] = "pre-calibration"
+        out["note"] = f"校准后样本不足(n={post_n}<10)，展示未校准时代旧账，仅参考"
+        return out
+    return {"note": "insufficient-history", "bucket": key, "model_prob": round(p, 4)}
 
 
 def compute_data_quality(conn: sqlite3.Connection, review: sqlite3.Row, pred: Dict[str, Any],
@@ -419,20 +464,22 @@ def compute_data_quality(conn: sqlite3.Connection, review: sqlite3.Row, pred: Di
         issues.append("竞彩时序赔率缺失（无 wdl_history 匹配）")
         cover.append({"type": "竞彩时序赔率", "status": "⚠️", "note": "无数据"})
 
-    # understat xG
+    # xG（C-20261016-110：三级回退 understat → sofascore → xgscore，note 标注实际来源）
     xg = get_understat_xg(conn, basics) if basics else None
     if xg:
-        cover.append({"type": "Understat xG", "status": "✅", "note": f"{xg['home_xg']:.2f}:{xg['away_xg']:.2f}"})
+        src = xg.get("xg_source") or "understat"
+        cover.append({"type": "xG 数据", "status": "✅",
+                      "note": f"{xg['home_xg']:.2f}:{xg['away_xg']:.2f}（来源 {src}）"})
     else:
         score -= 0.1
-        issues.append("Understat xG 缺失（26/27 未更新或队名不匹配）")
-        cover.append({"type": "Understat xG", "status": "⚠️", "note": "无数据"})
+        issues.append("xG 缺失（understat/sofascore/xgscore 三级回退均无）")
+        cover.append({"type": "xG 数据", "status": "⚠️", "note": "三级回退均无数据"})
 
-    # 赛后明细（--collect 时）
+    # 赛后明细（C-20261002-001：缓存命中或实时采集均算已入库，不扣分）
     if post_data:
-        cover.append({"type": "赛后技术统计/时间线", "status": "✅", "note": "已采集"})
+        cover.append({"type": "赛后技术统计/时间线", "status": "✅", "note": "已入库 sofascore_post_match_cache"})
     else:
-        cover.append({"type": "赛后技术统计/时间线", "status": "—", "note": "未采集（--collect 补全）"})
+        cover.append({"type": "赛后技术统计/时间线", "status": "—", "note": "未入库（默认 --collect 重跑可采集落库）"})
 
     # 预测数据
     if pred.get("wdl_probs"):
@@ -454,19 +501,25 @@ def compute_data_quality(conn: sqlite3.Connection, review: sqlite3.Row, pred: Di
 def _header(review: sqlite3.Row, fields: Dict[str, Any], confidence: Optional[int]) -> str:
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     half = review["actual_half_score"] or "—"
+    # C-20261001-006：标题/对阵行与文件名走同一归一函数，消除简称/全称双轨
+    # （review 表存赛果源原始中文名，如「瓦伦西亚/曼联」；文件名经 canonical_team_name
+    # 归一为「巴伦西亚/曼彻斯特联」）。队名身份仍以 review 字段为权威，此处只做展示归一。
+    home_disp = canonical_team_name(review["match_id"], review["home_team"], is_home=True)
+    away_disp = canonical_team_name(review["match_id"], review["away_team"], is_home=False)
     return (
-        f"# 赛后复盘报告 — {review['home_team']} vs {review['away_team']}\n\n"
+        f"# 赛后复盘报告 — {home_disp} vs {away_disp}\n\n"
         f"> 报告版本: {REPORT_VERSION}\n"
         f"> 生成时间: {now}\n"
         f"> 比赛: {review['league'] or '—'} {review['match_date'] or ''}\n"
-        f"> 对阵: {review['home_team']} (主) vs {review['away_team']} (客)\n"
+        f"> 对阵: {home_disp} (主) vs {away_disp} (客)\n"
         f"> 实际比分: {review['actual_score'] or '—'}（半场 {half}）\n"
         f"> 可信度: {f'{confidence}级' if confidence else '—'}\n"
     )
 
 
 def _section1_result(review: sqlite3.Row, post_data: Optional[Dict[str, Any]],
-                     stat500: Optional[sqlite3.Row] = None) -> str:
+                     stat500: Optional[sqlite3.Row] = None,
+                     post_state: Optional[str] = None) -> str:
     tg = review["actual_tg"] if review["actual_tg"] is not None else "—"
     hcp = review["actual_hcp"] or "—"
     wdl = review["actual_wdl"] or "—"
@@ -508,7 +561,16 @@ def _section1_result(review: sqlite3.Row, post_data: Optional[Dict[str, Any]],
     goals = inc.get("goals") or []
     cards = inc.get("cards") or []
     if not goals and not cards:
-        s += "> ⚠️ 赛后明细未采集到（SofaScore 无数据或 event_id 缺失）\n"
+        # C-20261002-001：区分「已采集但无事件」与「未采集」三态，旧文案一律称 event_id 缺失属误导
+        if post_data is not None:
+            s += "> ℹ️ SofaScore 赛后明细已采集：本场无进球/红牌类关键事件（如 0:0 且无红牌，属正常）\n"
+        else:
+            _miss_msg = {
+                "no_mapping": "> ⚠️ 赛后明细缺失：fbref_match_mapping 无该场 event_id 映射，无法采集 SofaScore incidents\n",
+                "fetch_failed": "> ⚠️ 赛后明细采集失败（SofaScore 请求异常或比赛未完赛，未落库）；重跑复盘生成（默认 --collect）可重试\n",
+                "no_cache": "> ⚠️ 赛后明细未入库（sofascore_post_match_cache 无缓存且本次为 --no-collect）；重跑复盘生成（默认 --collect）自动采集落库\n",
+            }
+            s += _miss_msg.get(post_state or "no_cache", _miss_msg["no_cache"])
         return s
     s += "| 时间 | 事件 | 影响 |\n|------|------|------|\n"
     events: List[tuple] = []
@@ -639,7 +701,7 @@ def _lambda_chain_review(conn: sqlite3.Connection, review: sqlite3.Row,
     xg = get_understat_xg(conn, basics) if basics else None
     s = "\n### λ 链路赛后复核\n\n"
     if not xg:
-        s += "> ⚠️ 赛后真实 xG 不可得（Understat 缺失且 xgscore fallback 未命中），无法定量复核\n"
+        s += "> ⚠️ 赛后真实 xG 不可得（understat/sofascore/xgscore 三级回退均无），无法定量复核\n"
         return s
     dh, da = abs(lh - xg["home_xg"]), abs(la_ - xg["away_xg"])
     verdict_h = "✅ 链路合理" if dh <= 0.5 else f"⚠️ {'高估' if lh > xg['home_xg'] else '低估'}（偏差 {dh:.2f}）"
@@ -647,10 +709,11 @@ def _lambda_chain_review(conn: sqlite3.Connection, review: sqlite3.Row,
     s += "| 侧 | 模型 λ | 赛后实际 xG | 偏差 \\|λ-xG\\| | 判定 |\n|------|:----:|:----:|:----:|------|\n"
     s += f"| 主队 | {lh:.2f} | {xg['home_xg']:.2f} | {dh:.2f} | {verdict_h} |\n"
     s += f"| 客队 | {la_:.2f} | {xg['away_xg']:.2f} | {da:.2f} | {verdict_a} |\n"
+    s += f"\n> xG 来源：{xg.get('xg_source') or 'understat'}（C-20261016-110 三级回退）\n"
     if dh <= 0.5 and da <= 0.5:
-        s += "\n> 结论：λ 链路对两队进球期望的刻画与实际 xG 偏差可控（≤0.5），告警属「期望失衡但方向正确」型，无需修链路。\n"
+        s += "\n> 注：单场 λ-xG 比对仅作展示；C-20261016-107 取证单场判据全场失效（基线噪声 82%），系统性复核由队级滚动监控器承担（lambda_rolling_monitor，≥5 场/队，E3 起算）。\n"
     else:
-        s += "\n> 结论：存在偏差侧，建议核查赔率隐含→λ 缩放链路（见赛前报告 §四 风险提示），并归档至 B4 修正规则候选。\n"
+        s += "\n> 注：单场 λ-xG 比对仅作展示；C-20261016-107 取证单场判据全场失效（基线噪声 82%），系统性复核由队级滚动监控器承担（lambda_rolling_monitor，≥5 场/队，E3 起算）。\n"
     return s
 
 
@@ -746,29 +809,33 @@ def _section5_lessons(review: sqlite3.Row, attribution: Optional[Dict[str, Any]]
 
 def _section6_factors(review: sqlite3.Row, attribution: Optional[Dict[str, Any]],
                       confidence: Optional[int]) -> str:
-    s = "\n---\n\n## 六、因子库更新建议\n\n"
-    s += "| 建议条目 | 层级 | 联赛 | 可信度 | 状态 |\n|---------|:----:|------|:------:|------|\n"
+    """C-20261016-109: 整块中性化——本块为自动模板命题，从未经 A5 人工审核、不进知识库。
+    旧版硬编码"可信度 2/3/4"冒充知识库分级（≥4 显示"建议写入"），属假口径，已删除。
+    运气偏差条目删除（归因维度 4 正文已述，建议块重复发死文案）。"""
+    s = "\n---\n\n## 六、因子库候选命题（自动模板，未经 A5 审核）\n\n"
+    s += "| 命题 | 层级 | 联赛 | 口径状态 |\n|---------|:----:|------|------|\n"
     types = [a["type"] for a in (attribution or {}).get("attributions", [])] if attribution else []
     rows: List[tuple] = []
 
     if "赔率异动归因" in types:
-        rows.append(("赛前1小时竞彩赔率异动>5% 对预测影响显著，需增强时序赔率特征权重", "L2 特征工程", review["league"], 3))
+        rows.append(("竞彩临场 drift 指示性（hit/rev/neutral）对预测方向的价值", "L2 特征工程", review["league"],
+                     "待 C-110 月度面板裁决（drift_indicative 已逐场落 attribution_json），未经 A5 审核"))
     if "阵容异动归因" in types:
-        rows.append(("实际首发与基准差异>3人时预测偏差显著，需新增阵容差异度特征", "L2 特征工程", review["league"], 4))
-    if "运气偏差归因" in types:
-        rows.append(("xG 高但进球少场次属运气偏差，比分 Top1 命中率天然受限", "L1 统计先验", "全局", 2))
+        rows.append(("实际首发与基准差异>3 人与预测偏差的关系", "L2 特征工程", review["league"],
+                     "未经 A5 审核，不写入因子库"))
     if "平局过度自信" in str(attribution):
-        rows.append(("模型平局概率系统性高于市场，重训时平局方向样本校准/降权", "L3 样本权重", review["league"], 3))
+        rows.append(("模型平局概率系统性高于市场的校准方向", "L3 样本权重", review["league"],
+                     "由 wdl_bias_monitor 跟踪（C-20261006-014）"))
     if "战意归因" in types:
-        rows.append(("爆冷胜场次胜方跑动显著更高，战意/投入度特征有增量", "L2 特征工程", "全局", 2))
+        rows.append(("爆冷胜场次胜方跑动/投入度特征的增量价值", "L2 特征工程", "全局",
+                     "未经 A5 审核，不写入因子库"))
 
     if not rows:
-        s += "| — | — | — | — | 无高置信因子建议 |\n"
+        s += "| — | — | — | 无候选命题 |\n"
     else:
-        for item, level, league, conf in rows:
-            status = "☑ 建议写入" if conf >= 4 else "⚠ 待验证"
-            s += f"| {item} | {level} | {league or '—'} | {conf} | {status} |\n"
-    s += "\n**写入规则**：只有可信度 ≥4 级的条目才写入因子库；3 级及以下标记为“待验证”。\n"
+        for item, level, league, note in rows:
+            s += f"| {item} | {level} | {league or '—'} | {note} |\n"
+    s += "\n**口径规则**：本块为自动模板命题，**未写入因子库、无可信度分级**；任何命题须经 A5 confidence_review 人工审核至 ≥4 级方可写入因子库。\n"
     return s
 
 
@@ -889,11 +956,12 @@ def build_report(review: sqlite3.Row, pred: Dict[str, Any], fields: Dict[str, An
                  dq: Dict[str, Any],
                  post_data: Optional[Dict[str, Any]] = None,
                  conn: Optional[sqlite3.Connection] = None,
-                 stat500: Optional[sqlite3.Row] = None) -> str:
+                 stat500: Optional[sqlite3.Row] = None,
+                 post_state: Optional[str] = None) -> str:
     confidence = attribution.get("confidence_level") if attribution else None
     parts = [
         _header(review, fields, confidence),
-        _section1_result(review, post_data, stat500),
+        _section1_result(review, post_data, stat500, post_state=post_state),
         _section2_vs_actual(review, pred, fields),
         _section3_attribution(review, attribution, conn=conn, pred=pred),
         _section4_quality(review, dq),
@@ -1026,6 +1094,11 @@ def run_report(match_date: Optional[str], match_id: Optional[str],
             logger.info(f"post_match_review 无目标场次（date={match_date} match_id={match_id}）")
             return {"total": 0}
 
+        # C-20261015-108d: 复盘前 500 stat 覆盖预检——批量扫目标场次的 odds500_stat 是否已采集，
+        # 避免复盘先生成后 stat 才入库导致技术统计空（10-13 考文垂 vs 纽卡斯尔实例：复盘 10-14 12:01，stat 10-15 13:06 入库，差 25h）。
+        # 此处只打 warning 不阻塞生成——stat 未到的场次复盘里会渲染占位符，用户可补采后重跑。
+        _warn_stat500_gaps(conn, rows, logger)
+
         if match_date:
             out_dir = PROJECT_DIR / "docs" / "post_match" / match_date.replace("-", "")
         else:
@@ -1040,16 +1113,16 @@ def run_report(match_date: Optional[str], match_id: Optional[str],
             pred = load_predictions(conn, mid)
             fields = compute_review_fields(conn, row, pred)
 
-            post_data = None
-            if do_collect:
-                post_data = _load_post_data(mid, logger)
+            # C-20261002-001：缓存优先（sofascore_post_match_cache），do_collect 时 miss 才实时采集落库
+            post_data, post_state = get_post_data(conn, mid, logger, allow_fetch=do_collect)
 
             attribution = ensure_attribution(conn, row, post_data=post_data)
             dq = compute_data_quality(conn, row, pred, post_data=post_data)
 
             # C-20260921-042: 用 resolved actual_hcp 构造 mutable review dict
+            # （resolved 优先 actual_handicap，可覆写历史写错的值再渲染）
             review_dict = dict(row)
-            if not review_dict.get("actual_hcp") and fields.get("actual_hcp_resolved"):
+            if fields.get("actual_hcp_resolved"):
                 review_dict["actual_hcp"] = fields["actual_hcp_resolved"]
 
             if dry_run:
@@ -1064,9 +1137,8 @@ def run_report(match_date: Optional[str], match_id: Optional[str],
 
             report = build_report(review_dict, pred, fields, attribution, dq, post_data=post_data,
                                   conn=conn,
-                                  stat500=conn.execute(
-                                      "SELECT * FROM odds500_stat WHERE match_id=?", (mid,)
-                                  ).fetchone())
+                                  post_state=post_state,
+                                  stat500=_resolve_stat500(conn, mid, logger))
             safe_home = _safe_name(canonical_team_name(mid, row["home_team"], is_home=True))
             safe_away = _safe_name(canonical_team_name(mid, row["away_team"], is_home=False))
             fname = f"{row['league'] or '未知'}_{safe_home}_vs_{safe_away}_复盘.md"
@@ -1078,6 +1150,23 @@ def run_report(match_date: Optional[str], match_id: Optional[str],
 
         if not dry_run and summaries:
             summary_md = build_summary(summaries, out_dir)
+            # C-20261015-106：复盘数据覆盖缺口警报行（>48h 完赛缺 500 统计 → summary 顶部可见）
+            try:
+                from stat_coverage_gate import count_gaps
+                _gconn = sqlite3.connect(ODDS_DB)
+                try:
+                    _gby, _gtotal = count_gaps(_gconn)
+                finally:
+                    _gconn.close()
+                if _gtotal:
+                    _gd = "、".join(f"{d}({n})" for d, n in _gby[:5])
+                    summary_md = (f"> 🔴 **数据缺口警报**：近 30 天 {_gtotal} 场已完赛场次缺 500 "
+                                  f"赛后统计（{_gd}）——Cookie 失效/反爬拦截，人工刷 Cookie 后跑 "
+                                  f"`final_500_collector --pages stat` 回补再重生成复盘（C-105）。\n\n"
+                                  ) + summary_md
+                    logger.warning(f"数据缺口警报: {_gtotal} 场缺统计")
+            except Exception as _ge:  # noqa: BLE001
+                logger.debug(f"覆盖门检查跳过: {_ge}")
             (out_dir / "_summary.md").write_text(summary_md, encoding="utf-8")
             logger.info(f"已写出 {out_dir / '_summary.md'}")
 
@@ -1133,26 +1222,77 @@ def _fill_review_fields(conn: sqlite3.Connection, match_id: str, fields: Dict[st
     conn.commit()
 
 
-def _load_post_data(match_id: str, logger: logging.Logger) -> Optional[Dict[str, Any]]:
-    """--collect：采集 SofaScore 赛后明细（时间线/统计/阵容）。"""
-    conn = _get_conn()
-    try:
-        event_id = get_event_id(conn, match_id)
-        if not event_id:
-            logger.warning(f"[{match_id}] 无 fbref_match_mapping 映射，跳过赛后采集")
-            return None
-    finally:
-        conn.close()
-    sys.path.insert(0, str(PROJECT_DIR / "collection"))
-    from final_sofascore_collector import SofaScoreClient, collect_post_match
-    client = SofaScoreClient(logger=logger)
-    try:
-        return collect_post_match(client, event_id, logger)
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"[{match_id}] 赛后采集失败: {e}")
+def _norm_en_team(name: Optional[str]) -> set:
+    """英文队名归一为小写 token 集合（去重音、标点），用于跨数据源匹配。"""
+    s = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode("ascii")
+    return set(re.findall(r"[a-z0-9]+", s.lower()))
+
+
+def _warn_stat500_gaps(conn: sqlite3.Connection, rows: List[sqlite3.Row],
+                       logger: Optional[logging.Logger]) -> None:
+    """C-20261015-108d: 复盘前批量预检 odds500_stat 覆盖，miss 打 warning。
+
+    和 _resolve_stat500 一致走英文队名双轨 fallback，只打日志不阻塞生成——
+    stat 未到的场次复盘里会渲染占位符，用户可补采后重跑。
+    """
+    if not logger:
+        return
+    missing: List[str] = []
+    for row in rows:
+        mid = row["match_id"]
+        if _resolve_stat500(conn, mid, logger=None) is None:
+            missing.append(mid)
+    if missing:
+        logger.warning(
+            f"[stat500 覆盖预检] {len(missing)}/{len(rows)} 场缺 500.com 技术统计，"
+            f"复盘中这些场次的 §一 技术统计将渲染占位符。"
+            f"跑 `collection/final_500_collector.py --rounds ...` 补采后重跑复盘可补齐。"
+        )
+        for mid in missing[:10]:  # 最多列 10 场，避免日志刷屏
+            logger.warning(f"  缺 stat: {mid}")
+        if len(missing) > 10:
+            logger.warning(f"  ... 还有 {len(missing) - 10} 场")
+
+
+def _resolve_stat500(conn: sqlite3.Connection, match_id: str,
+                     logger: Optional[logging.Logger] = None):
+    """按 review(SofaScore 规范) match_id 取 500 技术统计，兼容英文队名双轨。
+
+    直查 miss 时经 odds500_match 按日期 + 英文队名 token 重叠解析到 500 短名 match_id
+    （C-20261002-002：Hull City→Hull、Málaga CF→Malaga、Deportivo de A Coruña→La Coruna、
+    SC Paderborn 07→Paderborn 等，23 场 stat 已在库但 review match_id 关联不上）。
+    要求主/客 token 各自至少 1 个交集且总分当日唯一最高，防止误配。
+    """
+    row = conn.execute("SELECT * FROM odds500_stat WHERE match_id=?", (match_id,)).fetchone()
+    if row:
+        return row
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})_(.+?)_(.+)$", match_id)
+    if not m:
         return None
-    finally:
-        client.close()
+    date = m.group(1)
+    rh, ra = _norm_en_team(m.group(2)), _norm_en_team(m.group(3))
+    best = None
+    best_score = second = 0
+    for (cand_mid,) in conn.execute(
+            "SELECT match_id FROM odds500_match WHERE match_date=?", (date,)):
+        cm = re.match(r"^(\d{4}-\d{2}-\d{2})_(.+?)_(.+)$", cand_mid or "")
+        if not cm:
+            continue
+        ho = len(rh & _norm_en_team(cm.group(2)))
+        ao = len(ra & _norm_en_team(cm.group(3)))
+        if ho < 1 or ao < 1:
+            continue
+        score = ho + ao
+        if score > best_score:
+            second, best_score, best = best_score, score, cand_mid
+        elif score > second:
+            second = score
+    if best and best_score > second:
+        row = conn.execute("SELECT * FROM odds500_stat WHERE match_id=?", (best,)).fetchone()
+        if row and logger:
+            logger.info(f"[{match_id}] 500 stat 经英文队名双轨解析命中 {best}")
+        return row
+    return None
 
 
 def _safe_name(name: Optional[str]) -> str:
@@ -1162,7 +1302,7 @@ def _safe_name(name: Optional[str]) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="模块 A4：自动复盘报告生成器（8 章节 markdown）")
+    parser = argparse.ArgumentParser(description="模块 A4：自动复盘报告生成器（7 章节 markdown）")
     parser.add_argument("--date", type=str, default=None, metavar="YYYY-MM-DD",
                         help="批量生成当日复盘报告（扫 post_match_review.match_date）")
     parser.add_argument("--match-id", type=str, default=None, metavar="MATCH_ID",

@@ -1,7 +1,7 @@
 {
   "model_name": "T-005 v3 (24维对手Lag特征扩展 + 重新校准)",
-  "version": "20260920_011218",
-  "created_at": "2026-09-20T01:12:18.376909",
+  "version": "20261017_080020",
+  "created_at": "2026-10-17T08:00:20.463589",
   "architecture": "two-stage (draw detector + direction predictor)",
   "feature_columns": [
     "hcp_prob_win",
@@ -64,13 +64,35 @@
     "elo_gap_abs",
     "hcp_draw_prob_rank",
     "opponent_season_draw_rate",
-    "market_draw_std"
+    "market_draw_std",
+    "home_elo",
+    "away_elo",
+    "elo_diff",
+    "elo_ratio",
+    "elo_home_expected",
+    "elo_away_expected",
+    "elo_draw_prob",
+    "home_elo_momentum",
+    "away_elo_momentum",
+    "elo_confidence"
   ],
-  "feature_dim": 61,
+  "feature_dim": 71,
   "calibration": {
     "temperature": 1.0,
     "threshold": 0.5,
-    "class_weight_ratio": 1.2
+    "class_weight_ratio": 2.5,
+    "calibrator": "iso",
+    "cal_window": "2026-03-01~2026-08-22"
+  },
+  "draw_calibration": {
+    "enabled": true,
+    "type": "isotonic",
+    "asset": "t005v3_draw_calibrator.pkl",
+    "fitted_window": "2026-03-01~2026-08-22",
+    "n_val": 401,
+    "applied_at": "after Stage1 predict_proba, before fuse",
+    "legacy_draw_prob_floor": "disabled when calibrator loaded (was 0.08)",
+    "change_id": "C-20261013-069"
   },
   "feature_groups": {
     "hcp": {
@@ -166,187 +188,163 @@
     }
   },
   "test_metrics": {
-    "accuracy": 0.5573549257759784,
-    "f1_macro": 0.5255543738382683,
-    "f1_weighted": 0.5566298301915896,
-    "draw_recall": 0.38323353293413176,
-    "draw_precision": 0.42105263157894735,
-    "draw_pred_rate": 0.20512820512820512,
-    "actual_draw_rate": 0.2253711201079622,
-    "rate_deviation": 0.020242914979757082,
-    "recall_achieved": true,
+    "accuracy": 0.46445497630331756,
+    "f1_macro": 0.4355663169222492,
+    "f1_weighted": 0.45565990875424794,
+    "draw_recall": 0.2,
+    "draw_precision": 0.2558139534883721,
+    "draw_pred_rate": 0.2037914691943128,
+    "actual_draw_rate": 0.26066350710900477,
+    "rate_deviation": 0.056872037914691975,
+    "recall_achieved": false,
     "bin_distribution": [
       {
         "range": "0.0-0.3",
-        "count": 339,
-        "actual_draws": 25,
-        "actual_draw_rate": 0.07374631268436578
+        "count": 156,
+        "actual_draws": 37,
+        "actual_draw_rate": 0.23717948717948717
       },
       {
         "range": "0.3-0.4",
-        "count": 137,
-        "actual_draws": 39,
-        "actual_draw_rate": 0.2846715328467153
+        "count": 55,
+        "actual_draws": 18,
+        "actual_draw_rate": 0.32727272727272727
       },
       {
         "range": "0.4-0.5",
-        "count": 113,
-        "actual_draws": 39,
-        "actual_draw_rate": 0.34513274336283184
+        "count": 0,
+        "actual_draws": 0,
+        "actual_draw_rate": 0.0
       },
       {
         "range": "0.5-0.6",
-        "count": 107,
-        "actual_draws": 40,
-        "actual_draw_rate": 0.37383177570093457
+        "count": 0,
+        "actual_draws": 0,
+        "actual_draw_rate": 0.0
       },
       {
         "range": "0.6-0.7",
-        "count": 37,
-        "actual_draws": 21,
-        "actual_draw_rate": 0.5675675675675675
+        "count": 0,
+        "actual_draws": 0,
+        "actual_draw_rate": 0.0
       },
       {
         "range": "0.7-1.0",
-        "count": 8,
-        "actual_draws": 3,
-        "actual_draw_rate": 0.375
+        "count": 0,
+        "actual_draws": 0,
+        "actual_draw_rate": 0.0
       }
     ],
     "league_metrics": [
       {
-        "league": "法甲2025-2026赛季",
-        "samples": 57,
-        "actual_draws": 17,
-        "pred_draws": 13,
-        "recall": 0.47058823529411764,
-        "precision": 0.6153846153846154
+        "league": "英超2026-2027赛季",
+        "samples": 44,
+        "actual_draws": 10,
+        "pred_draws": 10,
+        "recall": 0.3,
+        "precision": 0.3
       },
       {
-        "league": "德甲2025-2026赛季",
-        "samples": 145,
-        "actual_draws": 27,
-        "pred_draws": 27,
-        "recall": 0.4444444444444444,
-        "precision": 0.4444444444444444
+        "league": "法甲2026-2027赛季",
+        "samples": 29,
+        "actual_draws": 6,
+        "pred_draws": 4,
+        "recall": 0.0,
+        "precision": 0.0
       },
       {
-        "league": "西甲2025-2026赛季",
-        "samples": 152,
-        "actual_draws": 36,
-        "pred_draws": 46,
-        "recall": 0.4722222222222222,
-        "precision": 0.3695652173913043
+        "league": "西甲2026-2027赛季",
+        "samples": 62,
+        "actual_draws": 18,
+        "pred_draws": 12,
+        "recall": 0.16666666666666666,
+        "precision": 0.25
       },
       {
-        "league": "英超2025-2026赛季",
-        "samples": 188,
-        "actual_draws": 33,
-        "pred_draws": 22,
-        "recall": 0.24242424242424243,
-        "precision": 0.36363636363636365
+        "league": "意甲2026-2027赛季",
+        "samples": 49,
+        "actual_draws": 16,
+        "pred_draws": 16,
+        "recall": 0.3125,
+        "precision": 0.3125
       },
       {
-        "league": "意甲2025-2026赛季",
-        "samples": 199,
-        "actual_draws": 54,
-        "pred_draws": 44,
-        "recall": 0.35185185185185186,
-        "precision": 0.4318181818181818
+        "league": "德甲2026-2027赛季",
+        "samples": 27,
+        "actual_draws": 5,
+        "pred_draws": 1,
+        "recall": 0.0,
+        "precision": 0.0
       }
     ],
     "category_metrics": [
       {
-        "category": "home_get_1",
-        "samples": 111,
-        "accuracy": 0.6126126126126126,
-        "recall": 0.2916666666666667,
-        "precision": 0.4666666666666667,
-        "actual_draw_rate": 0.21621621621621623
-      },
-      {
-        "category": "home_give_2+",
-        "samples": 15,
-        "accuracy": 0.5333333333333333,
-        "recall": 0.0,
-        "precision": 0.0,
-        "actual_draw_rate": 0.06666666666666667
-      },
-      {
-        "category": "home_give_1",
-        "samples": 485,
-        "accuracy": 0.5525773195876289,
-        "recall": 0.42452830188679247,
-        "precision": 0.4090909090909091,
-        "actual_draw_rate": 0.21855670103092784
-      },
-      {
         "category": "unknown",
-        "samples": 130,
-        "accuracy": 0.5307692307692308,
-        "recall": 0.3333333333333333,
-        "precision": 0.48,
-        "actual_draw_rate": 0.27692307692307694
+        "samples": 211,
+        "accuracy": 0.46445497630331756,
+        "recall": 0.2,
+        "precision": 0.2558139534883721,
+        "actual_draw_rate": 0.26066350710900477
       }
     ],
     "opponent_lag_importance": [
       [
         "opponent_season_draw_rate",
-        433
+        356
       ],
       [
         "away_hcp_draw_at_get1_l10",
-        99
-      ],
-      [
-        "hcp_draw_prob_rank",
-        80
+        128
       ],
       [
         "away_hcp_draw_vs_all_l10",
-        75
+        87
+      ],
+      [
+        "hcp_draw_prob_rank",
+        66
       ],
       [
         "elo_gap_abs",
-        69
+        60
+      ],
+      [
+        "home_hcp_draw_vs_stronger_l5",
+        29
       ],
       [
         "market_draw_std",
-        56
+        24
+      ],
+      [
+        "h2h_total_matches",
+        21
       ],
       [
         "away_hcp_draw_at_give1_l10",
-        40
+        15
       ],
       [
-        "home_hcp_draw_at_get1_l10",
-        37
-      ],
-      [
-        "h2h_hcp_draw_rate",
-        36
-      ],
-      [
-        "home_hcp_draw_vs_all_l10",
-        35
+        "home_hcp_draw_at_give1_l10",
+        14
       ]
     ],
-    "opponent_lag_total": 1051.0,
+    "opponent_lag_total": 864.0,
     "confusion_matrix": [
       [
-        120,
-        26,
-        68
+        43,
+        8,
+        20
       ],
       [
-        48,
-        64,
-        55
+        16,
+        11,
+        28
       ],
       [
-        69,
-        62,
-        229
+        17,
+        24,
+        44
       ]
     ]
   }

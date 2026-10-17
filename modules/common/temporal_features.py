@@ -541,7 +541,7 @@ def build_all_features(match_id: str, conn=None) -> Tuple[Dict, Dict]:
 
 def build_features_for_matches(match_ids: List[str]) -> Tuple[pd.DataFrame, Dict]:
     """批量构建多场比赛的特征"""
-    from modules.common.data_loader import get_db_connection, ODDS_DB_PATH
+    from modules.common.data_loader import ODDS_DB_PATH
 
     all_features = []
     all_feature_info = {}

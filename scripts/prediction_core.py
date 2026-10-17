@@ -113,8 +113,11 @@ def get_draw_threshold_factor(league_cn: str = ''):
 # T-005 v3 模型参数
 T005V3_TEMPERATURE = 1.000
 T005V3_THRESHOLD = 0.500
-T005V3_DRAW_PROB_FLOOR = 0.08  # 走水概率最低 8%
+# C-20261006-001：走水概率改由等温校准器（assets/t005v3_draw_calibrator.pkl）在 Stage1
+# 出口映射；校准器加载时不再施加硬下限。本常量仅在「校准器缺失」的旧资产兼容降级路径使用。
+T005V3_DRAW_PROB_FLOOR = 0.08  # 走水概率最低 8%（仅无校准器时的旧逻辑）
 T005V3_DRAW_MODEL_PATH = os.path.join(ASSETS_DIR, 't005v3_draw_detector.pkl')
+T005V3_DRAW_CALIBRATOR_PATH = os.path.join(ASSETS_DIR, 't005v3_draw_calibrator.pkl')
 T005V3_DIR_MODEL_PATH = os.path.join(ASSETS_DIR, 't005v3_direction_predictor.pkl')
 T005V3_ELO_PATH = os.path.join(ASSETS_DIR, 't005v2_final_elo_ratings.json')
 
@@ -180,6 +183,55 @@ def _tg_w_odds_config() -> tuple:
 
 
 TG_W_ODDS_PROD, TG_W_ODDS_SHADOW = _tg_w_odds_config()
+
+
+def _lambda_split_config():
+    """P1-1（C-20261002-006）: λ 强度差拆分模式配置。
+
+    证据（2026-09~10 复盘 235 场：231 场 understat xG 配对 + 198 场引擎回放）：
+      legacy A-002 stage1 独立乘数 (0.5+1.5·p) 使 |λ主客差| 中位达市场泊松
+      反演的 1.59 倍，热门 λ−xG=+0.62 / 冷门=−0.49（均 p<0.0001）；
+      bisect 拆分（总量锁死，市场去水 WDL 二分反演）后 λ MAE −14.5%、
+      热门/冷门偏差近零、让球方净胜≥2 球概率偏差 +4.7pp→+1.3pp，
+      TG 总量逐位守恒、WDL 边缘由 T-006 v4 区域重加权强制不变；
+      比分 Top1 +1.52pp/logloss 同向（n=198，端到端门禁待重训回放确认）。
+
+    Returns:
+        (mode, shadow_enabled): mode ∈ {'legacy','bisect'}，默认 legacy；
+        shadow 双算仅写 reports/lambda_split_shadow.jsonl，默认 False。
+    优先级：环境变量 TRAE_LAMBDA_SPLIT(legacy/bisect)、
+        TRAE_LAMBDA_SPLIT_SHADOW(1/0) > config.yaml lambda_split.*
+    """
+    mode = None
+    env = os.environ.get('TRAE_LAMBDA_SPLIT', '').strip().lower()
+    if env in ('bisect', 'bisection', '1'):
+        mode = 'bisect'
+    elif env in ('legacy', 'a002', '0'):
+        mode = 'legacy'
+    shadow = None
+    env_sh = os.environ.get('TRAE_LAMBDA_SPLIT_SHADOW', '').strip().lower()
+    if env_sh in ('1', 'true', 'yes', 'on'):
+        shadow = True
+    elif env_sh in ('0', 'false', 'no', 'off'):
+        shadow = False
+    cfg_mode, cfg_shadow = 'legacy', False
+    try:
+        import yaml
+        cfg_path = os.path.join(PROJECT_DIR, 'config.yaml')
+        if os.path.exists(cfg_path):
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                cfg = yaml.safe_load(f) or {}
+            ls = cfg.get('lambda_split') or {}
+            m = str(ls.get('mode', 'legacy')).strip().lower()
+            if m in ('legacy', 'bisect'):
+                cfg_mode = m
+            cfg_shadow = bool(ls.get('shadow_enabled', False))
+    except Exception:
+        pass
+    return mode or cfg_mode, shadow if shadow is not None else cfg_shadow
+
+
+LAMBDA_SPLIT_MODE, LAMBDA_SPLIT_SHADOW = _lambda_split_config()
 
 
 def _mc_score_injury_config() -> tuple:
@@ -373,6 +425,17 @@ class CalcEngine:
         return lambda_home, lambda_away
 
     @staticmethod
+    def solve_lambda_split_bisection(win_home, win_away, total):
+        """P1-1（C-20261002-006）: 锁死总量 + 市场去水 WDL，二分法求 (λh, λa)。
+
+        复用 T-006 v5 的独立泊松胜负边缘反演（solve_lambda_core），与 legacy
+        A-002 stage1 独立乘数互为对照：拆分由 WDL 自洽求解，市场强度差不被
+        二次放大；λ clamp[0.15,6.0]，返回值之和在 clamp 前严格等于 total。
+        """
+        from t006_score_predictor_v5 import solve_lambda_core
+        return solve_lambda_core(float(win_home), float(win_away), float(total))
+
+    @staticmethod
     def adjust_lambda_for_mid_score(lambda_home, lambda_away, odds_data=None):
         """
         A-002 中比分 λ 调整 — 移植自 prediction-engine.js L1469-1504。
@@ -456,6 +519,35 @@ class CalcEngine:
             "scale": round(tg_scale, 4),
         }
 
+        # P1-1（C-20261002-006）: λ 拆分二分法——总量锁死（TG 逐位免疫），
+        # 强度差改由市场去水 WDL 经独立泊松二分反演（v5 同口径），消除 stage1
+        # 独立乘数对市场强度差的二次放大。默认 legacy；bisect 经 config/env
+        # 开启，且须等重训时序 A/B 门禁通过。失败就地回退 legacy；无市场 WDL
+        # （fallback 0.33 对称先验）时不启用，避免反演函数制造虚假主客差。
+        split_mode = "legacy"
+        if LAMBDA_SPLIT_MODE == "bisect" and wdl_source == "odds_implied":
+            try:
+                _total_locked = lambda_home_adj + lambda_away_adj
+                _bh, _ba = CalcEngine.solve_lambda_split_bisection(
+                    win_home, win_away, _total_locked)
+                trace["stage_bisect"] = {
+                    "source": wdl_source,
+                    "win_home": round(win_home, 4),
+                    "win_away": round(win_away, 4),
+                    "total_locked": round(_total_locked, 4),
+                    "legacy_home": round(lambda_home_adj, 4),
+                    "legacy_away": round(lambda_away_adj, 4),
+                    "lambda_home": round(_bh, 4),
+                    "lambda_away": round(_ba, 4),
+                }
+                lambda_home_adj, lambda_away_adj = _bh, _ba
+                split_mode = "bisect"
+            except Exception as e:
+                log_model('A-002', 'λ拆分',
+                          f'二分法失败回退 legacy: {type(e).__name__}: {e}', 'warning')
+        elif LAMBDA_SPLIT_MODE == "bisect":
+            trace["stage_bisect_skipped"] = "no_market_wdl_keep_symmetric"
+
         log_model('A-002', 'λ调整',
                   f'λ_home: {lambda_home:.3f}→{lambda_home_adj:.3f} '
                   f'(wdl={wdl_scale_home:.2f}, tg={tg_scale:.2f}), '
@@ -465,6 +557,7 @@ class CalcEngine:
         # P1-13: λ 主客差值告警钩子
         lambda_diff = abs(lambda_home_adj - lambda_away_adj)
         trace["final"] = {
+            "split_mode": split_mode,
             "lambda_home": round(lambda_home_adj, 4),
             "lambda_away": round(lambda_away_adj, 4),
             "diff": round(lambda_diff, 4),
@@ -808,6 +901,20 @@ def load_t005v3_model():
             draw_model = pickle.load(f)
         log_model('T-005 v3', '加载', f'draw_detector: {type(draw_model).__name__} (n_features={draw_model.n_features_in_})')
 
+        # C-20261006-001：走水概率等温校准器（Stage1 出口映射；缺失则降级为旧 8% 下限逻辑）
+        draw_calibrator = None
+        cal_kind = None
+        try:
+            with open(T005V3_DRAW_CALIBRATOR_PATH, 'rb') as f:
+                cal_blob = pickle.load(f)
+            cal_kind = cal_blob.get('kind') if isinstance(cal_blob, dict) else None
+            draw_calibrator = cal_blob['model'] if isinstance(cal_blob, dict) else cal_blob
+            log_model('T-005 v3', '加载',
+                      f"draw_calibrator: {type(draw_calibrator).__name__} kind={cal_kind} "
+                      f"({cal_blob.get('change_id') if isinstance(cal_blob, dict) else 'legacy'})")
+        except FileNotFoundError:
+            log_model('T-005 v3', '加载', '未找到走水校准器，降级使用旧 8% 硬下限逻辑', 'warning')
+
         with open(T005V3_DIR_MODEL_PATH, 'rb') as f:
             dir_model = pickle.load(f)
         log_model('T-005 v3', '加载', f'direction_predictor: {type(dir_model).__name__} (n_features={dir_model.n_features_in_})')
@@ -818,6 +925,7 @@ def load_t005v3_model():
 
         return {
             'draw_model': draw_model,
+            'draw_calibrator': draw_calibrator,
             'dir_model': dir_model,
             'elo_ratings': elo_snapshot.get('elo_ratings', {}),
             'elo_momentum': elo_snapshot.get('elo_momentum', {}),
@@ -886,7 +994,6 @@ _BAYESIAN_MODELS_CACHE = {}
 
 def load_bayesian_model(league):
     """加载指定联赛的贝叶斯层级模型（P1-7）。结果缓存，避免重复加载。"""
-    global _BAYESIAN_MODELS_CACHE
     if league in _BAYESIAN_MODELS_CACHE:
         return _BAYESIAN_MODELS_CACHE[league]
     try:
@@ -966,6 +1073,75 @@ def apply_stacking_meta_learner(sub_probs, extra_features=None):
     return {"win": float(proba[2]), "draw": float(proba[1]), "lose": float(proba[0])}
 
 
+# C-20261004-004: 分联赛 Platt 校准（canonical JSON 双端共读，class 序 [lose, draw, win]）
+_PLATT_CACHE = {}
+
+
+def _sigmoid(z):
+    return 1.0 / (1.0 + math.exp(-z))
+
+
+# C-20261015-113: 别名映射（训练端存 xgb_/lgb_，消费端传 xgboost/lightgbm）
+_PLATT_NAME_ALIAS = {
+    'xgboost': 'xgb',
+    'lightgbm': 'lgb',
+}
+
+
+def _load_platt_calibration(model_name):
+    """懒加载分联赛 Platt 校准参数（xgb/lgb 各一份 canonical JSON）。"""
+    if model_name in _PLATT_CACHE:
+        return _PLATT_CACHE[model_name]
+    params = None
+    # 优先 canonical 文件名，fallback 别名（兼容训练端旧命名）
+    for name in (model_name, _PLATT_NAME_ALIAS.get(model_name, model_name)):
+        path = os.path.join(ASSETS_DIR, f"{name}_calibration.json")
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    params = json.load(f)
+                break
+            except Exception as e:
+                logger.warning('分联赛校准 %s 读取失败: %s', name, e)
+    if params is None:
+        logger.warning('分联赛校准 %s: 未找到校准文件（已试 %s）。Platt 校准将跳过。',
+                       model_name,
+                       ', '.join({model_name, _PLATT_NAME_ALIAS.get(model_name, model_name)}))
+    _PLATT_CACHE[model_name] = params
+    return params
+
+
+def _select_platt_params(calibration, league):
+    """降级链: 联赛缺参 → global → None(不校准)。"""
+    if not calibration:
+        return None
+    leagues = calibration.get('leagues') or {}
+    lg = leagues.get(league) if league else None
+    if isinstance(lg, list) and len(lg) == 3:
+        return lg
+    g = calibration.get('global')
+    if isinstance(g, list) and len(g) == 3:
+        return g
+    return None
+
+
+def _apply_platt_to_wdl(wdl, params):
+    """对 {win,draw,lose} 应用 Platt；params 类序 [lose, draw, win]（0/1/2）。"""
+    if params is None:
+        return wdl
+    vec = [float(wdl.get('lose', 0)), float(wdl.get('draw', 0)), float(wdl.get('win', 0))]
+    cal = []
+    for i in range(3):
+        a = float(params[i].get('a', 1.0))
+        b = float(params[i].get('b', 0.0))
+        cal.append(_sigmoid(a * vec[i] + b))
+    s = sum(cal)
+    if s <= 1e-12:
+        return wdl
+    cal = [p / s for p in cal]
+    return {'win': float(cal[2]), 'draw': float(cal[1]), 'lose': float(cal[0])}
+
+
 def init_models():
     """初始化所有模型"""
     return {
@@ -1029,6 +1205,8 @@ class WDLPredictor:
         home_norm = normalize_team_name(home_cn)
         away_norm = normalize_team_name(away_cn)
         league = match.get('league', match.get('league_cn', ''))
+        platt_applied = 0  # C-20261004-004: 本场 XGB/LGB 子模型应用分联赛 Platt 的数量
+        platt_shadow = {}  # C-20261004-004: shadow 对照（未校准原始概率）
 
         log_model('WDL模型', '预测', f'开始预测: {home_cn} vs {away_cn}')
 
@@ -1285,6 +1463,22 @@ class WDLPredictor:
                         log_model('WDL模型', 'XGB', f'推理异常: {e}，后续跳过', 'warning')
                         traceback.print_exc()
 
+                # C-20261004-004: 分联赛 Platt 校准（XGB/LGB 子模型，赛前未校准→校准）。
+                # shadow 双算：原始概率保留在 platt_shadow，校准后覆盖 sub_probs 参与融合。
+                for _mkey in ('xgboost', 'lightgbm'):
+                    _raw = sub_probs.get(_mkey)
+                    if _raw is None:
+                        continue
+                    _params = _select_platt_params(_load_platt_calibration(_mkey), league)
+                    if _params is None:
+                        continue
+                    platt_shadow[_mkey] = {k: float(v) for k, v in _raw.items()}
+                    sub_probs[_mkey] = _apply_platt_to_wdl(_raw, _params)
+                    platt_applied += 1
+                if platt_applied:
+                    log_model('WDL模型', '校准',
+                              f'分联赛Platt校准已应用 {platt_applied} 个模型 (league={league})')
+
                 # Stacking 融合 (P1-7: 优先 LR meta-learner，回退固定权重)
                 # C-20260919-023: 只统计 5 个 Stacking 基础模型；sub_probs 中另有
                 # poisson/ssm 两个辅助参考源（不参与融合、不在报告子模型表展示），
@@ -1392,6 +1586,13 @@ class WDLPredictor:
             'model_used': model_used,
             'epl_reference': epl_reference,  # C-20260823-002: 英超独立模型参考(不参与Stacking)
             'sub_models': sub_probs,  # P1-02: 5 子模型原始概率 {name: {win,draw,lose}}，供报告展示
+            # C-20261004-004: 分联赛 Platt 校准 shadow 元数据（uncalibrated 见 *_raw 键）
+            'platt_calibration': {
+                'applied': platt_applied > 0,
+                'league': league,
+                'n_models': platt_applied,
+                'shadow_uncalibrated': platt_shadow,
+            },
             # C-050 冷门因子库输出
             'upset_risk_score': upset_risk_score_val,
             'upset_data_missing': upset_data_missing_flag,
@@ -1629,6 +1830,19 @@ class HandicapPredictor:
 
         hcp = odds_data['handicap_odds']
         hcp_line = hcp['line']
+        # C-20261013-068: 竞彩未开让球盘（hcp_line=None）短路——
+        # 无竞彩让球赔率时 T-005/D2 垃圾进垃圾出（特征用兜底赔率算、方向用 0 赔率跳过），
+        # 返回占位结果，由 writer 守卫不落 HC 行（hcp_correct=NULL 走未判定，与 C-065 口径一致）。
+        if hcp_line is None:
+            log_model('T-005 v3', '预测', '竞彩未开让球盘，短路让球预测', 'warning')
+            return {
+                'line': None,
+                'home_win_prob': None, 'draw_prob': None, 'away_win_prob': None,
+                'prediction': '竞彩未开让球盘',
+                'confidence': None,
+                'open': {}, 'close': {},
+                'method': '竞彩未开让球盘（短路，C-20261013-068）',
+            }
         if hcp['close']:
             h = hcp['close']
         elif hcp['records']:
@@ -1642,6 +1856,126 @@ class HandicapPredictor:
                 X, feature_quality = self._build_t005v3_feature_vector(match, odds_data, is_mock)
                 result = self._predict_t005v3_handicap(X)
 
+                # C-20261013-072: class_weight 平局判别力 Shadow 双算——仅写 jsonl,
+                # 不影响生产预测/落库/展示。开关 config.yaml > class_weight_experiment.shadow_enabled
+                # 或环境变量 TRAE_CLASS_WEIGHT_SHADOW=1; 默认 false=production-safe no-op。
+                # try/except 全隔离, 失败只写 error 字段不抛出。
+                try:
+                    from class_weight_shadow_writer import is_shadow_enabled, compute_shadow_predictions
+                    if is_shadow_enabled():
+                        _ctrl_p_draw = result.get('calib_p_draw') or result.get('raw_p_draw')
+                        _ctrl_probs = result.get('probabilities', {})
+                        _ctrl_argmax = (0 if _ctrl_probs.get('上盘赢', 0) >= _ctrl_probs.get('下盘赢', 0)
+                                        else 2) if _ctrl_p_draw and _ctrl_p_draw < 0.5 else 1
+                        _shadow_cw = compute_shadow_predictions(X)
+                        result['_shadow_class_weight'] = {
+                            'control': {
+                                'class_weight_version': 'baseline_2.5',
+                                'p_draw_marginal': float(_ctrl_p_draw) if _ctrl_p_draw is not None else None,
+                                'argmax_class': _ctrl_argmax,
+                                'proba_3way': [
+                                    float(_ctrl_probs.get('上盘赢', 0)),
+                                    float(_ctrl_probs.get('走水', 0)),
+                                    float(_ctrl_probs.get('下盘赢', 0)),
+                                ] if _ctrl_probs else None,
+                            },
+                            'shadow': _shadow_cw,
+                        }
+                except Exception as _e_cw:
+                    result['_shadow_class_weight'] = {'error': f'{type(_e_cw).__name__}: {_e_cw}'}
+
+                # C-20261016-122: D3 主路径 = 竞彩让球三向去水（市场复制，§15.5 ⑬）——
+                # 模型方向已证伪（C-003，-3~-6pp），走水 isotonic 台阶低估 ~10pp
+                # （market_benchmark_hc n=64/65：skill=-0.33、argmax 32.8% vs 市场 54.7%）。
+                # 原「赔率隐含概率」降级路径数学与此相同，提升为主路径；D2 模型路径降为
+                # 让平缺失（盘口异常，不硬造值）回退。skill≈0 是设计目标，非退化。
+                if h['win'] > 0 and h['draw'] > 0 and h['lose'] > 0:
+                    hcp_hp, hcp_dp, hcp_ap = odds_to_implied_prob(h['win'], h['draw'], h['lose'])
+                    probs_map = {'下盘赢': hcp_ap, '走水': hcp_dp, '上盘赢': hcp_hp}
+                    pred = max(probs_map, key=probs_map.get)
+                    conf = max(probs_map.values())
+                    log_model('T-005 v3', 'D3 市场复制',
+                              f"三向去水: 上={hcp_hp:.3f} 走={hcp_dp:.3f} 下={hcp_ap:.3f} → {pred}")
+                    return {
+                        'line': hcp_line,
+                        'home_win_prob': hcp_hp,
+                        'draw_prob': hcp_dp,
+                        'away_win_prob': hcp_ap,
+                        'prediction': pred,
+                        'confidence': conf,
+                        'open': hcp.get('open', {}),
+                        'close': h,
+                        'method': 'T-005 v3 D3 (market_replication, model_fallback)',
+                        'draw_source': 'market_hcp',
+                        'feature_quality': feature_quality,
+                        'raw_p_draw': result['raw_p_draw'],
+                        'calib_p_draw': result.get('calib_p_draw'),
+                        '_shadow_class_weight': result.get('_shadow_class_weight'),
+                    }
+
+                # C-20261006-003: D2 方向改由市场赔率推导（模型方向已证伪，-3~-6pp 差距）。
+                # 保留模型走水（含 iso 校准），非走水方向用竞彩让球去水概率。
+                # 赔率无效时回退模型方向兜底。
+                draw_prob = result['probabilities']['走水']
+                # C-20261011-036：平手盘（line=0）下「走水」语义≡常规平局，而 draw_model 按
+                # 全盘口混合训练，对 line=0 系统性低估（实测 13.5% vs 市场去水 ~27%，同报告内
+                # 与 Stacking WDL 平局 31.5% 口径冲突）。与 D2「方向交给市场」同源：line=0 时
+                # 走水概率锚定竞彩 WDL 去水平局概率；WDL 赔率缺失/异常时保留模型值。
+                try:
+                    _line_val = float(hcp_line)
+                except (TypeError, ValueError):
+                    _line_val = None
+                if _line_val == 0.0:
+                    try:
+                        _wdl_o = odds_data.get('wdl_odds') or {}
+                        _w = _wdl_o.get('close') or ((_wdl_o.get('records') or [{}])[-1])
+                        if _w.get('win') and _w.get('draw') and _w.get('lose'):
+                            _, _dp_mkt, _ = odds_to_implied_prob(_w['win'], _w['draw'], _w['lose'])
+                            if _dp_mkt and _dp_mkt > 0:
+                                log_model('T-005 v3', '平手锚定',
+                                          f'line=0 走水≡平局: 模型 {draw_prob*100:.1f}% → 市场WDL去水 {_dp_mkt*100:.1f}%')
+                                draw_prob = float(_dp_mkt)
+                    except Exception as _e:
+                        log_model('T-005 v3', '平手锚定', f'WDL 平局锚定失败，保留模型走水: {_e}', 'warning')
+                if h['win'] > 0 and h['lose'] > 0:
+                    eps = 1e-10
+                    p_lower_odds = 1.0 / max(h['lose'], eps)
+                    p_upper_odds = 1.0 / max(h['win'], eps)
+                    total_dir = p_lower_odds + p_upper_odds
+                    p_lower = p_lower_odds / total_dir   # P(下|非走水)_市场
+                    p_upper = p_upper_odds / total_dir   # P(上|非走水)_市场
+
+                    p_away = (1.0 - draw_prob) * p_lower
+                    p_home = (1.0 - draw_prob) * p_upper
+                    p_draw = draw_prob
+                    total = p_away + p_home + p_draw
+                    if total > eps:
+                        p_away /= total
+                        p_home /= total
+                        p_draw /= total
+
+                    probs_map = {'下盘赢': p_away, '走水': p_draw, '上盘赢': p_home}
+                    pred = max(probs_map, key=probs_map.get)
+                    conf = max(probs_map.values())
+                    log_model('T-005 v3', '方向覆盖',
+                              f"D2 市场方向: 下={p_away:.3f} 走={p_draw:.3f} 上={p_home:.3f} → {pred}")
+                    return {
+                        'line': hcp_line,
+                        'home_win_prob': p_home,
+                        'draw_prob': p_draw,
+                        'away_win_prob': p_away,
+                        'prediction': pred,
+                        'confidence': conf,
+                        'open': hcp.get('open', {}),
+                        'close': h,
+                        'method': f"T-005 v3 D2 (draw_model+market_dir, T={T005V3_TEMPERATURE})",
+                        'feature_quality': feature_quality,
+                        'raw_p_draw': result['raw_p_draw'],
+                        'calib_p_draw': result.get('calib_p_draw'),
+                        '_shadow_class_weight': result.get('_shadow_class_weight'),
+                    }
+
+                # 模型方向兜底（dir_model 缺失时回退）
                 return {
                     'line': hcp_line,
                     'home_win_prob': result['probabilities']['上盘赢'],
@@ -1654,6 +1988,8 @@ class HandicapPredictor:
                     'method': f"T-005 v3 两阶段模型 (T={T005V3_TEMPERATURE}, θ={T005V3_THRESHOLD})",
                     'feature_quality': feature_quality,
                     'raw_p_draw': result['raw_p_draw'],
+                    'calib_p_draw': result.get('calib_p_draw'),
+                    '_shadow_class_weight': result.get('_shadow_class_weight'),
                 }
             except Exception as e:
                 log_model('T-005 v3', '预测', f'推理失败: {e}', 'warning')
@@ -1791,15 +2127,23 @@ class HandicapPredictor:
         p_draw_raw = draw_model.predict_proba(X)[:, 1]
         log_model('T-005 v3', 'Stage1', f'走水检测器原始输出: p_draw={p_draw_raw[0]:.4f} ({p_draw_raw[0]*100:.1f}%)')
 
+        # C-20261006-001：等温校准（Stage1 出口）；校准器在加载时已就绪则映射，
+        # 三向融合与后续决策一律使用校准后概率。
+        draw_calibrator = self.t005_models.get('draw_calibrator')
+        if draw_calibrator is not None:
+            p_draw = np.clip(draw_calibrator.predict(p_draw_raw), 1e-9, 1 - 1e-9)
+            log_model('T-005 v3', '走水校准', f'isotonic 映射: {p_draw_raw[0]*100:.1f}%→{p_draw[0]*100:.1f}%')
+        else:
+            p_draw = p_draw_raw
+
         # Stage 2: 方向预测
         p_away_nd = dir_model.predict_proba(X)[:, 1]
         p_home_nd = 1.0 - p_away_nd
         log_model('T-005 v3', 'Stage2', f'方向预测器: p_home_nd={p_home_nd[0]:.4f}, p_away_nd={p_away_nd[0]:.4f}')
 
         # 融合
-        p_home = p_home_nd * (1.0 - p_draw_raw)
-        p_away = p_away_nd * (1.0 - p_draw_raw)
-        p_draw = p_draw_raw
+        p_home = p_home_nd * (1.0 - p_draw)
+        p_away = p_away_nd * (1.0 - p_draw)
 
         total = p_home + p_draw + p_away
         p_home = p_home / total
@@ -1818,8 +2162,9 @@ class HandicapPredictor:
             p_away = p_away / total
             log_model('T-005 v3', '温度缩放', f'T={T005V3_TEMPERATURE}')
 
-        # 走水概率下限校准
-        if T005V3_DRAW_PROB_FLOOR > 0:
+        # 走水概率下限校准（C-20261006-001：校准器存在时等温映射已含绝对水平，不再施硬下限；
+        # 仅在校准器缺失的旧资产降级路径保留 8% 下限）
+        if draw_calibrator is None and T005V3_DRAW_PROB_FLOOR > 0:
             p_draw_before = p_draw[0]
             p_draw = np.maximum(p_draw, T005V3_DRAW_PROB_FLOOR)
             total = p_home + p_draw + p_away
@@ -1851,6 +2196,7 @@ class HandicapPredictor:
             'prediction': prediction,
             'confidence': confidence,
             'raw_p_draw': float(p_draw_raw[0]),
+            'calib_p_draw': float(p_draw[0]) if draw_calibrator is not None else None,
             'probabilities': {
                 '上盘赢': float(p_home_final),
                 '走水': float(p_draw_final),
@@ -1952,11 +2298,44 @@ class ScorePredictor:
 
                 sorted_probs = sorted(fused.items(), key=lambda x: x[1], reverse=True)
 
+                # C-20261011-041: WDL 方向族内重排（展示层止血，用户拍板）。
+                # 背景：λ 链过度偏斜（如 λ=4.18/0.41）时泊松边际极端化 → 乘法重加权 ratio
+                # 反向纠偏（压优势方向、抬弱势方向），质量全部堆积到弱势族基数最大的格子
+                # （典型 1:1）；全量复盘 198/245 场 Top1=1:1（80.8%），与 WDL 方向自相矛盾。
+                # 处置：网格 argmax 与 WDL 方向族不一致时，把 WDL 方向族内最大格移到首位
+                # （top5[0] 同步移动 → 落库 Score_top1=scoreTop5[0] 展示与落库自动一致）。
+                # 概率网格、边缘不变量（重加权后边缘==WDL）、Top5 集合一律不动；
+                # 判据：任何使「重加权后边缘 != WDL」的改动（如 ratio 限幅）必须先过影子评估。
+                _reorder_note = None
+                if (wdl_probs and all(wdl_probs.get(k) is not None
+                                      for k in ('win', 'draw', 'lose')) and sorted_probs):
+                    _wdl_dir = max((('win', wdl_probs['win']), ('draw', wdl_probs['draw']),
+                                    ('lose', wdl_probs['lose'])), key=lambda kv: kv[1])[0]
+
+                    def _dir_of(_s):
+                        try:
+                            _h, _a = str(_s).split(':')[:2]
+                            return 'win' if int(_h) > int(_a) else ('draw' if int(_h) == int(_a) else 'lose')
+                        except (ValueError, IndexError):
+                            return None
+
+                    _top_score, _top_prob = sorted_probs[0]
+                    if _dir_of(_top_score) not in (None, _wdl_dir):
+                        _alt = next(((s, p) for s, p in sorted_probs if _dir_of(s) == _wdl_dir), None)
+                        if _alt:
+                            _reorder_note = (f"重加权网格 Top1={_top_score}@{_top_prob*100:.1f}% "
+                                             f"与 WDL 方向({_wdl_dir})不一致，已重排为 "
+                                             f"{_wdl_dir} 族内最大格 {_alt[0]}@{_alt[1]*100:.1f}%")
+                            log_model('T-006 v4', 'WDL方向族重排', _reorder_note)
+                            sorted_probs = [_alt] + [x for x in sorted_probs if x[0] != _alt[0]]
+
                 return {
                     'top5': [{'score': sc, 'prob': pr} for sc, pr in sorted_probs[:5]],
                     'most_likely': sorted_probs[0][0] if sorted_probs else 'N/A',
                     'most_likely_prob': sorted_probs[0][1] if sorted_probs else 0.0,
-                    'method': f'T-006 v4 (Poisson+DC+MC+赔率融合, λ={lambda_home:.2f}/{lambda_away:.2f})',
+                    'method': (f'T-006 v4 (Poisson+DC+MC+赔率融合, λ={lambda_home:.2f}/{lambda_away:.2f})'
+                               + (' +WDL方向族重排' if _reorder_note else '')),
+                    'reorder_note': _reorder_note,
                     'lambda_home': lambda_home,
                     'lambda_away': lambda_away,
                 }
@@ -2308,6 +2687,51 @@ class PredictionCore:
             except Exception as e:
                 result['_shadow_score_injury'] = {'error': f'{type(e).__name__}: {e}'}
 
+        # P1-1（C-20261002-006）: λ 拆分 bisect Shadow 双算——生产 Score 用 legacy
+        # A-002 λ，影子以【相同总量、相同市场去水 WDL】二分反演拆分重跑同一
+        # T-006 v4 预测器（WDL 区域重加权不变），仅写 result['_shadow_lambda_split']
+        # 供批量层落 reports/lambda_split_shadow.jsonl；不展示、不落库，
+        # try/except 全隔离。生产已处 bisect 模式时不重复双算。
+        if LAMBDA_SPLIT_SHADOW and LAMBDA_SPLIT_MODE != "bisect" and not is_mock \
+                and lambda_home_score is not None and lambda_away_score is not None:
+            try:
+                _sh = _sa = 0.33
+                _has_mkt_wdl = False
+                if odds_data and odds_data.get('wdl_odds'):
+                    _wdl_src = odds_data['wdl_odds']
+                    _last_wdl = _wdl_src.get('close') or \
+                        (_wdl_src.get('records')[-1] if _wdl_src.get('records') else None)
+                    if _last_wdl:
+                        _sh, _sd, _sa = odds_to_implied_prob(
+                            _last_wdl['win'], _last_wdl['draw'], _last_wdl['lose'])
+                        _has_mkt_wdl = True
+                if not _has_mkt_wdl:
+                    # 无市场 WDL 时 legacy 对称先验即基准，双算无信息增益，跳过
+                    result['_shadow_lambda_split'] = {'skipped': 'no_market_wdl'}
+                else:
+                    _total_sc = lambda_home_score + lambda_away_score
+                    _lh_b, _la_b = CalcEngine.solve_lambda_split_bisection(
+                        _sh, _sa, _total_sc)
+                    _shadow_bs = self.score_predictor.predict(
+                        odds_data, _lh_b, _la_b, wdl_probs=wdl_probs)
+                    _ctrl_bs = result['score']
+                    result['_shadow_lambda_split'] = {
+                        'control_lambda': [round(lambda_home_score, 4),
+                                           round(lambda_away_score, 4)],
+                        'shadow_lambda': [round(_lh_b, 4), round(_la_b, 4)],
+                        'win_home': round(_sh, 4),
+                        'win_away': round(_sa, 4),
+                        'total_locked': round(_total_sc, 4),
+                        'control_most_likely': _ctrl_bs.get('most_likely'),
+                        'shadow_most_likely': _shadow_bs.get('most_likely'),
+                        'control_most_likely_prob': _ctrl_bs.get('most_likely_prob'),
+                        'shadow_most_likely_prob': _shadow_bs.get('most_likely_prob'),
+                        'control_top5': _ctrl_bs.get('top5'),
+                        'shadow_top5': _shadow_bs.get('top5'),
+                    }
+            except Exception as e:
+                result['_shadow_lambda_split'] = {'error': f'{type(e).__name__}: {e}'}
+
         # C-20260920-029: T-006 v5 Shadow 双算——仅写 result['_shadow_v5'] 供批量层记录，
         # 不展示、不落库；任何异常就地隔离，绝不影响 v4 生产路径。
         if T006_SHADOW_V5 and wdl_probs:
@@ -2322,6 +2746,9 @@ class PredictionCore:
                     'rho': _shadow['rho'],
                     'tg_total': round(_shadow['tg_total'], 3),
                     'method': _shadow['method'],
+                    # C-20261006-005: 透传全量 dist 供批量层持久化 Score_grid（修复 09-08 起网格断供）；
+                    # 批量层在 append_shadow_v5 前 pop，不写入 jsonl，保持 C-20260920-029 记录口径。
+                    'dist': _shadow.get('dist'),
                 }
             except Exception as e:
                 result['_shadow_v5'] = {'error': f'{type(e).__name__}: {e}'}

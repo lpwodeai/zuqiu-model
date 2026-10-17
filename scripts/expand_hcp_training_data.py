@@ -40,6 +40,7 @@ from handicap_line_inference import (
     load_validation_data, load_inference_target,
     build_inference_features, parse_score, compute_handicap_result,
 )
+from hcp_features import parse_hcp_result_label
 
 
 # ==============================================================================
@@ -75,12 +76,17 @@ def load_all_labeled_samples(conn: sqlite3.Connection) -> pd.DataFrame:
         ORDER BY mt.match_date
     """
     df = pd.read_sql(query, conn, params=(MAX_VALID_TIMESTAMP,))
-    print(f"[EXPAND] 加载全部真标签样本: {len(df)} 场")
+    # P0-1（C-20261002-006）: 结算标签含 '(-1)胜'/'(+1)平' 带线形态，统一解析，
+    # 剔除空串等无法解析行；真标签样本由 2026-08 的 242 场扩至万场级竞彩结算。
+    n_raw = len(df)
+    df['_result_code'] = df['actual_handicap'].map(parse_hcp_result_label)
+    df = df[df['_result_code'].notna()].copy()
+    print(f"[EXPAND] 加载全部真标签样本: {len(df)} 场（原始非空 {n_raw}，解析后）")
     print(f"    有 handicap_line: {df['handicap_line'].notna().sum()} 场")
     print(f"    无 handicap_line（仅真标签）: {df['handicap_line'].isna().sum()} 场")
-    print(f"    actual_handicap 分布:")
-    for val, cnt in df['actual_handicap'].value_counts().items():
-        print(f"      {val}: {cnt} 场")
+    print(f"    actual_handicap 分布（按类别码）:")
+    for code, cnt in df['_result_code'].astype(int).value_counts().sort_index().items():
+        print(f"      {HCP_RESULT_NAMES.get(code, code)}({code}): {cnt} 场")
     return df
 
 
@@ -382,7 +388,13 @@ def generate_labels_and_merge(df_target: pd.DataFrame, df_all_labeled: pd.DataFr
     print(f"\n  【6.2 准备真标签样本（{len(df_all_labeled)}场）】:")
     df_labeled = df_all_labeled.copy()
     df_labeled['handicap_line_pred'] = df_labeled['handicap_line']  # 有则用真值，无则NaN
-    df_labeled['actual_handicap_pred'] = df_labeled['actual_handicap'].map(HCP_RESULT_MAP)
+    # P0-1（C-20261002-006）: 走统一解析（裸标签 + '(-1)胜' 带线结算标签）
+    df_labeled['actual_handicap_pred'] = df_labeled['actual_handicap'].map(parse_hcp_result_label)
+    n_bad = df_labeled['actual_handicap_pred'].isna().sum()
+    if n_bad:
+        print(f"    ⚠️ 真标签 {n_bad} 场无法解析，已剔除")
+        df_labeled = df_labeled[df_labeled['actual_handicap_pred'].notna()].copy()
+    df_labeled['actual_handicap_pred'] = df_labeled['actual_handicap_pred'].astype(int)
     df_labeled['label_source'] = 'actual'
     df_labeled['pred_confidence'] = 1.0  # 真标签置信度为1.0
 

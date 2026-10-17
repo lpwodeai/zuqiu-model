@@ -33,7 +33,7 @@ import sqlite3
 import sys
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -121,7 +121,6 @@ def build_english_candidates(date_str: str, home_cn: str, away_cn: str, cn_to_en
     away_en_candidates = list(dict.fromkeys(away_en_candidates))
     
     # 步骤 3: 生成所有候选 match_id（笛卡尔积），支持 ±1 天日期容差
-    from datetime import datetime, timedelta
     date_variants = [date_str]
     try:
         dt = datetime.strptime(date_str, '%Y-%m-%d')

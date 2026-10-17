@@ -40,6 +40,17 @@ def _is_valid_prob(p) -> bool:
     return 0.0 < v < 1.0
 
 
+def _is_goalline_integer(hp) -> bool:
+    """C-20261002-014: 竞彩 goalLine 必为整数；亚盘 0.25/0.5/0.75 档（x.25/x.5/x.75）
+    不得写入 matches.handicap（否则又把竞彩口径污染成亚盘，见 §15.2 避坑）。"""
+    if hp is None:
+        return False
+    try:
+        return float(hp).is_integer()
+    except (TypeError, ValueError):
+        return False
+
+
 def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(str(ODDS_DB))
     conn.execute("PRAGMA busy_timeout = 5000")
@@ -100,6 +111,14 @@ def save_pre_match_prediction(pred: dict, model_version: str = DEFAULT_MODEL_VER
     row_ts = pred_timestamp or _now_iso()
     replay_flag = 1 if is_replay else 0
 
+    # C-20261002-014 / C-20261013-067: pred["handicap"] 现来自竞彩整数 goalLine（SSOT），
+    # 亚盘兜底已禁用；守卫保留作防御层，万一亚盘线再次混入则非整数一律不写入（置 NULL）。
+    raw_hcp = pred.get("handicap")
+    hcp_line = raw_hcp if _is_goalline_integer(raw_hcp) else None
+    if raw_hcp is not None and hcp_line is None:
+        logger.warning("handicap 写入守卫: match_id=%s 亚盘线 %r 非整数盘口，matches.handicap 置 NULL",
+                       match_id, raw_hcp)
+
     conn = _connect()
     try:
         _ensure_is_replay_column(conn)
@@ -113,7 +132,7 @@ def save_pre_match_prediction(pred: dict, model_version: str = DEFAULT_MODEL_VER
             (match_id,
              f"{pred['league']}{pred['season']}赛季",
              pred["league"],
-             pred["homeTeam"], pred["awayTeam"], pred["matchDate"], pred.get("handicap"),
+             pred["homeTeam"], pred["awayTeam"], pred["matchDate"], hcp_line,
              _now_iso(), _now_iso()),
         )
 
@@ -154,14 +173,20 @@ def save_pre_match_prediction(pred: dict, model_version: str = DEFAULT_MODEL_VER
             if prob is not None:
                 conn.execute(insert_pred, (match_id, model_version, ptype, label, prob, prob, row_ts, replay_flag) + extra)
 
+        # C-20261013-068: 竞彩未开让球盘（hcp_line=None）不写 HC 行——
+        # prediction_core 已短路返回 None 概率，此为防御层防其他调用路径漏短路。
         hcp = pred.get("handicapProb") or {}
-        for ptype, label, prob in (
-            ("HC_upper", "上盘赢", hcp.get("upper")),
-            ("HC_draw", "走水", hcp.get("draw")),
-            ("HC_lower", "下盘赢", hcp.get("lower")),
-        ):
-            if prob is not None:
-                conn.execute(insert_pred, (match_id, model_version, ptype, label, prob, prob, row_ts, replay_flag) + extra)
+        if hcp_line is None:
+            logger.info("HC 写入守卫: match_id=%s 竞彩未开让球盘，跳过 HC_upper/draw/lower 落库",
+                       match_id)
+        else:
+            for ptype, label, prob in (
+                ("HC_upper", "上盘赢", hcp.get("upper")),
+                ("HC_draw", "走水", hcp.get("draw")),
+                ("HC_lower", "下盘赢", hcp.get("lower")),
+            ):
+                if prob is not None:
+                    conn.execute(insert_pred, (match_id, model_version, ptype, label, prob, prob, row_ts, replay_flag) + extra)
 
         # C-20260921-036: TG 写入守卫——0.0/1.0/None/越界概率不落库（无有效赔率降级场）
         over = pred.get("totalGoalsProbOver")
@@ -284,6 +309,85 @@ def batch_save_predictions(preds: list, model_version: str = DEFAULT_MODEL_VERSI
     for p in preds:
         ids.append(save_pre_match_prediction(p, model_version))
     return ids
+
+
+# C-20261011-049: 5 子模型 WDL 概率落库（影子线数据地基）
+# 报告子模型表键（generate_unified_report.SUB_MODEL_LABELS）→ 落库标签
+SUBMODEL_TAGS = (
+    ("dixonColes", "DC"),
+    ("xgboost", "XGB"),
+    ("lightgbm", "LGB"),
+    ("elo", "Elo"),
+    ("bayesian", "Bayes"),
+)
+_SUBMODEL_DIRS = (("win", "home", "主胜"), ("draw", "draw", "平"), ("lose", "away", "客胜"))
+
+
+def save_submodel_probs(match_date: str, home_team: str, away_team: str,
+                        sub_models: dict, model_version: str = DEFAULT_MODEL_VERSION,
+                        is_replay: bool = False, pred_timestamp: str = None) -> int:
+    """写入一场比赛 5 个基础子模型的 WDL 三向概率（最多 15 行，UPSERT 幂等）。
+
+    C-20261011-049：子模型概率此前只活在赛前报告 MD 中（model_predictions 仅
+    融合值 WDL_home/draw/away），C-046 §15.5⑧ argmax 一致性维度与 C-048 族
+    结构影子线评估需要查库取数。本函数仅铺数据地基，不参与任何生产口径。
+
+    prediction_type 命名：Submodel_<DC|XGB|LGB|Elo|Bayes>_<home|draw|away>
+    写入/时间语义与 save_pre_match_prediction 完全一致（timestamp、is_replay
+    取 MIN；概率走 _is_valid_prob 守卫，脏值跳过）。返回写入行数。
+    """
+    match_id = make_match_id(match_date, home_team, away_team)
+    row_ts = pred_timestamp or _now_iso()
+    replay_flag = 1 if is_replay else 0
+    written = 0
+
+    conn = _connect()
+    try:
+        _ensure_is_replay_column(conn)
+        insert_pred = (
+            "INSERT INTO model_predictions "
+            "(match_id, model_name, prediction_type, prediction, probability, confidence, timestamp, "
+            " is_replay, input_snapshot_json, feature_version, config_version, model_version) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?) "
+            "ON CONFLICT(match_id, model_name, prediction_type) DO UPDATE SET "
+            " prediction=excluded.prediction, probability=excluded.probability, "
+            " confidence=excluded.confidence, "
+            " timestamp=MIN(model_predictions.timestamp, excluded.timestamp), "
+            " is_replay=MIN(model_predictions.is_replay, excluded.is_replay), "
+            " model_version=excluded.model_version"
+        )
+        for model_key, tag in SUBMODEL_TAGS:
+            p = (sub_models or {}).get(model_key)
+            if not p:
+                continue
+            for src_key, dir_key, label in _SUBMODEL_DIRS:
+                val = p.get(src_key)
+                if _is_valid_prob(val):
+                    val = float(val)
+                    conn.execute(
+                        insert_pred,
+                        (match_id, model_version, f"Submodel_{tag}_{dir_key}",
+                         label, val, val, row_ts, replay_flag, model_version),
+                    )
+                    written += 1
+        conn.commit()
+    finally:
+        conn.close()
+    return written
+
+
+def batch_save_submodel_probs(rows: list, model_version: str = DEFAULT_MODEL_VERSION) -> int:
+    """批量落库行式结果（generate_unified_report rows 结构：含 home_en/away_en/
+    match_date/sub_models/_is_replay/_pred_timestamp）。返回总写入行数。"""
+    total = 0
+    for r in rows:
+        total += save_submodel_probs(
+            r["match_date"], r["home_en"], r["away_en"], r.get("sub_models"),
+            model_version=model_version,
+            is_replay=bool(r.get("_is_replay")),
+            pred_timestamp=r.get("_pred_timestamp"),
+        )
+    return total
 
 
 def serializable_to_pred(m: dict) -> dict:

@@ -53,8 +53,11 @@ from db_utils import connect, read_sql  # noqa: E402
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'odds.db')
 
-# 2026-07 时间戳过滤阈值（project_memory 规则）
-MAX_VALID_TIMESTAMP = "2026-07-01 00:00:00"
+# 2026-07 时间戳过滤阈值（project_memory 规则：生产/历史训练默认冻结，防训练数据漂移）
+# P1-1/P0-1（C-20261002-006）: T-005 重训管道可经环境变量 TRAE_HCP_TRAIN_CUTOFF
+# 提升截止线纳入 2026-08 起的真实结算标签样本；serving 仍由
+# hcp_features_v2.get_serving_feature_matrix() 临时提升至 2099 并在构建后还原。
+MAX_VALID_TIMESTAMP = os.environ.get('TRAE_HCP_TRAIN_CUTOFF', '2026-07-01 00:00:00')
 
 # 让球赔率列名
 HCP_COLS = ['hcp_win', 'hcp_draw', 'hcp_lose']
@@ -62,6 +65,23 @@ HCP_COLS = ['hcp_win', 'hcp_draw', 'hcp_lose']
 # 实际让球结果映射
 HCP_RESULT_MAP = {'胜': 0, '平': 1, '负': 2}
 HCP_RESULT_NAMES = {0: '上盘赢', 1: '走水', 2: '下盘赢'}
+
+
+def parse_hcp_result_label(val):
+    """P0-1（C-20261002-006）: 解析 matches.actual_handicap 结算标签为类别码。
+
+    结算写回有两种形态：
+      - 裸标签 '胜'/'平'/'负'（早期 200+ 场人工/竞彩写回）
+      - 带盘口线 '(-1)胜'/'(+1)平'/'(-2)负'…（2016 赛季起竞彩结算口径，
+        括号内为该场让球线，末字即上盘结果）
+    类别码：胜(上盘赢)=0, 平(走水)=1, 负(下盘赢)=2；无法解析（None/空串）→ None。
+    """
+    if val is None:
+        return None
+    s = str(val).strip()
+    if not s:
+        return None
+    return HCP_RESULT_MAP.get(s[-1])
 
 
 def load_hcp_data(conn: Optional[sqlite3.Connection] = None) -> pd.DataFrame:

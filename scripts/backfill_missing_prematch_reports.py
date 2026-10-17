@@ -21,6 +21,7 @@ sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 
 from generate_unified_report import (  # noqa: E402
     connect_db, discover_matches, find_sporttery_match_id,
+    find_any_sporttery_match_id,
     build_sporttery_odds, parse_hcp_line, build_match_dict, render_report,
     load_500_data, load_sofascore_data,
 )
@@ -57,8 +58,20 @@ def backfill(date: str, league: str, homes: list[str]) -> None:
         print(f"\n=== {m['match_date']} [{m['league']}] {home_cn} vs {away_cn} ===")
 
         sporttery_mid = find_sporttery_match_id(conn, home_cn, away_cn, m["match_date"])
-        odds_data = build_sporttery_odds(conn, sporttery_mid, m.get("win"), m.get("draw"), m.get("lost"))
-        hcp_line = parse_hcp_line(m.get("handicap"))
+        # C-20261002-004：WDL 未开售时用另三表 match_id 取让球/总进球/比分时序
+        any_mid = (find_any_sporttery_match_id(conn, home_cn, away_cn, m["match_date"])
+                   if sporttery_mid is None else None)
+        # C-20261002-005：WDL 来源三态（jc/fallback_deep/fallback_none）
+        wdl_source = "jc" if sporttery_mid is not None else (
+            "fallback_deep" if any_mid is not None else "fallback_none")
+        odds_data = build_sporttery_odds(conn, sporttery_mid, m.get("win"), m.get("draw"),
+                                         m.get("lost"), other_mid=any_mid)
+        # C-20261013-067：让球线源切换——竞彩整数 goalLine（SSOT），亚盘兜底已禁用（C-066）
+        _jc_hcp = conn.execute(
+            "SELECT m.handicap FROM matches m JOIN odds500_match o ON m.match_id=o.match_id WHERE o.fid=?",
+            (m["fid"],)
+        ).fetchone()
+        hcp_line = float(_jc_hcp[0]) if (_jc_hcp and _jc_hcp[0] is not None) else None
         odds_data["handicap_odds"]["line"] = hcp_line
 
         extra = {"500": load_500_data(conn, m["fid"]),
@@ -72,6 +85,9 @@ def backfill(date: str, league: str, homes: list[str]) -> None:
 
         out_dir = PROJECT_DIR / "docs" / "prematch_reports" / m["match_date"].replace("-", "")
         out_dir.mkdir(parents=True, exist_ok=True)
+        # C-20261002-005：渲染前三态标记（backfill 此前漏设 _wdl_not_offered，顺带补齐）
+        result["_wdl_not_offered"] = (wdl_source == "fallback_deep")
+        result["_wdl_source"] = wdl_source
         fname = f"{m['league']}_{m['match_date']}_{home_cn}_vs_{away_cn}.md".replace("/", "-")
         report_path = out_dir / fname
         completeness = render_report(m, odds_data, result, extra, report_path, conn)

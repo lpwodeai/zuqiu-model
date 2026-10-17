@@ -48,7 +48,6 @@ def analyze_excel_odds(file_path, sheet_name):
     return odds_sections
 
 if __name__ == '__main__':
-    import os
     base_dir = os.path.dirname(os.path.abspath(__file__))
     project_dir = os.path.dirname(base_dir)
     

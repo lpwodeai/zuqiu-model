@@ -22,7 +22,7 @@ import urllib.error
 import ssl
 
 # SofaScore API 配置
-BASE_URL = "https://api.sofascore.com/api/v1"
+BASE_URL = "https://www.sofascore.com/api/v1"  # C-20260930-004: api. 子域已 403，迁移至主域路径（urllib 无指纹模拟，403 时改用 final_sofascore_collector）
 
 # 五大联赛 uniqueTournament ID (已验证)
 LEAGUE_IDS = {

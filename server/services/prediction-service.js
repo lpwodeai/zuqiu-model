@@ -39,6 +39,10 @@ const T006_FEATURE_SPEC_PATH = path.join(__dirname, '../../assets/t006_feature_s
 // 阶段 B (unified_engine_integration_plan §7): λ 回归头路径（非阻塞，缺失/失败不影响主预测）
 const LAMBDA_MODEL_PATH = path.join(__dirname, '../../assets/lambda_model_export.js');
 
+// C-20261004-004: 分联赛 Platt 校准参数（canonical JSON：global + leagues，双端共读）
+const XGB_CALIBRATION_JSON_PATH = path.join(__dirname, '../../assets/xgb_calibration.json');
+const LGB_CALIBRATION_JSON_PATH = path.join(__dirname, '../../assets/lgb_calibration.json');
+
 // C-20260816-200: 联赛专属 draw_threshold_factor（D3: 单一来源迁至 config.yaml，JS 不再硬编码阈值）
 // C-20260823-001: 联赛分档阈值模式开关
 //   "argmax"          — 全局 argmax，默认（消除多重比较过拟合风险）
@@ -142,6 +146,8 @@ class PredictionService {
     this.xgbModel = {};
     this.lgbModel = {};
     this.lgbEplModel = null;  // C-20260816-204: 英超独立模型
+    this.xgbCalibration = null;  // C-20261004-004: 分联赛 Platt 校准参数
+    this.lgbCalibration = null;  // C-20261004-004: 分联赛 Platt 校准参数
     this.t006LowgoalModel = null;  // C-20260819-006: T-006 低进球分类器
     this.t006FeatureSpec = null;   // C-20260819-006: T-006 特征规格(参考)
     this.stackingWeights = {};
@@ -215,6 +221,18 @@ class PredictionService {
           this.t006LowgoalModel = data;
           this.configureEngine();
           break;
+        case 'xgbCalibration':  // C-20261011-045
+          this.xgbCalibration = data;
+          this.configureEngine();
+          break;
+        case 'lgbCalibration':  // C-20261011-045
+          this.lgbCalibration = data;
+          this.configureEngine();
+          break;
+        case 'lambdaModel':  // C-20261011-045
+          this.lambdaModel = data;
+          this.configureEngine();
+          break;
       }
       
       logger.info('prediction-service', `热更新完成: ${key}`);
@@ -228,6 +246,7 @@ class PredictionService {
     this.engine.setStackingWeights(this.stackingWeights);
     this.engine.setFeatureScalerParams(this.featureScalerParams);
     this.engine.setModels(this.xgbModel, this.lgbModel);
+    this.engine.setCalibrationParams(this.xgbCalibration, this.lgbCalibration);  // C-20261004-004
     this.engine.setEloRatings(this.eloRatings);
     this.engine.setT006LowgoalModel(this.t006LowgoalModel);  // C-20260819-006
     this.engine.setLambdaModel(this.lambdaModel);  // 阶段 B: λ 回归头（null 时引擎回退 calcLambdaMatch）
@@ -447,6 +466,28 @@ class PredictionService {
       console.warn('⚠️ λ 回归头加载失败,将回退 calcLambdaMatch:', err.message);
       logger.warn('prediction-service', `λ回归头加载失败: ${err.message}`);
       this.lambdaModel = null;
+    }
+
+    // C-20261004-004: 加载分联赛 Platt 校准参数（canonical JSON，非阻塞；缺失则回退不校准）
+    try {
+      if (fs.existsSync(XGB_CALIBRATION_JSON_PATH)) {
+        this.xgbCalibration = JSON.parse(fs.readFileSync(XGB_CALIBRATION_JSON_PATH, 'utf8'));
+        const nLg = Object.keys(this.xgbCalibration.leagues || {}).length;
+        console.log(`✅ XGBoost 分联赛校准已加载: global=${!!this.xgbCalibration.global}, ${nLg} 联赛`);
+      }
+    } catch (err) {
+      console.warn('⚠️ XGBoost 校准参数加载失败,将不校准:', err.message);
+      this.xgbCalibration = null;
+    }
+    try {
+      if (fs.existsSync(LGB_CALIBRATION_JSON_PATH)) {
+        this.lgbCalibration = JSON.parse(fs.readFileSync(LGB_CALIBRATION_JSON_PATH, 'utf8'));
+        const nLg = Object.keys(this.lgbCalibration.leagues || {}).length;
+        console.log(`✅ LightGBM 分联赛校准已加载: global=${!!this.lgbCalibration.global}, ${nLg} 联赛`);
+      }
+    } catch (err) {
+      console.warn('⚠️ LightGBM 校准参数加载失败,将不校准:', err.message);
+      this.lgbCalibration = null;
     }
 
     const elapsed = Date.now() - startTime;

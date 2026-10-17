@@ -1,0 +1,1705 @@
+{
+ "generated_from": "data/odds.db (mode=ro)",
+ "denominators": {
+  "all_rows": 739695,
+  "played_rows(minutes>0)": 538354
+ },
+ "metric_note": "cov_played=非空率; nonzero_played=非零率; zero_fill_played=恰为0的占比（解析器把缺值写 0 时非空率虚高，须看非零率）",
+ "match_player_stats_columns": [
+  {
+   "column": "player_name_cn",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "penalties_made",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "penalties_attempted",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "shots",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "shots_on_target",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "fouls_committed",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "fouls_drawn",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "offsides",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "crosses",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "tackles_won",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "own_goals",
+   "cov_played": 100.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 100.0
+  },
+  {
+   "column": "passes_completed",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "passes_attempted",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "pass_completion_pct",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "total_distance_passes",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "progressive_distance_passes",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "short_passes_completed",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "short_passes_attempted",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "medium_passes_completed",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "medium_passes_attempted",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "long_passes_completed",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "long_passes_attempted",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "key_passes",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "passes_into_final_third",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "passes_into_penalty_area",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "crosses_into_penalty_area",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "progressive_passes",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "tackles",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "tackles_won_def",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "tackles_in_def_third",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "tackles_in_mid_third",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "tackles_in_att_third",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "dribblers_tackled",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "dribblers_challenged",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "blocks",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "blocked_shots",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "blocked_passes",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "errors_leading_to_shot",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "touches",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "touches_def_pen_area",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "touches_def_third",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "touches_mid_third",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "touches_att_third",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "touches_att_pen_area",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "dribbles_completed_pos",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "dribbles_attempted_pos",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "successful_dribble_pct",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "players_beaten",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "carries",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "carry_distance",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "progressive_carries",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "carries_into_final_third",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "carries_into_penalty_area",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "miscontrols",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "dispossessed",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "passes_received",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "progressive_passes_received",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "corner_kicks",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "penalties_won",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "penalties_conceded",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "ball_recoveries",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "aerials_won",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "aerials_lost",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "aerial_win_pct",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "gk_shots_on_target_against",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "gk_goals_against",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "gk_saves",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "gk_save_pct",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "gk_psa",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "xg",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "xg_npxg",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "xa",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "sca",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "gca",
+   "cov_played": 0.0,
+   "nonzero_played": 0.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "meters_covered_walking_km",
+   "cov_played": 0.06,
+   "nonzero_played": 0.06,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "meters_covered_jogging_km",
+   "cov_played": 0.06,
+   "nonzero_played": 0.06,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "red_cards",
+   "cov_played": 100.0,
+   "nonzero_played": 0.36,
+   "zero_fill_played": 99.64
+  },
+  {
+   "column": "keeper_save_value",
+   "cov_played": 1.33,
+   "nonzero_played": 1.32,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "accurate_keeper_sweeper",
+   "cov_played": 2.05,
+   "nonzero_played": 2.05,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "punches",
+   "cov_played": 2.08,
+   "nonzero_played": 2.08,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "total_keeper_sweeper",
+   "cov_played": 2.15,
+   "nonzero_played": 2.15,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "goals_prevented",
+   "cov_played": 2.97,
+   "nonzero_played": 2.97,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "good_high_claim",
+   "cov_played": 3.03,
+   "nonzero_played": 3.03,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "saved_shots_from_inside_box",
+   "cov_played": 5.53,
+   "nonzero_played": 5.53,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "assists",
+   "cov_played": 100.0,
+   "nonzero_played": 6.04,
+   "zero_fill_played": 93.96
+  },
+  {
+   "column": "gk_saves_sofa",
+   "cov_played": 6.29,
+   "nonzero_played": 6.29,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "big_chances_missed",
+   "cov_played": 7.23,
+   "nonzero_played": 7.23,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "goals",
+   "cov_played": 100.0,
+   "nonzero_played": 8.27,
+   "zero_fill_played": 91.73
+  },
+  {
+   "column": "total_ball_carries_distance",
+   "cov_played": 8.85,
+   "nonzero_played": 8.85,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "ball_carries_count",
+   "cov_played": 8.85,
+   "nonzero_played": 8.85,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "total_progression",
+   "cov_played": 8.85,
+   "nonzero_played": 8.85,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "big_chances_created",
+   "cov_played": 9.11,
+   "nonzero_played": 9.11,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "yellow_cards",
+   "cov_played": 100.0,
+   "nonzero_played": 13.6,
+   "zero_fill_played": 86.4
+  },
+  {
+   "column": "meters_covered_sprinting_km",
+   "cov_played": 19.35,
+   "nonzero_played": 18.63,
+   "zero_fill_played": 0.72
+  },
+  {
+   "column": "accurate_crosses",
+   "cov_played": 19.13,
+   "nonzero_played": 19.13,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "meters_covered_high_speed_running_km",
+   "cov_played": 19.35,
+   "nonzero_played": 19.25,
+   "zero_fill_played": 0.11
+  },
+  {
+   "column": "meters_covered_running_km",
+   "cov_played": 19.35,
+   "nonzero_played": 19.35,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "expected_goals",
+   "cov_played": 26.12,
+   "nonzero_played": 19.42,
+   "zero_fill_played": 6.7
+  },
+  {
+   "column": "successful_dribbles",
+   "cov_played": 35.07,
+   "nonzero_played": 35.07,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "key_passes_sofa",
+   "cov_played": 38.96,
+   "nonzero_played": 38.96,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "interceptions",
+   "cov_played": 100.0,
+   "nonzero_played": 40.96,
+   "zero_fill_played": 59.04
+  },
+  {
+   "column": "expected_assists",
+   "cov_played": 41.72,
+   "nonzero_played": 41.47,
+   "zero_fill_played": 0.25
+  },
+  {
+   "column": "total_crosses",
+   "cov_played": 43.17,
+   "nonzero_played": 43.17,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "total_shots",
+   "cov_played": 100.0,
+   "nonzero_played": 46.37,
+   "zero_fill_played": 53.62
+  },
+  {
+   "column": "total_dribbles",
+   "cov_played": 49.22,
+   "nonzero_played": 49.22,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "aerials_won_total",
+   "cov_played": 50.08,
+   "nonzero_played": 50.08,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "aerials_lost_sofa",
+   "cov_played": 52.38,
+   "nonzero_played": 52.38,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "clearances",
+   "cov_played": 52.46,
+   "nonzero_played": 52.46,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "total_tackles",
+   "cov_played": 55.63,
+   "nonzero_played": 55.63,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "accurate_long_balls",
+   "cov_played": 60.53,
+   "nonzero_played": 60.53,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "aerials_total",
+   "cov_played": 69.27,
+   "nonzero_played": 69.27,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "total_long_balls",
+   "cov_played": 74.4,
+   "nonzero_played": 74.4,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "is_starter",
+   "cov_played": 100.0,
+   "nonzero_played": 74.5,
+   "zero_fill_played": 25.5
+  },
+  {
+   "column": "ground_duels_won",
+   "cov_played": 84.82,
+   "nonzero_played": 77.08,
+   "zero_fill_played": 7.74
+  },
+  {
+   "column": "ground_duels_lost",
+   "cov_played": 84.34,
+   "nonzero_played": 77.39,
+   "zero_fill_played": 6.96
+  },
+  {
+   "column": "duels_lost_sofa",
+   "cov_played": 84.34,
+   "nonzero_played": 84.34,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "duels_won",
+   "cov_played": 84.82,
+   "nonzero_played": 84.82,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "ball_recoveries_sofa",
+   "cov_played": 87.12,
+   "nonzero_played": 87.12,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "ground_duels_total",
+   "cov_played": 92.07,
+   "nonzero_played": 87.63,
+   "zero_fill_played": 4.44
+  },
+  {
+   "column": "duels_total",
+   "cov_played": 92.07,
+   "nonzero_played": 92.07,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "possession_lost",
+   "cov_played": 92.44,
+   "nonzero_played": 92.44,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "rating",
+   "cov_played": 97.97,
+   "nonzero_played": 97.97,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "accurate_pass_sofa",
+   "cov_played": 98.0,
+   "nonzero_played": 98.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "total_pass_sofa",
+   "cov_played": 98.85,
+   "nonzero_played": 98.85,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "touches_sofa",
+   "cov_played": 99.59,
+   "nonzero_played": 99.59,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "match_id",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "fbref_match_id",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "team",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "team_fbref",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "player_name",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "fbref_player_id",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "jersey_number",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "position",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "minutes_played",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "stats_json",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "stats_source",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "collected_at",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  },
+  {
+   "column": "quality_flag",
+   "cov_played": 100.0,
+   "nonzero_played": 100.0,
+   "zero_fill_played": 0.0
+  }
+ ],
+ "summary_player_stats": {
+  "total_cols": 138,
+  "dead_cols_0cov": 64,
+  "low_nonzero_cols<60pct": 35,
+  "healthy_nonzero>=60pct": 29
+ },
+ "feature_key_to_source": {
+  "sofa_rat_5g": [
+   "rating"
+  ],
+  "sofa_xg_5g": [
+   "expected_goals"
+  ],
+  "sofa_xa_5g": [
+   "expected_assists"
+  ],
+  "sofa_pass_sr_5g": [
+   "accurate_pass_sofa",
+   "total_pass_sofa"
+  ],
+  "sofa_longball_sr_5g": [
+   "accurate_long_balls",
+   "total_long_balls"
+  ],
+  "sofa_cross_sr_5g": [
+   "accurate_crosses",
+   "total_crosses"
+  ],
+  "sofa_dribble_sr_5g": [
+   "successful_dribbles",
+   "total_dribbles"
+  ],
+  "sofa_tackle_5g": [
+   "total_tackles"
+  ],
+  "sofa_interception_5g": [
+   "interceptions"
+  ],
+  "sofa_duel_sr_5g": [
+   "duels_won",
+   "duels_total"
+  ],
+  "sofa_aerial_sr_5g": [
+   "aerials_won_total",
+   "aerials_total"
+  ],
+  "sofa_recovery_5g": [
+   "ball_recoveries_sofa"
+  ],
+  "sofa_poss_lost_5g": [
+   "possession_lost"
+  ],
+  "sofa_big_chance_c_5g": [
+   "big_chances_created"
+  ],
+  "sofa_big_chance_m_5g": [
+   "big_chances_missed"
+  ],
+  "sofa_sprint_km_5g": [
+   "meters_covered_sprinting_km"
+  ],
+  "sofa_hsr_km_5g": [
+   "meters_covered_high_speed_running_km"
+  ],
+  "sofa_total_dist_km_5g": [
+   "meters_covered_walking_km",
+   "meters_covered_jogging_km",
+   "meters_covered_running_km",
+   "meters_covered_high_speed_running_km",
+   "meters_covered_sprinting_km"
+  ],
+  "sofa_gk_saves_5g": [
+   "gk_saves_sofa"
+  ],
+  "sofa_gk_goals_prev_5g": [
+   "goals_prevented"
+  ],
+  "sofa_clearance_5g": [
+   "clearances"
+  ],
+  "sofa_formation_consistency": [],
+  "sofa_rat_std_5g": [
+   "rating"
+  ],
+  "sofa_fw_goals_5g": [
+   "goals"
+  ],
+  "sofa_fw_assists_5g": [
+   "assists"
+  ],
+  "sofa_fw_touches_5g": [
+   "touches_sofa"
+  ],
+  "sofa_fw_rat_5g": [
+   "rating"
+  ],
+  "sofa_mf_pass_5g": [
+   "total_pass_sofa"
+  ],
+  "sofa_mf_touches_5g": [
+   "touches_sofa"
+  ],
+  "sofa_mf_rat_5g": [
+   "rating"
+  ],
+  "sofa_df_interception_5g": [
+   "interceptions"
+  ],
+  "sofa_df_tackle_5g": [
+   "total_tackles"
+  ],
+  "sofa_df_duel_sr_5g": [
+   "duels_won",
+   "duels_total"
+  ],
+  "sofa_df_rat_5g": [
+   "rating"
+  ]
+ },
+ "sofascore_team_features_columns": [
+  {
+   "column": "sofa_sprint_km_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 80.01
+  },
+  {
+   "column": "sofa_hsr_km_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 80.01
+  },
+  {
+   "column": "sofa_total_dist_km_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 80.01
+  },
+  {
+   "column": "sofa_sprint_km_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 80.0
+  },
+  {
+   "column": "sofa_hsr_km_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 80.0
+  },
+  {
+   "column": "sofa_total_dist_km_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 80.0
+  },
+  {
+   "column": "pa_missing_impact_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 72.11
+  },
+  {
+   "column": "pa_missing_impact_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 70.77
+  },
+  {
+   "column": "sofa_xg_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 61.53
+  },
+  {
+   "column": "sofa_xa_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 61.53
+  },
+  {
+   "column": "sofa_xg_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 61.51
+  },
+  {
+   "column": "sofa_xa_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 61.51
+  },
+  {
+   "column": "sofa_gk_goals_prev_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 57.68
+  },
+  {
+   "column": "sofa_gk_goals_prev_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 57.68
+  },
+  {
+   "column": "pa_xi_xg_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 56.45
+  },
+  {
+   "column": "pa_xi_xa_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 56.45
+  },
+  {
+   "column": "pa_core_xg_share_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 56.45
+  },
+  {
+   "column": "pa_xi_xg_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 56.41
+  },
+  {
+   "column": "pa_xi_xa_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 56.41
+  },
+  {
+   "column": "pa_core_xg_share_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 56.41
+  },
+  {
+   "column": "pa_fatigue_7d_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 39.46
+  },
+  {
+   "column": "pa_fatigue_7d_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 39.34
+  },
+  {
+   "column": "sofa_fw_assists_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 34.66
+  },
+  {
+   "column": "sofa_fw_assists_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 34.06
+  },
+  {
+   "column": "pa_fatigue_14d_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 13.98
+  },
+  {
+   "column": "pa_fatigue_14d_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 13.92
+  },
+  {
+   "column": "sofa_fw_goals_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 11.55
+  },
+  {
+   "column": "sofa_fw_goals_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 11.31
+  },
+  {
+   "column": "sofa_poss_lost_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 9.0
+  },
+  {
+   "column": "sofa_poss_lost_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 8.91
+  },
+  {
+   "column": "sofa_big_chance_m_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 6.83
+  },
+  {
+   "column": "sofa_big_chance_m_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 6.81
+  },
+  {
+   "column": "sofa_big_chance_c_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 6.29
+  },
+  {
+   "column": "sofa_big_chance_c_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 6.26
+  },
+  {
+   "column": "sofa_gk_saves_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.63
+  },
+  {
+   "column": "sofa_cross_sr_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.58
+  },
+  {
+   "column": "sofa_rat_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.57
+  },
+  {
+   "column": "sofa_dribble_sr_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.57
+  },
+  {
+   "column": "sofa_rat_std_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.57
+  },
+  {
+   "column": "sofa_fw_rat_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.57
+  },
+  {
+   "column": "sofa_mf_rat_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.57
+  },
+  {
+   "column": "sofa_df_interception_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.57
+  },
+  {
+   "column": "sofa_df_rat_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.57
+  },
+  {
+   "column": "sofa_pass_sr_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_longball_sr_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_tackle_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_interception_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_duel_sr_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_aerial_sr_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_recovery_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_clearance_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_formation_consistency_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_fw_touches_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_mf_pass_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_mf_touches_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_df_tackle_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_df_duel_sr_5g_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.56
+  },
+  {
+   "column": "sofa_gk_saves_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.53
+  },
+  {
+   "column": "sofa_cross_sr_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.52
+  },
+  {
+   "column": "sofa_rat_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.49
+  },
+  {
+   "column": "sofa_rat_std_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.49
+  },
+  {
+   "column": "sofa_fw_rat_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.49
+  },
+  {
+   "column": "sofa_mf_rat_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.49
+  },
+  {
+   "column": "sofa_df_interception_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.49
+  },
+  {
+   "column": "sofa_df_rat_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.49
+  },
+  {
+   "column": "sofa_pass_sr_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_longball_sr_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_dribble_sr_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_tackle_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_interception_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_duel_sr_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_aerial_sr_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_recovery_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_clearance_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_formation_consistency_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_fw_touches_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_mf_pass_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_mf_touches_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_df_tackle_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "sofa_df_duel_sr_5g_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 5.48
+  },
+  {
+   "column": "pa_squad_stability_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.51
+  },
+  {
+   "column": "pa_xi_rating_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.48
+  },
+  {
+   "column": "pa_core_dependency_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.48
+  },
+  {
+   "column": "pa_availability_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.48
+  },
+  {
+   "column": "pa_rest_days_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.48
+  },
+  {
+   "column": "pa_formation_std_away",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.48
+  },
+  {
+   "column": "pa_squad_stability_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.4
+  },
+  {
+   "column": "pa_xi_rating_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.38
+  },
+  {
+   "column": "pa_core_dependency_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.38
+  },
+  {
+   "column": "pa_availability_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.38
+  },
+  {
+   "column": "pa_rest_days_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.38
+  },
+  {
+   "column": "pa_formation_std_home",
+   "rows": 19662,
+   "null_rate": 0.0,
+   "zero_rate": 0.38
+  }
+ ],
+ "json_recoverability": {
+  "sample_n": 22582,
+  "json_key_presence": {
+   "accurate_crosses": 18.71,
+   "accurate_long_balls": 60.72,
+   "accurate_pass_sofa": 98.2,
+   "aerials_won_total": 49.59,
+   "ball_recoveries_sofa": 87.18,
+   "big_chances_created": 8.7,
+   "big_chances_missed": 6.93,
+   "clearances": 51.83,
+   "duels_won": 84.28,
+   "expected_assists": 41.6,
+   "expected_goals": 26.11,
+   "gk_saves_sofa": 7.09,
+   "goals_prevented": 2.94,
+   "interceptions": 40.75,
+   "meters_covered_high_speed_running_km": 19.36,
+   "meters_covered_running_km": 19.36,
+   "meters_covered_sprinting_km": 19.36,
+   "possession_lost": 92.53,
+   "rating": 98.29,
+   "successful_dribbles": 34.67,
+   "total_crosses": 41.91,
+   "total_dribbles": 48.81,
+   "total_long_balls": 74.61,
+   "total_pass_sofa": 99.08,
+   "total_tackles": 55.11,
+   "touches_sofa": 99.74
+  }
+ },
+ "xg_gradient": {
+  "per_team_bottom10": [
+   {
+    "team": "1. FC Nürnberg",
+    "n": 470,
+    "cov": 0.0
+   },
+   {
+    "team": "Amiens SC",
+    "n": 1455,
+    "cov": 0.0
+   },
+   {
+    "team": "Arminia Bielefeld",
+    "n": 1045,
+    "cov": 0.0
+   },
+   {
+    "team": "Bastia",
+    "n": 509,
+    "cov": 0.0
+   },
+   {
+    "team": "Benevento",
+    "n": 1127,
+    "cov": 0.0
+   },
+   {
+    "team": "Bordeaux",
+    "n": 3162,
+    "cov": 0.0
+   },
+   {
+    "team": "Brescia",
+    "n": 539,
+    "cov": 0.0
+   },
+   {
+    "team": "Cardiff City",
+    "n": 527,
+    "cov": 0.0
+   },
+   {
+    "team": "Chievo Verona",
+    "n": 1589,
+    "cov": 0.0
+   },
+   {
+    "team": "Dijon",
+    "n": 2543,
+    "cov": 0.0
+   }
+  ],
+  "per_team_top10": [
+   {
+    "team": "Ajaccio",
+    "n": 590,
+    "cov": 100.0
+   },
+   {
+    "team": "Almería",
+    "n": 1199,
+    "cov": 78.9
+   },
+   {
+    "team": "Cremonese",
+    "n": 1202,
+    "cov": 68.8
+   },
+   {
+    "team": "Monza",
+    "n": 1898,
+    "cov": 64.4
+   },
+   {
+    "team": "Nottingham Forest",
+    "n": 2400,
+    "cov": 61.6
+   },
+   {
+    "team": "Auxerre",
+    "n": 1708,
+    "cov": 60.8
+   },
+   {
+    "team": "Luton Town",
+    "n": 576,
+    "cov": 54.5
+   },
+   {
+    "team": "VfL Bochum 1848",
+    "n": 2066,
+    "cov": 53.6
+   },
+   {
+    "team": "Salernitana",
+    "n": 598,
+    "cov": 53.5
+   },
+   {
+    "team": "Clermont Foot",
+    "n": 1707,
+    "cov": 51.8
+   }
+  ],
+  "per_season": [
+   {
+    "season": "2016",
+    "n": 50641,
+    "cov": 0.0
+   },
+   {
+    "season": "2017",
+    "n": 50642,
+    "cov": 0.0
+   },
+   {
+    "season": "2018",
+    "n": 50677,
+    "cov": 0.0
+   },
+   {
+    "season": "2019",
+    "n": 42085,
+    "cov": 0.0
+   },
+   {
+    "season": "2020",
+    "n": 61306,
+    "cov": 0.0
+   },
+   {
+    "season": "2021",
+    "n": 54905,
+    "cov": 0.0
+   },
+   {
+    "season": "2022",
+    "n": 56097,
+    "cov": 98.8
+   },
+   {
+    "season": "2023",
+    "n": 54133,
+    "cov": 58.1
+   },
+   {
+    "season": "2024",
+    "n": 54285,
+    "cov": 45.0
+   },
+   {
+    "season": "2025",
+    "n": 54357,
+    "cov": 45.7
+   },
+   {
+    "season": "2026",
+    "n": 9226,
+    "cov": 47.9
+   }
+  ]
+ }
+}

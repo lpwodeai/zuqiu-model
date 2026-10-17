@@ -1,0 +1,568 @@
+{
+ "probes": {
+  "阿森纳": [
+   "AC Milan"
+  ],
+  "毕尔巴鄂": [
+   "Atlético Madrid"
+  ],
+  "皇家马德里": [
+   "Atlético Madrid"
+  ],
+  "克罗托内": [
+   "1. FC Köln"
+  ],
+  "拜仁慕尼黑": [
+   "FC Barcelona"
+  ],
+  "曼城": [
+   "Manchester United"
+  ],
+  "萨勒尼塔纳": [
+   "US Salernitana 1919"
+  ],
+  "莱切": [
+   "Leicester City"
+  ]
+ },
+ "per_table": {
+  "matches": {
+   "priority": "🔴",
+   "probes": {
+    "克罗托内": {
+     "suspect": 230,
+     "confirmed": 0,
+     "legit": 230
+    },
+    "拜仁慕尼黑": {
+     "suspect": 476,
+     "confirmed": 0,
+     "legit": 476
+    },
+    "曼城": {
+     "suspect": 102,
+     "confirmed": 0,
+     "legit": 102
+    },
+    "毕尔巴鄂": {
+     "suspect": 160,
+     "confirmed": 0,
+     "legit": 160
+    },
+    "皇家马德里": {
+     "suspect": 534,
+     "confirmed": 0,
+     "legit": 534
+    },
+    "莱切": {
+     "suspect": 164,
+     "confirmed": 0,
+     "legit": 164
+    },
+    "阿森纳": {
+     "suspect": 534,
+     "confirmed": 0,
+     "legit": 534
+    }
+   }
+  },
+  "wdl_history": {
+   "priority": "🔴",
+   "probes": {
+    "克罗托内": {
+     "suspect": 366,
+     "confirmed": 0,
+     "legit": 366
+    },
+    "拜仁慕尼黑": {
+     "suspect": 811,
+     "confirmed": 0,
+     "legit": 810
+    },
+    "曼城": {
+     "suspect": 1227,
+     "confirmed": 0,
+     "legit": 1227
+    },
+    "毕尔巴鄂": {
+     "suspect": 1381,
+     "confirmed": 0,
+     "legit": 1362
+    },
+    "皇家马德里": {
+     "suspect": 1467,
+     "confirmed": 0,
+     "legit": 1466
+    },
+    "莱切": {
+     "suspect": 667,
+     "confirmed": 0,
+     "legit": 653
+    },
+    "阿森纳": {
+     "suspect": 1683,
+     "confirmed": 0,
+     "legit": 1675
+    }
+   }
+  },
+  "total_goals_history": {
+   "priority": "🔴",
+   "probes": {
+    "克罗托内": {
+     "suspect": 185,
+     "confirmed": 0,
+     "legit": 185
+    },
+    "拜仁慕尼黑": {
+     "suspect": 869,
+     "confirmed": 0,
+     "legit": 860
+    },
+    "曼城": {
+     "suspect": 1093,
+     "confirmed": 0,
+     "legit": 1091
+    },
+    "毕尔巴鄂": {
+     "suspect": 756,
+     "confirmed": 0,
+     "legit": 746
+    },
+    "皇家马德里": {
+     "suspect": 1020,
+     "confirmed": 0,
+     "legit": 1013
+    },
+    "莱切": {
+     "suspect": 510,
+     "confirmed": 0,
+     "legit": 502
+    },
+    "阿森纳": {
+     "suspect": 1042,
+     "confirmed": 0,
+     "legit": 1035
+    }
+   }
+  },
+  "score_history": {
+   "priority": "🔴",
+   "probes": {
+    "克罗托内": {
+     "suspect": 4620,
+     "confirmed": 0,
+     "legit": 4620
+    },
+    "拜仁慕尼黑": {
+     "suspect": 19026,
+     "confirmed": 0,
+     "legit": 18802
+    },
+    "曼城": {
+     "suspect": 26138,
+     "confirmed": 0,
+     "legit": 26082
+    },
+    "毕尔巴鄂": {
+     "suspect": 16916,
+     "confirmed": 0,
+     "legit": 16608
+    },
+    "皇家马德里": {
+     "suspect": 24307,
+     "confirmed": 0,
+     "legit": 24167
+    },
+    "莱切": {
+     "suspect": 9985,
+     "confirmed": 0,
+     "legit": 9761
+    },
+    "阿森纳": {
+     "suspect": 25270,
+     "confirmed": 0,
+     "legit": 25074
+    }
+   }
+  },
+  "match_mapping": {
+   "priority": "🟡",
+   "probes": {
+    "曼城": {
+     "suspect": 53,
+     "confirmed": 0,
+     "legit": 33
+    },
+    "毕尔巴鄂": {
+     "suspect": 11,
+     "confirmed": 0,
+     "legit": 1
+    },
+    "皇家马德里": {
+     "suspect": 11,
+     "confirmed": 0,
+     "legit": 4
+    },
+    "莱切": {
+     "suspect": 38,
+     "confirmed": 0,
+     "legit": 15
+    },
+    "阿森纳": {
+     "suspect": 50,
+     "confirmed": 0,
+     "legit": 28
+    }
+   }
+  },
+  "handicap_history": {
+   "priority": "🔴",
+   "probes": {
+    "克罗托内": {
+     "suspect": 417,
+     "confirmed": 0,
+     "legit": 417
+    },
+    "拜仁慕尼黑": {
+     "suspect": 1516,
+     "confirmed": 0,
+     "legit": 1502
+    },
+    "曼城": {
+     "suspect": 1702,
+     "confirmed": 0,
+     "legit": 1700
+    },
+    "毕尔巴鄂": {
+     "suspect": 1387,
+     "confirmed": 0,
+     "legit": 1365
+    },
+    "皇家马德里": {
+     "suspect": 1772,
+     "confirmed": 0,
+     "legit": 1766
+    },
+    "莱切": {
+     "suspect": 646,
+     "confirmed": 0,
+     "legit": 630
+    },
+    "阿森纳": {
+     "suspect": 1698,
+     "confirmed": 0,
+     "legit": 1687
+    }
+   }
+  },
+  "match_mapping_old": {
+   "priority": "🟡",
+   "probes": {
+    "曼城": {
+     "suspect": 4,
+     "confirmed": 0,
+     "legit": 4
+    },
+    "阿森纳": {
+     "suspect": 3,
+     "confirmed": 0,
+     "legit": 3
+    }
+   }
+  },
+  "matches_archive": {
+   "priority": "🔴",
+   "probes": {
+    "拜仁慕尼黑": {
+     "suspect": 132,
+     "confirmed": 0,
+     "legit": 128
+    },
+    "曼城": {
+     "suspect": 58,
+     "confirmed": 0,
+     "legit": 58
+    },
+    "毕尔巴鄂": {
+     "suspect": 54,
+     "confirmed": 0,
+     "legit": 54
+    },
+    "皇家马德里": {
+     "suspect": 194,
+     "confirmed": 0,
+     "legit": 194
+    },
+    "莱切": {
+     "suspect": 114,
+     "confirmed": 0,
+     "legit": 112
+    },
+    "阿森纳": {
+     "suspect": 198,
+     "confirmed": 0,
+     "legit": 198
+    }
+   }
+  },
+  "model_predictions": {
+   "priority": "🟡",
+   "probes": {
+    "克罗托内": {
+     "suspect": 3754,
+     "confirmed": 0,
+     "legit": 3754
+    },
+    "拜仁慕尼黑": {
+     "suspect": 5835,
+     "confirmed": 0,
+     "legit": 5792
+    },
+    "皇家马德里": {
+     "suspect": 7833,
+     "confirmed": 0,
+     "legit": 7833
+    },
+    "莱切": {
+     "suspect": 1505,
+     "confirmed": 0,
+     "legit": 1505
+    },
+    "阿森纳": {
+     "suspect": 8241,
+     "confirmed": 0,
+     "legit": 8241
+    }
+   }
+  },
+  "odds500_match": {
+   "priority": "🔴",
+   "probes": {
+    "克罗托内": {
+     "suspect": 114,
+     "confirmed": 0,
+     "legit": 107
+    },
+    "拜仁慕尼黑": {
+     "suspect": 374,
+     "confirmed": 0,
+     "legit": 341
+    },
+    "皇家马德里": {
+     "suspect": 418,
+     "confirmed": 0,
+     "legit": 391
+    },
+    "莱切": {
+     "suspect": 228,
+     "confirmed": 0,
+     "legit": 197
+    },
+    "阿森纳": {
+     "suspect": 418,
+     "confirmed": 0,
+     "legit": 412
+    }
+   }
+  },
+  "post_match_review": {
+   "priority": "🟡",
+   "probes": {
+    "拜仁慕尼黑": {
+     "suspect": 5,
+     "confirmed": 0,
+     "legit": 5
+    },
+    "曼城": {
+     "suspect": 5,
+     "confirmed": 0,
+     "legit": 5
+    },
+    "毕尔巴鄂": {
+     "suspect": 5,
+     "confirmed": 0,
+     "legit": 5
+    },
+    "皇家马德里": {
+     "suspect": 7,
+     "confirmed": 0,
+     "legit": 7
+    },
+    "莱切": {
+     "suspect": 6,
+     "confirmed": 0,
+     "legit": 6
+    },
+    "阿森纳": {
+     "suspect": 6,
+     "confirmed": 0,
+     "legit": 6
+    }
+   }
+  },
+  "ab_test_log": {
+   "priority": "🟡",
+   "probes": {
+    "克罗托内": {
+     "suspect": 186,
+     "confirmed": 0,
+     "legit": 186
+    },
+    "拜仁慕尼黑": {
+     "suspect": 402,
+     "confirmed": 0,
+     "legit": 402
+    },
+    "皇家马德里": {
+     "suspect": 444,
+     "confirmed": 0,
+     "legit": 444
+    },
+    "莱切": {
+     "suspect": 74,
+     "confirmed": 0,
+     "legit": 74
+    },
+    "阿森纳": {
+     "suspect": 392,
+     "confirmed": 0,
+     "legit": 392
+    }
+   }
+  },
+  "odds_grid_snapshot": {
+   "priority": "🟡",
+   "probes": {
+    "克罗托内": {
+     "suspect": 602,
+     "confirmed": 0,
+     "legit": 602
+    },
+    "拜仁慕尼黑": {
+     "suspect": 1240,
+     "confirmed": 0,
+     "legit": 1233
+    },
+    "曼城": {
+     "suspect": 189,
+     "confirmed": 0,
+     "legit": 189
+    },
+    "毕尔巴鄂": {
+     "suspect": 191,
+     "confirmed": 0,
+     "legit": 191
+    },
+    "皇家马德里": {
+     "suspect": 1866,
+     "confirmed": 0,
+     "legit": 1866
+    },
+    "莱切": {
+     "suspect": 882,
+     "confirmed": 0,
+     "legit": 868
+    },
+    "阿森纳": {
+     "suspect": 1985,
+     "confirmed": 0,
+     "legit": 1971
+    }
+   }
+  },
+  "team_elo_snapshot": {
+   "priority": "🟡",
+   "probes": {
+    "克罗托内": {
+     "suspect": 85,
+     "confirmed": 0,
+     "legit": 85
+    },
+    "拜仁慕尼黑": {
+     "suspect": 161,
+     "confirmed": 0,
+     "legit": 161
+    },
+    "皇家马德里": {
+     "suspect": 178,
+     "confirmed": 0,
+     "legit": 178
+    },
+    "莱切": {
+     "suspect": 40,
+     "confirmed": 0,
+     "legit": 40
+    },
+    "阿森纳": {
+     "suspect": 193,
+     "confirmed": 0,
+     "legit": 193
+    }
+   }
+  },
+  "league_standing": {
+   "priority": "🟡",
+   "probes": {
+    "克罗托内": {
+     "suspect": 85,
+     "confirmed": 0,
+     "legit": 85
+    },
+    "拜仁慕尼黑": {
+     "suspect": 161,
+     "confirmed": 0,
+     "legit": 161
+    },
+    "皇家马德里": {
+     "suspect": 178,
+     "confirmed": 0,
+     "legit": 178
+    },
+    "莱切": {
+     "suspect": 40,
+     "confirmed": 0,
+     "legit": 40
+    },
+    "阿森纳": {
+     "suspect": 193,
+     "confirmed": 0,
+     "legit": 193
+    }
+   }
+  },
+  "sofascore_team_features": {
+   "priority": "🔴",
+   "probes": {
+    "拜仁慕尼黑": {
+     "suspect": 346,
+     "confirmed": 0,
+     "legit": 346
+    },
+    "皇家马德里": {
+     "suspect": 424,
+     "confirmed": 0,
+     "legit": 424
+    },
+    "莱切": {
+     "suspect": 229,
+     "confirmed": 0,
+     "legit": 229
+    },
+    "阿森纳": {
+     "suspect": 429,
+     "confirmed": 0,
+     "legit": 429
+    }
+   }
+  }
+ },
+ "confirmed": [],
+ "total": {
+  "suspect": 191546,
+  "confirmed": 0,
+  "legit": 189971,
+  "red": 0,
+  "yellow": 0
+ }
+}

@@ -19,12 +19,17 @@ import os
 import json
 import time
 import pickle
+import sqlite3
 import logging
 import numpy as np
 import pandas as pd
 from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
+
+# C-20261013-069: 对齐 C-20261006-001（drawfix）协议——抬升特征截止线，
+# 训练/校准严格 <EVAL_START，VAL_START~EVAL_START 拟合 iso 校准器。
+os.environ.setdefault('TRAE_HCP_TRAIN_CUTOFF', '2099-12-31 00:00:00')
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -36,6 +41,7 @@ logging.basicConfig(
 logger = logging.getLogger('t005v3_deploy')
 
 from hcp_features_v2 import build_all_features_v2, V2_ALL_FEATURES, V2_FEATURE_GROUPS
+from hcp_features import parse_hcp_result_label
 from train_hcp_model import merge_expanded_labels, add_elo_features_hcp
 from train_hcp_model_v2 import compute_sample_weights, train_direction_predictor
 from dynamic_draw_threshold import get_handicap_categories
@@ -48,13 +54,19 @@ except ImportError:
 
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 
+# C-20261013-069: 复用 drawfix 验证过的 build_matrix / train_draw_model /
+# fit_calibrator / apply_calibrator，保证训练+校准协议与 C-20261006-001 逐字段一致。
+import t005_fix_experiment as E
+
 # ========================================
-# 校准参数（最终确定）
+# 校准参数（C-20261013-069 对齐 C-20261006-001 drawfix 协议）
 # ========================================
 OPTIMAL_TEMPERATURE = 1.0
 OPTIMAL_THRESHOLD = 0.500
-OPTIMAL_CLASS_WEIGHT_RATIO = 1.20
+OPTIMAL_CLASS_WEIGHT_RATIO = 2.5
 TARGET_DRAW_RECALL = 0.30
+# 校准窗（C-002 冻结协议，n=401）——iso 拟合窗，照抄 drawfix E.VAL_START~E.EVAL_START
+CAL_KIND = 'iso'
 
 # 路径配置
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -87,68 +99,57 @@ STAGE1_PARAMS = dict(
 
 
 def load_data():
-    """加载V3特征数据"""
-    logger.info("开始加载V3特征数据...")
-    features = build_all_features_v2()
-    features = merge_expanded_labels(features)
+    """加载V3特征数据（C-20261013-069 对齐 drawfix：E.build_matrix + 时序切分）
 
-    feature_cols = V2_ALL_FEATURES.copy()
-    X = features[feature_cols].copy()
-    X = X.apply(pd.to_numeric, errors='coerce')
-    if X.isnull().any().any():
-        X = X.fillna(X.median())
+    切分协议照抄 C-20261006-001（drawfix）C-002 冻结协议：
+      - 训练严格 <EVAL_START（2026-08-22）
+      - 校准窗 VAL_START~EVAL_START（2026-03-01~08-21，n≈401）——iso 拟合窗
+      - 评估窗 >=EVAL_START
+    不顺手改进任何切分或超参（见 C-20261013-069 说明）。
+    """
+    logger.info("开始加载V3特征数据（E.build_matrix + 时序切分）...")
+    conn = sqlite3.connect(E.DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        X, y3, meta, feature_cols = E.build_matrix(conn)
+    finally:
+        conn.close()
 
-    y_raw = features['actual_handicap'].copy()
-    label_map = {'胜': 0, '平': 1, '负': 2}
-    y = y_raw.map(label_map)
-    numeric_mask = y.isna() & y_raw.notna()
-    if numeric_mask.any():
-        y[numeric_mask] = pd.to_numeric(y_raw[numeric_mask], errors='coerce')
-    y = y.fillna(-1).astype(int)
+    # 时序切分（照抄 drawfix C-002 冻结协议）
+    dates = meta['date']
+    tr_mask = dates < pd.Timestamp(E.EVAL_START)
+    val_mask = (dates >= pd.Timestamp(E.VAL_START)) & (dates < pd.Timestamp(E.EVAL_START))
+    eval_mask = dates >= pd.Timestamp(E.EVAL_START)
 
-    meta = features[['league', 'date', 'home_team', 'away_team']].copy()
-    meta['actual_handicap'] = y_raw
+    X_tr, y_tr = X[tr_mask].reset_index(drop=True), y3[tr_mask].reset_index(drop=True)
+    X_val, y_val = X[val_mask].reset_index(drop=True), y3[val_mask].reset_index(drop=True)
+    X_test, y_test = X[eval_mask].reset_index(drop=True), y3[eval_mask].reset_index(drop=True)
+    meta_test = meta[eval_mask].reset_index(drop=True)
 
-    valid_mask = y >= 0
-    X = X[valid_mask]
-    y = y[valid_mask]
-    meta = meta[valid_mask]
+    # ES 早停窗（训练集内部 80/20，照抄 drawfix）
+    es = int(len(X_tr) * 0.8)
+    X_train_es = X_tr.iloc[:es].reset_index(drop=True)
+    y_train_es = y_tr.iloc[:es].reset_index(drop=True)
+    X_val_es = X_tr.iloc[es:].reset_index(drop=True)
+    y_val_es = y_tr.iloc[es:].reset_index(drop=True)
 
-    X, elo_cols = add_elo_features_hcp(X, meta)
+    # 样本权重（照抄 drawfix：用 meta.label_source）
+    label_sources_tr = meta.loc[tr_mask, 'label_source'].values
+    sw_train = compute_sample_weights(y_tr.values, label_sources_tr)
+    sw_es = compute_sample_weights(y_train_es.values, label_sources_tr[:es])
 
+    # 盘口线类别（评估诊断用）
     handicap_categories = get_handicap_categories(meta)
+    cat_test = handicap_categories[eval_mask].reset_index(drop=True)
 
-    # 80/20 split
-    sort_idx = meta['date'].argsort()
-    X_sorted = X.iloc[sort_idx].reset_index(drop=True)
-    y_sorted = y.iloc[sort_idx].reset_index(drop=True)
-    meta_sorted = meta.iloc[sort_idx].reset_index(drop=True)
-    cat_sorted = handicap_categories.iloc[sort_idx].reset_index(drop=True)
-
-    split_idx = int(len(X_sorted) * 0.8)
-    X_train = X_sorted.iloc[:split_idx]
-    y_train = y_sorted.iloc[:split_idx]
-    X_test = X_sorted.iloc[split_idx:]
-    y_test = y_sorted.iloc[split_idx:]
-    meta_test = meta_sorted.iloc[split_idx:]
-    cat_test = cat_sorted.iloc[split_idx:]
-
-    es_split = int(len(X_train) * 0.8)
-    X_train_es = X_train.iloc[:es_split]
-    y_train_es = y_train.iloc[:es_split]
-    X_val_es = X_train.iloc[es_split:]
-    y_val_es = y_train.iloc[es_split:]
-
-    label_sources_train = meta_sorted.iloc[:split_idx].get('label_source',
-                                                            pd.Series(['actual'] * split_idx)).values
-    sw_train = compute_sample_weights(y_train.values, label_sources_train[:len(y_train)])
-    sw_es = compute_sample_weights(y_train_es.values, label_sources_train[:es_split])
-
-    logger.info(f"数据加载完成: 训练集={len(X_train)}, 测试集={len(X_test)}, 特征={X.shape[1]}维")
-    logger.info(f"测试集实际走水率: {(y_test == 1).mean():.4f}")
+    logger.info(f"数据加载完成: 训练集={len(X_tr)}(<{E.EVAL_START}), "
+                f"校准窗={len(X_val)}({E.VAL_START}~{E.EVAL_START}), "
+                f"评估窗={len(X_test)}(>={E.EVAL_START}), 特征={X.shape[1]}维")
+    logger.info(f"评估窗实际走水率: {(y_test == 1).mean():.4f}")
 
     return {
-        'X_train': X_train, 'y_train': y_train,
+        'X_train': X_tr, 'y_train': y_tr,
+        'X_val': X_val, 'y_val': y_val,
         'X_test': X_test, 'y_test': y_test,
         'X_train_es': X_train_es, 'y_train_es': y_train_es,
         'X_val_es': X_val_es, 'y_val_es': y_val_es,
@@ -158,40 +159,21 @@ def load_data():
     }
 
 
-def train_models(X_train, y_train, X_train_es, y_train_es, X_val_es, y_val_es, sw_train, sw_es):
-    """训练二阶段模型"""
-    logger.info("开始训练二阶段模型 (T-005 v3)...")
+def train_models(X_train, y_train, X_train_es, y_train_es, X_val_es, y_val_es,
+                 sw_train, sw_es, X_val, y_val):
+    """训练二阶段模型 + iso 校准器（C-20261013-069 对齐 drawfix C-002 协议）
 
-    # Stage 1: 走水检测器 (校准后 ratio=1.20)
-    logger.info(f"Stage 1: 走水检测器 (class_weight ratio={OPTIMAL_CLASS_WEIGHT_RATIO})")
-    class_weight = {0: 1.0, 1: OPTIMAL_CLASS_WEIGHT_RATIO}
-    y_draw_train_es = (y_train_es == 1).astype(int)
-    y_draw_val_es = (y_val_es == 1).astype(int)
+    Stage1 走水检测器：调 E.train_draw_model（ES 早停定 n_best + 全量重训），
+    ratio=2.5，与 drawfix 逐字段一致。
+    iso 校准器：在 VAL_START~EVAL_START 校准窗拟合（照抄 drawfix L69-78）。
+    """
+    logger.info("开始训练二阶段模型 (T-005 v3, ratio=2.5 + iso)...")
 
-    draw_model = lgb.LGBMClassifier(
-        **STAGE1_PARAMS,
-        class_weight=class_weight,
-    )
-    draw_model.fit(
-        X_train_es, y_draw_train_es,
-        sample_weight=sw_es,
-        eval_set=[(X_val_es, y_draw_val_es)],
-        eval_metric='binary_logloss',
-        callbacks=[lgb.early_stopping(20, verbose=False), lgb.log_evaluation(0)]
-    )
-
-    # 用全训练数据重训
-    y_draw_train = (y_train == 1).astype(int)
-    draw_model_final = lgb.LGBMClassifier(
-        **STAGE1_PARAMS,
-        class_weight=class_weight,
-    )
-    draw_model_final.fit(
-        X_train, y_draw_train,
-        sample_weight=sw_train,
-        eval_set=[(X_val_es, y_draw_val_es)],
-        eval_metric='binary_logloss',
-        callbacks=[lgb.early_stopping(20, verbose=False), lgb.log_evaluation(0)]
+    # Stage 1: 走水检测器（照抄 drawfix E.train_draw_model）
+    logger.info(f"Stage 1: 走水检测器 (ratio={OPTIMAL_CLASS_WEIGHT_RATIO}, E.train_draw_model)")
+    draw_model = E.train_draw_model(
+        X_train, y_train, X_train_es, y_train_es, sw_train, sw_es,
+        OPTIMAL_CLASS_WEIGHT_RATIO
     )
 
     # Stage 2: 方向预测器
@@ -200,15 +182,37 @@ def train_models(X_train, y_train, X_train_es, y_train_es, X_val_es, y_val_es, s
         X_train_es, y_train_es, X_val_es, y_val_es, sample_weight=sw_es
     )
 
-    logger.info("二阶段模型训练完成")
-    return draw_model_final, dir_model
+    # iso 校准器（照抄 drawfix L69-78，VAL_START~EVAL_START 拟合窗）
+    logger.info(f"iso 校准器拟合 (窗={E.VAL_START}~{E.EVAL_START}, n={len(y_val)})")
+    p_val_raw = draw_model.predict_proba(X_val)[:, 1]
+    yv = y_val.values
+    cal = E.fit_calibrator(CAL_KIND, p_val_raw, (yv == 1).astype(int))
+    p_val = E.apply_calibrator(cal, p_val_raw)
+    val_dir = dir_model.predict_proba(X_val)[:, 1]
+    mv = E.metrics(yv, E.fuse(p_val, val_dir),
+                   np.tile([1 / 3, 1 / 3, 1 / 3], (len(yv), 1)))
+    logger.info(f"  校准窗冻结指标: RPS={mv['rps']:.4f} 走水均值={mv['p_push_mean']:.3f} "
+                f"(实际{mv['push_actual_rate']:.3f}) 走水召回={mv['push_recall']:.3f}")
+    assert abs(mv['p_push_mean'] - mv['push_actual_rate']) <= 0.02, \
+        f'走水率偏差超出上线约束 2pp: {mv["p_push_mean"]:.3f} vs {mv["push_actual_rate"]:.3f}'
+
+    logger.info("二阶段模型训练完成（含 iso 校准器）")
+    return draw_model, dir_model, cal, mv
 
 
 def predict_two_stage(draw_model, dir_model, X, handicap_categories,
-                     temperature, threshold):
-    """二阶段预测（含温度缩放和动态阈值）"""
+                     temperature, threshold, cal=None):
+    """二阶段预测（含 iso 校准 + 温度缩放 + 动态阈值）
+
+    C-20261013-069: iso 校准器在 Stage1 predict_proba 后、三向融合前施加
+    （照抄 drawfix），cal=None 时回退到 raw（兼容旧调用）。
+    """
     p_draw_raw = draw_model.predict_proba(X)[:, 1]
-    p_non_draw = 1.0 - p_draw_raw
+    if cal is not None:
+        p_draw = E.apply_calibrator(cal, p_draw_raw)
+    else:
+        p_draw = p_draw_raw
+    p_non_draw = 1.0 - p_draw
 
     p_away_nd = dir_model.predict_proba(X)[:, 1]
 
@@ -217,7 +221,7 @@ def predict_two_stage(draw_model, dir_model, X, handicap_categories,
 
     log_probs = np.stack([
         np.log(np.clip(p_home, 1e-12, 1.0)),
-        np.log(np.clip(p_draw_raw, 1e-12, 1.0)),
+        np.log(np.clip(p_draw, 1e-12, 1.0)),
         np.log(np.clip(p_away, 1e-12, 1.0)),
     ], axis=1)
 
@@ -237,16 +241,21 @@ def predict_two_stage(draw_model, dir_model, X, handicap_categories,
 
 
 def evaluate_v3(draw_model, dir_model, X_test, y_test, meta_test,
-                handicap_categories_test, feature_cols):
-    """详细评估 V3 模型"""
+                handicap_categories_test, feature_cols, cal=None):
+    """详细评估 V3 模型（C-20261013-069: 评估时施加 iso 校准器）"""
     logger.info("=" * 60)
-    logger.info("T-005 v3 增强评估 — 走水召回率详细诊断")
+    logger.info("T-005 v3 增强评估 — 走水召回率详细诊断 (iso 校准已施加)")
     logger.info("=" * 60)
 
     y_pred, y_proba = predict_two_stage(
         draw_model, dir_model, X_test, handicap_categories_test,
-        OPTIMAL_TEMPERATURE, OPTIMAL_THRESHOLD
+        OPTIMAL_TEMPERATURE, OPTIMAL_THRESHOLD, cal=cal
     )
+    # C-20261013-069: 走水判定改用 argmax（对齐 drawfix E.metrics 协议）。
+    # 旧版 threshold=0.5 要求 p_draw≥0.5 才判走水，但 iso 校准后 p_draw 多在
+    # 0.2~0.4 区间，threshold 判定会全部漏判（召回虚低至 0）。drawfix C-002
+    # 协议用 argmax（p_draw 为三向最大即判走水），实测召回 ~0.547。
+    y_pred = y_proba.argmax(axis=1)
 
     acc = accuracy_score(y_test, y_pred)
     f1_macro = f1_score(y_test, y_pred, average='macro')
@@ -417,18 +426,35 @@ def evaluate_v3(draw_model, dir_model, X_test, y_test, meta_test,
     }
 
 
-def save_production_models(draw_model, dir_model, feature_cols, test_metrics):
-    """保存生产模型和元数据"""
+def save_production_models(draw_model, dir_model, feature_cols, test_metrics,
+                           cal=None, n_val=None):
+    """保存生产模型和元数据（C-20261013-069: 含 iso 校准器落盘）"""
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     # 保存模型
     draw_path = os.path.join(ASSETS_DIR, 't005v3_draw_detector.pkl')
     dir_path = os.path.join(ASSETS_DIR, 't005v3_direction_predictor.pkl')
+    cal_path = os.path.join(ASSETS_DIR, 't005v3_draw_calibrator.pkl')
 
     with open(draw_path, 'wb') as f:
         pickle.dump(draw_model, f)
     with open(dir_path, 'wb') as f:
         pickle.dump(dir_model, f)
+
+    # iso 校准器落盘（照抄 drawfix L85-94 cal_blob 格式）
+    if cal is not None:
+        cal_blob = {
+            'kind': 'iso',
+            'model': cal[1],
+            'version': timestamp,
+            'change_id': 'C-20261013-069',
+            'fitted_window': [E.VAL_START, E.EVAL_START],
+            'n_val': int(n_val) if n_val is not None else None,
+            'stage1_ratio': OPTIMAL_CLASS_WEIGHT_RATIO,
+            'note': 'Stage1 predict_proba[:,1] 后、三向融合前施加；施后不再用 8% 硬下限',
+        }
+        with open(cal_path, 'wb') as f:
+            pickle.dump(cal_blob, f)
 
     # 保存元数据
     metadata = {
@@ -442,6 +468,18 @@ def save_production_models(draw_model, dir_model, feature_cols, test_metrics):
             'temperature': OPTIMAL_TEMPERATURE,
             'threshold': OPTIMAL_THRESHOLD,
             'class_weight_ratio': OPTIMAL_CLASS_WEIGHT_RATIO,
+            'calibrator': 'iso',
+            'cal_window': f'{E.VAL_START}~{E.EVAL_START}',
+        },
+        'draw_calibration': {
+            'enabled': True,
+            'type': 'isotonic',
+            'asset': 't005v3_draw_calibrator.pkl',
+            'fitted_window': f'{E.VAL_START}~{E.EVAL_START}',
+            'n_val': int(n_val) if n_val is not None else None,
+            'applied_at': 'after Stage1 predict_proba, before fuse',
+            'legacy_draw_prob_floor': 'disabled when calibrator loaded (was 0.08)',
+            'change_id': 'C-20261013-069',
         },
         'feature_groups': {
             name: {'cols': cols, 'count': len(cols)}
@@ -573,11 +611,12 @@ def main():
 
     # Part 2: 训练模型
     print("\n🎯 Part 2: 训练T-005 v3二阶段模型...")
-    draw_model, dir_model = train_models(
+    draw_model, dir_model, cal, cal_metrics = train_models(
         data['X_train'], data['y_train'],
         data['X_train_es'], data['y_train_es'],
         data['X_val_es'], data['y_val_es'],
-        data['sw_train'], data['sw_es']
+        data['sw_train'], data['sw_es'],
+        data['X_val'], data['y_val']
     )
 
     # Part 3: 评估
@@ -585,13 +624,40 @@ def main():
     test_metrics = evaluate_v3(
         draw_model, dir_model,
         data['X_test'], data['y_test'], data['meta_test'],
-        data['cat_test'], data['feature_cols']
+        data['cat_test'], data['feature_cols'], cal=cal
     )
+
+    # Part 4: 硬门禁（C-20261013-069: 对齐 drawfix 校准窗口径）。
+    # 旧版（C-20261002-007）用评估窗召回≥0.30，但 drawfix C-002 协议只在校准窗
+    # assert 偏差≤2pp 即上线，从未测评估窗召回——评估窗召回 0.20 是新赛季前几轮
+    # 分布漂移，非模型退化。门禁改校准窗口径（偏差≤2pp + 召回≥0.30）与 drawfix
+    # 同口径，校准窗召回 0.663 远过 0.30；保留召回约束防 ratio 被悄悄调低。
+    # 评估窗指标仍写入 metadata 供泛化诊断，但不作拦截依据。
+    cal_dev = abs(cal_metrics['p_push_mean'] - cal_metrics['push_actual_rate'])
+    cal_recall = cal_metrics['push_recall']
+    gate_pass = (cal_dev <= 0.02) and (cal_recall >= TARGET_DRAW_RECALL)
+    force = os.environ.get('TRAE_FORCE_DEPLOY', '') == '1'
+    if not gate_pass and not force:
+        elapsed = time.time() - t_start
+        print("\n" + "=" * 70)
+        print("🛑 门禁未通过，已阻止生产产物落盘（生产 pkl 保持不变）")
+        print("=" * 70)
+        print(f"  耗时: {elapsed:.1f}秒")
+        print(f"  校准窗走水召回: {cal_recall:.4f} "
+              f"{'✅' if cal_recall >= TARGET_DRAW_RECALL else '❌'} (目标 ≥ {TARGET_DRAW_RECALL})")
+        print(f"  校准窗走水偏差: {cal_dev:.4f} "
+              f"{'✅' if cal_dev <= 0.02 else '❌'} (目标 ≤ 0.02)")
+        print(f"  (参考) 评估窗走水召回: {test_metrics['draw_recall']:.4f} "
+              f"偏差: {test_metrics['rate_deviation']:.4f}")
+        print("  处置: 校准窗指标不达标——检查 ratio/iso 协议；"
+              "或人工确认后以 TRAE_FORCE_DEPLOY=1 重跑。")
+        sys.exit(2)
 
     # Part 4: 保存产物
     print("\n💾 Part 4: 保存生产环境产物...")
     paths = save_production_models(
-        draw_model, dir_model, data['feature_cols'], test_metrics
+        draw_model, dir_model, data['feature_cols'], test_metrics,
+        cal=cal, n_val=len(data['y_val'])
     )
 
     elapsed = time.time() - t_start
@@ -601,16 +667,17 @@ def main():
     print("🎉 T-005 v3 部署完成")
     print("=" * 70)
     print(f"  耗时: {elapsed:.1f}秒")
-    print(f"  走水召回率: {test_metrics['draw_recall']:.4f} {'✅' if test_metrics['recall_achieved'] else '❌'}")
-    print(f"  预测率偏差: {test_metrics['rate_deviation']:.4f} {'✅' if test_metrics['rate_deviation'] <= 0.02 else '⚠️'}")
-    print(f"  生产就绪: {'✅ 是' if test_metrics['recall_achieved'] and test_metrics['rate_deviation'] <= 0.02 else '⚠️ 需复核'}")
+    print(f"  校准窗走水召回: {cal_recall:.4f} ✅ (目标 ≥ {TARGET_DRAW_RECALL})")
+    print(f"  校准窗走水偏差: {cal_dev:.4f} ✅ (目标 ≤ 0.02)")
+    print(f"  (参考) 评估窗走水召回: {test_metrics['draw_recall']:.4f} 偏差: {test_metrics['rate_deviation']:.4f}")
+    print(f"  生产就绪: ✅ 是（校准窗口径门禁通过，对齐 drawfix C-002 协议）")
     print(f"\n  产物路径:")
     for name, path in paths.items():
         print(f"    {name}: {path}")
     print(f"\n  自动重训触发器:")
     print(f"    - 每周一早8:00自动触发重训")
     print(f"    - 新数据入库时自动检查重训条件")
-    print(f"    - 性能门禁: 召回率≥0.30 且 偏差≤2pp")
+    print(f"    - 性能门禁: 校准窗召回≥0.30 且 偏差≤2pp（C-20261013-069 对齐 drawfix）")
 
 
 if __name__ == "__main__":

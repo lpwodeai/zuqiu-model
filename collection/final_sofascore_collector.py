@@ -6,8 +6,8 @@ SofaScore 五大联赛批量数据采集器（最终生产版本）
   的比赛阵容、球员详细统计、事件流（进球/红黄牌/换人）。
 
 数据源：
-  Base URL : https://api.sofascore.com/api/v1
-  反爬机制 : Akamai Bot Manager（TLS 指纹），通过 curl_cffi impersonate="chrome" 绕过
+  Base URL : https://www.sofascore.com/api/v1（C-20260930-004：旧 api.sofascore.com 子域已 403）
+  反爬机制 : Cloudflare（cf_clearance，主域同源）；curl_cffi impersonate="edge" + data/cookies_sofascore.json
   五大联赛 uniqueTournament IDs（已验证）:
     - 英超 Premier League : 17
     - 西甲 La Liga        : 8
@@ -179,7 +179,9 @@ LEAGUES_CONFIG: Dict[str, Dict[str, Any]] = {
     },
 }
 
-API_BASE = "https://api.sofascore.com/api/v1"
+# C-20260930-004: api.sofascore.com 子域已被 Cloudflare 拦截（403 Forbidden），
+# SofaScore 现将 API 部署于主域路径 https://www.sofascore.com/api/v1（SSR 同源）。
+API_BASE = "https://www.sofascore.com/api/v1"
 REQUEST_TIMEOUT = 15
 MAX_RETRIES = 2
 RETRY_BACKOFF = 0.8  # 指数退避基数（秒）
@@ -438,17 +440,23 @@ class SofaScoreClient:
                                     headers={"User-Agent": "Mozilla/5.0"})
         else:
             return None
-        if (resp.status_code == 403 and not self._pw_tried
-                and any(kw in (resp.text or "")[:300].lower()
-                        for kw in ("challenge", "akamai", "blocked", "denied"))):
+        # C-20261013-063 v3: 任何 403（challenge/Forbidden/jwt过期）都尝试切 CDP 通道
+        if resp.status_code == 403 and not self._pw_tried:
             self.challenge_detected = True
             if self._start_playwright():
-                self.logger.warning("➡️ curl_cffi 403 challenge，已切换 Playwright(Chromium) 后端重发")
+                self.logger.warning("➡️ curl_cffi 403，已切换 CDP(用户Edge) 后端重发")
                 return self._pw_send(url)
         return resp
 
     def _start_playwright(self) -> bool:
-        """惰性启动 headless Chromium。成功 True；未安装/已试过/异常 False（全异常隔离）。"""
+        """C-20261013-063 v3（终版）: attach 用户手动启动的 Edge（CDP 9222 端口）。
+
+        根因链：api.sofascore.com 子域硬封（403 Forbidden，疑地域级）；
+        www 同域 API 为 Akamai challenge 级，仅真实浏览器可解（页内传感器执行后 fetch 放行）；
+        Playwright launch（自动化拉起）会被 Cloudflare 判 Verification failed（--enable-automation 痕迹）；
+        唯一可行：用户手动启动 Edge（--remote-debugging-port=9222 --user-data-dir=独立目录，
+        见 f:\\zuqiu\\start_edge_sofa.bat），本方法 connect_over_cdp attach。
+        """
         if self._pw_active:
             return True
         if self._pw_tried:
@@ -456,50 +464,70 @@ class SofaScoreClient:
         self._pw_tried = True
         if not _HAS_PLAYWRIGHT:
             self.logger.warning("[Playwright] 未安装，无法切换后端"
-                                "（pip install playwright && playwright install chromium）")
+                                "（pip install playwright）")
             return False
         try:
             from playwright.sync_api import sync_playwright
             self._pw = sync_playwright().start()
-            self._pw_browser = self._pw.chromium.launch(headless=True)
-            self._pw_context = self._pw_browser.new_context(
-                locale="en-US",
-                viewport={"width": 1366, "height": 900},
-            )
-            self._pw_page = self._pw_context.new_page()
-            # 热身：模拟真实用户先访问 www 站让 Akamai 传感器执行（失败不阻断，api 可裸过）
+            # C-20261014-084: localhost → 127.0.0.1（本机 localhost 优先解析 IPv6 ::1，
+            # 而 Edge CDP 只绑 127.0.0.1，connect_over_cdp 不回落导致 ECONNREFUSED）
+            self._pw_browser = self._pw.chromium.connect_over_cdp("http://127.0.0.1:9222")
+            self._pw_context = self._pw_browser.contexts[0]
+            page = next((p for p in self._pw_context.pages
+                         if "sofascore.com" in p.url), None)
+            if page is None:
+                page = (self._pw_context.pages[0] if self._pw_context.pages
+                        else self._pw_context.new_page())
+                page.goto("https://www.sofascore.com/",
+                          timeout=REQUEST_TIMEOUT * 1000,
+                          wait_until="domcontentloaded")
+            self._pw_page = page
+            # 热身：给 Akamai 页内传感器执行时间（挑战由浏览器自动完成）
             try:
-                self._pw_page.goto("https://www.sofascore.com/",
-                                   timeout=REQUEST_TIMEOUT * 1000,
-                                   wait_until="domcontentloaded")
+                self._pw_page.wait_for_timeout(3000)
             except Exception:
                 pass
             self._pw_active = True
+            self.logger.info("[CDP] 已 attach 用户 Edge（localhost:9222），同域 fetch 通道就绪")
             return True
         except Exception as e:
-            self.logger.error(f"[Playwright] 启动失败: {type(e).__name__}: {e}")
+            self.logger.error(f"[CDP] attach 失败: {type(e).__name__}: {e} | "
+                              f"请先双击运行 f:\\zuqiu\\start_edge_sofa.bat 启动采集专用 Edge")
             self._close_playwright()
             return False
 
     def _pw_send(self, url: str) -> Optional[_PwJsonResponse]:
-        """用 Chromium 页面导航请求 API。导航/读取异常上抛给 get() 的重试逻辑。"""
+        """在已 attach 的 Edge 页面内 fetch 同域 API（与 SofaScore 前端 XHR 行为一致）。
+
+        url 为绝对地址（https://www.sofascore.com/api/v1/...），页内 fetch 用相对路径
+        （同域，自动携带会话 cookie / Akamai _abck，无 CORS 问题）。
+        """
         if not self._pw_active or self._pw_page is None:
             return None
-        pw_resp = self._pw_page.goto(url, timeout=REQUEST_TIMEOUT * 1000,
-                                     wait_until="domcontentloaded")
-        if pw_resp is None:
-            raise RuntimeError("page.goto returned None")
-        return _PwJsonResponse(pw_resp.status, pw_resp.body())
+        path = url.replace("https://www.sofascore.com", "")
+        result = self._pw_page.evaluate(
+            """async (p) => {
+                const r = await fetch(p);
+                return {status: r.status, body: await r.text()};
+            }""", path)
+        return _PwJsonResponse(result["status"], result["body"].encode("utf-8"))
 
     def _close_playwright(self) -> None:
-        for attr in ("_pw_page", "_pw_context", "_pw_browser"):
-            obj = getattr(self, attr, None)
-            if obj is not None:
-                try:
-                    obj.close()
-                except Exception:
-                    pass
-                setattr(self, attr, None)
+        # C-20261013-063 v3: attach 模式下浏览器是用户手动启动的 Edge，
+        # 只断开 CDP 连接（browser.close()），绝不能 close page/context（会关用户标签页）
+        if self._pw_browser is not None:
+            try:
+                self._pw_browser.close()
+            except Exception:
+                pass
+        elif self._pw_context is not None:
+            try:
+                self._pw_context.close()
+            except Exception:
+                pass
+        self._pw_page = None
+        self._pw_context = None
+        self._pw_browser = None
         if self._pw is not None:
             try:
                 self._pw.stop()
@@ -1697,6 +1725,35 @@ def write_match_to_db(conn: sqlite3.Connection, parsed_event: Dict[str, Any],
         counts["mapping"] = cursor.rowcount if cursor.rowcount > 0 else 0
         logger.debug(f"[event {event_id}] 写入 fbref_match_mapping: rowcount={counts['mapping']}")
 
+        # C-20261013-062 官方改期对账：INSERT OR IGNORE 不更新既有行，赛程改点后
+        # mapping.match_date 永久陈旧（案例：埃尔切 vs 塞尔塔 官方由周一 14:00 提前至
+        # 周日 14:00（西班牙），北京日 10-12→10-11，复盘 --date 批量扫漏场）。
+        # 权威日期 = startTimestamp 的北京日（parse_event_basics 已统一 CN_TZ）。
+        # 只改 match_date；odds_match_id/match_id 保留旧值作历史标识，避免跨表 join 断裂。
+        cursor.execute(
+            "SELECT match_date, odds_match_id FROM fbref_match_mapping "
+            "WHERE fbref_match_id=?",
+            (event_id,),
+        )
+        existing_map = cursor.fetchone()
+        if existing_map and existing_map[0] != parsed_event["match_date"]:
+            old_date, old_odds_mid = existing_map
+            cursor.execute(
+                "UPDATE fbref_match_mapping SET match_date=? WHERE fbref_match_id=?",
+                (parsed_event["match_date"], event_id),
+            )
+            upd = cursor.execute(
+                "UPDATE matches SET match_date=? WHERE match_id=? AND match_date<>?",
+                (parsed_event["match_date"], old_odds_mid, parsed_event["match_date"]),
+            )
+            logger.warning(
+                f"[event {event_id}] 官方改期对账: {old_date} -> "
+                f"{parsed_event['match_date']} "
+                f"({parsed_event['home_team']} vs {parsed_event['away_team']})；"
+                f"mapping 已更新、matches 同步 {upd.rowcount} 行；"
+                f"odds_match_id/match_id 保留旧值作历史标识"
+            )
+
         # ---------- 2/3. match_lineups + match_player_stats ----------
         # 先按 incidents 的 substitutions 建索引: (side, player_name) -> (sub_in_time, sub_out_time, injury)
         sub_index: Dict[Tuple[str, str], Dict[str, Any]] = {}
@@ -1951,20 +2008,37 @@ def collect_single_event(client: SofaScoreClient, event: Dict[str, Any],
 
     # 4 个接口并发拉取（同一场内并行，提升效率）
     results: Dict[str, Optional[Dict[str, Any]]] = {}
-    with ThreadPoolExecutor(max_workers=CONCURRENT_WORKERS, thread_name_prefix=f"evt{event_id}") as ex:
-        futures = {
-            ex.submit(fetch_event_detail, client, event_id, logger): "detail",
-            ex.submit(fetch_event_statistics, client, event_id, logger): "statistics",
-            ex.submit(fetch_event_lineups, client, event_id, logger): "lineups",
-            ex.submit(fetch_event_incidents, client, event_id, logger): "incidents",
+    if getattr(client, "_pw_active", False):
+        # C-20261014-084: CDP 后端（Playwright sync API）绑定 attach 所在线程，
+        # 线程池内 evaluate 会报 "Cannot switch to a different thread"——
+        # CDP 已激活时改为主线程顺序拉取（反爬状态下稳定性优先于速度）。
+        fetchers = {
+            "detail": fetch_event_detail,
+            "statistics": fetch_event_statistics,
+            "lineups": fetch_event_lineups,
+            "incidents": fetch_event_incidents,
         }
-        for fut in as_completed(futures):
-            tag = futures[fut]
+        for tag, fn in fetchers.items():
             try:
-                results[tag] = fut.result()
+                results[tag] = fn(client, event_id, logger)
             except Exception as e:
                 logger.error(f"[event {event_id}] 接口 {tag} 异常: {type(e).__name__}: {e}")
                 results[tag] = None
+    else:
+        with ThreadPoolExecutor(max_workers=CONCURRENT_WORKERS, thread_name_prefix=f"evt{event_id}") as ex:
+            futures = {
+                ex.submit(fetch_event_detail, client, event_id, logger): "detail",
+                ex.submit(fetch_event_statistics, client, event_id, logger): "statistics",
+                ex.submit(fetch_event_lineups, client, event_id, logger): "lineups",
+                ex.submit(fetch_event_incidents, client, event_id, logger): "incidents",
+            }
+            for fut in as_completed(futures):
+                tag = futures[fut]
+                try:
+                    results[tag] = fut.result()
+                except Exception as e:
+                    logger.error(f"[event {event_id}] 接口 {tag} 异常: {type(e).__name__}: {e}")
+                    results[tag] = None
 
     detail = results.get("detail")
     stats = results.get("statistics")
@@ -1980,11 +2054,16 @@ def collect_single_event(client: SofaScoreClient, event: Dict[str, Any],
                 f"incidents={'Y' if incidents_data else 'N'}")
 
     # 403 challenge 检测：反爬封禁已触发，跳过写库并中止整轮采集
-    if getattr(client, "challenge_detected", False):
+    # C-20261014-084：若 4 接口经 CDP 兜底已全部成功（ok_count==4），curl 层的
+    # challenge 标记不代表数据缺失——放行写库（数据完整），但仍保留标记供批量
+    # 轮外层决定是否冷却；仅当数据有缺口才中止。
+    if getattr(client, "challenge_detected", False) and ok_count < 4:
         logger.error(f"[event {event_id}] 检测到 Akamai 403 challenge，跳过写库并中止本轮采集")
         raise SofaScoreChallengeError(
             f"event {event_id} 触发 403 challenge（建议冷却 {CHALLENGE_COOLDOWN_SECONDS}s 后 --resume）"
         )
+    if getattr(client, "challenge_detected", False):
+        logger.info(f"[event {event_id}] curl 403 但 CDP 兜底 4/4 成功，数据完整，放行写库（challenge 标记保留）")
 
     # 原始 JSON 落盘（冷存储：失败仅WARNING，不中断DB热写入，不抛异常）
     try:

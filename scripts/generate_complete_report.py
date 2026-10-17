@@ -535,7 +535,7 @@ def predict_match(m, odds_data, models):
         tg_total = sum(1.0/tg.get(f'o{i}', 999) for i in range(8) if tg.get(f'o{i}', 999) > 0)
         tg_lambda = sum(i * (1.0/tg.get(f'o{i}',999))/tg_total for i in range(8) if tg.get(f'o{i}',999) > 0)
         
-        home_impl, away_impl = hp_b, ap_b
+        home_impl, away_impl = hp, ap
         h_ratio = home_impl / (home_impl + away_impl) if (home_impl + away_impl) > 0 else 0.5
         lh = tg_lambda * h_ratio
         la = tg_lambda * (1 - h_ratio)

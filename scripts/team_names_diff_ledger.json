@@ -1,0 +1,1038 @@
+{
+  "canonical_count": 166,
+  "canonical_cn_unmapped": [],
+  "source_sizes": {
+    "team_name_mapping.TEAM_ALIASES": 591,
+    "feature_utils.TEAM_NAME_MAP": 227,
+    "fbref_anti_cloudflare.FBREF_TEAM_NAME_MAP": 191,
+    "sporttery_sync_to_odds.TEAM_NAME_MAP": 69,
+    "score_match_enhancer(cn→en)": 127,
+    "merge_understat_to_matches.UNDERSTAT_ALIASES": 14,
+    "manual_extra(C-097差分)": 4,
+    "odds.db.team_mapping": 261
+  },
+  "drift_unresolved_per_source": {
+    "team_name_mapping.TEAM_ALIASES": [
+      "不伦瑞克",
+      "Eintracht Braunschweig",
+      "Braunschweig"
+    ],
+    "feature_utils.TEAM_NAME_MAP": [
+      "罗德兹",
+      "敦刻尔克"
+    ],
+    "score_match_enhancer(cn→en)": [
+      "敦刻尔克",
+      "罗德兹"
+    ],
+    "odds.db.team_mapping": [
+      "Burgos",
+      "Zaragoza",
+      "Cittadella",
+      "Modena",
+      "Reggiana",
+      "Grenoble",
+      "Rodez",
+      "Concarneau",
+      "Dunkerque"
+    ]
+  },
+  "teams": [
+    {
+      "team_id": 1,
+      "canonical_en": "1. FC Heidenheim",
+      "canonical_cn": "海登海姆",
+      "alias_count": 4
+    },
+    {
+      "team_id": 2,
+      "canonical_en": "1. FC Köln",
+      "canonical_cn": "科隆",
+      "alias_count": 9
+    },
+    {
+      "team_id": 3,
+      "canonical_en": "1. FC Nürnberg",
+      "canonical_cn": "纽伦堡",
+      "alias_count": 7
+    },
+    {
+      "team_id": 4,
+      "canonical_en": "1. FC Union Berlin",
+      "canonical_cn": "柏林联合",
+      "alias_count": 3
+    },
+    {
+      "team_id": 5,
+      "canonical_en": "1. FSV Mainz 05",
+      "canonical_cn": "美因茨",
+      "alias_count": 4
+    },
+    {
+      "team_id": 6,
+      "canonical_en": "AC Milan",
+      "canonical_cn": "AC米兰",
+      "alias_count": 5
+    },
+    {
+      "team_id": 7,
+      "canonical_en": "AS Monaco",
+      "canonical_cn": "摩纳哥",
+      "alias_count": 3
+    },
+    {
+      "team_id": 8,
+      "canonical_en": "AS Roma",
+      "canonical_cn": "罗马",
+      "alias_count": 3
+    },
+    {
+      "team_id": 9,
+      "canonical_en": "Ajaccio",
+      "canonical_cn": "阿雅克肖",
+      "alias_count": 3
+    },
+    {
+      "team_id": 10,
+      "canonical_en": "Almería",
+      "canonical_cn": "阿尔梅里亚",
+      "alias_count": 5
+    },
+    {
+      "team_id": 11,
+      "canonical_en": "Amiens SC",
+      "canonical_cn": "亚眠",
+      "alias_count": 3
+    },
+    {
+      "team_id": 12,
+      "canonical_en": "Angers",
+      "canonical_cn": "昂热",
+      "alias_count": 4
+    },
+    {
+      "team_id": 13,
+      "canonical_en": "Arminia Bielefeld",
+      "canonical_cn": "比勒费尔德",
+      "alias_count": 4
+    },
+    {
+      "team_id": 14,
+      "canonical_en": "Arsenal",
+      "canonical_cn": "阿森纳",
+      "alias_count": 3
+    },
+    {
+      "team_id": 15,
+      "canonical_en": "Aston Villa",
+      "canonical_cn": "阿斯顿维拉",
+      "alias_count": 5
+    },
+    {
+      "team_id": 16,
+      "canonical_en": "Atalanta",
+      "canonical_cn": "亚特兰大",
+      "alias_count": 3
+    },
+    {
+      "team_id": 17,
+      "canonical_en": "Athletic Club",
+      "canonical_cn": "毕尔巴鄂",
+      "alias_count": 7
+    },
+    {
+      "team_id": 18,
+      "canonical_en": "Atlético Madrid",
+      "canonical_cn": "马德里竞技",
+      "alias_count": 10
+    },
+    {
+      "team_id": 19,
+      "canonical_en": "Auxerre",
+      "canonical_cn": "欧塞尔",
+      "alias_count": 3
+    },
+    {
+      "team_id": 20,
+      "canonical_en": "Bastia",
+      "canonical_cn": "巴斯蒂亚",
+      "alias_count": 3
+    },
+    {
+      "team_id": 21,
+      "canonical_en": "Bayer 04 Leverkusen",
+      "canonical_cn": "勒沃库森",
+      "alias_count": 5
+    },
+    {
+      "team_id": 22,
+      "canonical_en": "Benevento",
+      "canonical_cn": "贝内文托",
+      "alias_count": 3
+    },
+    {
+      "team_id": 23,
+      "canonical_en": "Bologna",
+      "canonical_cn": "博洛尼亚",
+      "alias_count": 3
+    },
+    {
+      "team_id": 24,
+      "canonical_en": "Bordeaux",
+      "canonical_cn": "波尔多",
+      "alias_count": 3
+    },
+    {
+      "team_id": 25,
+      "canonical_en": "Borussia Dortmund",
+      "canonical_cn": "多特蒙德",
+      "alias_count": 5
+    },
+    {
+      "team_id": 26,
+      "canonical_en": "Borussia M'gladbach",
+      "canonical_cn": "门兴格拉德巴赫",
+      "alias_count": 10
+    },
+    {
+      "team_id": 27,
+      "canonical_en": "Bournemouth",
+      "canonical_cn": "伯恩茅斯",
+      "alias_count": 3
+    },
+    {
+      "team_id": 28,
+      "canonical_en": "Brentford",
+      "canonical_cn": "布伦特福德",
+      "alias_count": 4
+    },
+    {
+      "team_id": 29,
+      "canonical_en": "Brescia",
+      "canonical_cn": "布雷西亚",
+      "alias_count": 3
+    },
+    {
+      "team_id": 30,
+      "canonical_en": "Brighton & Hove Albion",
+      "canonical_cn": "布莱顿",
+      "alias_count": 6
+    },
+    {
+      "team_id": 31,
+      "canonical_en": "Burnley",
+      "canonical_cn": "伯恩利",
+      "alias_count": 3
+    },
+    {
+      "team_id": 32,
+      "canonical_en": "Cagliari",
+      "canonical_cn": "卡利亚里",
+      "alias_count": 3
+    },
+    {
+      "team_id": 33,
+      "canonical_en": "Cardiff City",
+      "canonical_cn": "加的夫城",
+      "alias_count": 3
+    },
+    {
+      "team_id": 34,
+      "canonical_en": "Celta Vigo",
+      "canonical_cn": "塞尔塔",
+      "alias_count": 5
+    },
+    {
+      "team_id": 35,
+      "canonical_en": "Chelsea",
+      "canonical_cn": "切尔西",
+      "alias_count": 3
+    },
+    {
+      "team_id": 36,
+      "canonical_en": "Chievo Verona",
+      "canonical_cn": "切沃",
+      "alias_count": 4
+    },
+    {
+      "team_id": 37,
+      "canonical_en": "Clermont Foot",
+      "canonical_cn": "克莱蒙",
+      "alias_count": 4
+    },
+    {
+      "team_id": 38,
+      "canonical_en": "Como",
+      "canonical_cn": "科莫",
+      "alias_count": 4
+    },
+    {
+      "team_id": 39,
+      "canonical_en": "Coventry City",
+      "canonical_cn": "考文垂",
+      "alias_count": 3
+    },
+    {
+      "team_id": 40,
+      "canonical_en": "Cremonese",
+      "canonical_cn": "克雷莫纳",
+      "alias_count": 3
+    },
+    {
+      "team_id": 41,
+      "canonical_en": "Crystal Palace",
+      "canonical_cn": "水晶宫",
+      "alias_count": 4
+    },
+    {
+      "team_id": 42,
+      "canonical_en": "Cádiz",
+      "canonical_cn": "加的斯",
+      "alias_count": 5
+    },
+    {
+      "team_id": 43,
+      "canonical_en": "Darmstadt 98",
+      "canonical_cn": "达姆施塔特",
+      "alias_count": 4
+    },
+    {
+      "team_id": 44,
+      "canonical_en": "Deportivo Alavés",
+      "canonical_cn": "阿拉维斯",
+      "alias_count": 5
+    },
+    {
+      "team_id": 45,
+      "canonical_en": "Deportivo de A Coruña",
+      "canonical_cn": "拉科鲁尼亚",
+      "alias_count": 8
+    },
+    {
+      "team_id": 46,
+      "canonical_en": "Dijon",
+      "canonical_cn": "第戎",
+      "alias_count": 3
+    },
+    {
+      "team_id": 47,
+      "canonical_en": "Eibar",
+      "canonical_cn": "埃瓦尔",
+      "alias_count": 3
+    },
+    {
+      "team_id": 48,
+      "canonical_en": "Eintracht Frankfurt",
+      "canonical_cn": "法兰克福",
+      "alias_count": 4
+    },
+    {
+      "team_id": 49,
+      "canonical_en": "Elche",
+      "canonical_cn": "埃尔切",
+      "alias_count": 3
+    },
+    {
+      "team_id": 50,
+      "canonical_en": "Empoli",
+      "canonical_cn": "恩波利",
+      "alias_count": 3
+    },
+    {
+      "team_id": 51,
+      "canonical_en": "Espanyol",
+      "canonical_cn": "西班牙人",
+      "alias_count": 4
+    },
+    {
+      "team_id": 52,
+      "canonical_en": "Everton",
+      "canonical_cn": "埃弗顿",
+      "alias_count": 3
+    },
+    {
+      "team_id": 53,
+      "canonical_en": "FC Augsburg",
+      "canonical_cn": "奥格斯堡",
+      "alias_count": 3
+    },
+    {
+      "team_id": 54,
+      "canonical_en": "FC Barcelona",
+      "canonical_cn": "巴塞罗那",
+      "alias_count": 7
+    },
+    {
+      "team_id": 55,
+      "canonical_en": "FC Bayern München",
+      "canonical_cn": "拜仁慕尼黑",
+      "alias_count": 8
+    },
+    {
+      "team_id": 56,
+      "canonical_en": "FC Crotone",
+      "canonical_cn": "克罗托内",
+      "alias_count": 3
+    },
+    {
+      "team_id": 57,
+      "canonical_en": "FC Ingolstadt 04",
+      "canonical_cn": "因戈尔施塔特",
+      "alias_count": 3
+    },
+    {
+      "team_id": 58,
+      "canonical_en": "FC Schalke 04",
+      "canonical_cn": "沙尔克04",
+      "alias_count": 4
+    },
+    {
+      "team_id": 59,
+      "canonical_en": "FC St. Pauli",
+      "canonical_cn": "圣保利",
+      "alias_count": 4
+    },
+    {
+      "team_id": 60,
+      "canonical_en": "Fiorentina",
+      "canonical_cn": "佛罗伦萨",
+      "alias_count": 3
+    },
+    {
+      "team_id": 61,
+      "canonical_en": "Fortuna Düsseldorf",
+      "canonical_cn": "杜塞尔多夫",
+      "alias_count": 7
+    },
+    {
+      "team_id": 62,
+      "canonical_en": "Frosinone",
+      "canonical_cn": "弗罗西诺内",
+      "alias_count": 4
+    },
+    {
+      "team_id": 63,
+      "canonical_en": "Fulham",
+      "canonical_cn": "富勒姆",
+      "alias_count": 3
+    },
+    {
+      "team_id": 64,
+      "canonical_en": "Genoa",
+      "canonical_cn": "热那亚",
+      "alias_count": 3
+    },
+    {
+      "team_id": 65,
+      "canonical_en": "Getafe",
+      "canonical_cn": "赫塔费",
+      "alias_count": 4
+    },
+    {
+      "team_id": 66,
+      "canonical_en": "Girona FC",
+      "canonical_cn": "赫罗纳",
+      "alias_count": 3
+    },
+    {
+      "team_id": 67,
+      "canonical_en": "Granada",
+      "canonical_cn": "格拉纳达",
+      "alias_count": 4
+    },
+    {
+      "team_id": 68,
+      "canonical_en": "Guingamp",
+      "canonical_cn": "甘冈",
+      "alias_count": 3
+    },
+    {
+      "team_id": 69,
+      "canonical_en": "Hamburger SV",
+      "canonical_cn": "汉堡",
+      "alias_count": 4
+    },
+    {
+      "team_id": 70,
+      "canonical_en": "Hannover 96",
+      "canonical_cn": "汉诺威96",
+      "alias_count": 3
+    },
+    {
+      "team_id": 71,
+      "canonical_en": "Hellas Verona",
+      "canonical_cn": "维罗纳",
+      "alias_count": 3
+    },
+    {
+      "team_id": 72,
+      "canonical_en": "Hertha BSC",
+      "canonical_cn": "柏林赫塔",
+      "alias_count": 4
+    },
+    {
+      "team_id": 73,
+      "canonical_en": "Holstein Kiel",
+      "canonical_cn": "基尔",
+      "alias_count": 3
+    },
+    {
+      "team_id": 74,
+      "canonical_en": "Huddersfield Town",
+      "canonical_cn": "哈德斯菲尔德",
+      "alias_count": 3
+    },
+    {
+      "team_id": 75,
+      "canonical_en": "Huesca",
+      "canonical_cn": "韦斯卡",
+      "alias_count": 3
+    },
+    {
+      "team_id": 76,
+      "canonical_en": "Hull City",
+      "canonical_cn": "赫尔城",
+      "alias_count": 4
+    },
+    {
+      "team_id": 77,
+      "canonical_en": "Inter",
+      "canonical_cn": "国际米兰",
+      "alias_count": 6
+    },
+    {
+      "team_id": 78,
+      "canonical_en": "Ipswich Town",
+      "canonical_cn": "伊普斯维奇",
+      "alias_count": 4
+    },
+    {
+      "team_id": 79,
+      "canonical_en": "Juventus",
+      "canonical_cn": "尤文图斯",
+      "alias_count": 5
+    },
+    {
+      "team_id": 80,
+      "canonical_en": "Lazio",
+      "canonical_cn": "拉齐奥",
+      "alias_count": 3
+    },
+    {
+      "team_id": 81,
+      "canonical_en": "Le Havre",
+      "canonical_cn": "勒阿弗尔",
+      "alias_count": 4
+    },
+    {
+      "team_id": 82,
+      "canonical_en": "Le Mans",
+      "canonical_cn": "勒芒",
+      "alias_count": 3
+    },
+    {
+      "team_id": 83,
+      "canonical_en": "Lecce",
+      "canonical_cn": "莱切",
+      "alias_count": 3
+    },
+    {
+      "team_id": 84,
+      "canonical_en": "Leeds United",
+      "canonical_cn": "利兹联",
+      "alias_count": 3
+    },
+    {
+      "team_id": 85,
+      "canonical_en": "Leganés",
+      "canonical_cn": "莱加内斯",
+      "alias_count": 6
+    },
+    {
+      "team_id": 86,
+      "canonical_en": "Leicester City",
+      "canonical_cn": "莱切斯特城",
+      "alias_count": 6
+    },
+    {
+      "team_id": 87,
+      "canonical_en": "Levante UD",
+      "canonical_cn": "莱万特",
+      "alias_count": 4
+    },
+    {
+      "team_id": 88,
+      "canonical_en": "Lille",
+      "canonical_cn": "里尔",
+      "alias_count": 4
+    },
+    {
+      "team_id": 89,
+      "canonical_en": "Liverpool FC",
+      "canonical_cn": "利物浦",
+      "alias_count": 4
+    },
+    {
+      "team_id": 90,
+      "canonical_en": "Lorient",
+      "canonical_cn": "洛里昂",
+      "alias_count": 3
+    },
+    {
+      "team_id": 91,
+      "canonical_en": "Luton Town",
+      "canonical_cn": "卢顿",
+      "alias_count": 4
+    },
+    {
+      "team_id": 92,
+      "canonical_en": "Mallorca",
+      "canonical_cn": "马洛卡",
+      "alias_count": 4
+    },
+    {
+      "team_id": 93,
+      "canonical_en": "Manchester City",
+      "canonical_cn": "曼城",
+      "alias_count": 5
+    },
+    {
+      "team_id": 94,
+      "canonical_en": "Manchester United",
+      "canonical_cn": "曼联",
+      "alias_count": 9
+    },
+    {
+      "team_id": 95,
+      "canonical_en": "Metz",
+      "canonical_cn": "梅斯",
+      "alias_count": 3
+    },
+    {
+      "team_id": 96,
+      "canonical_en": "Middlesbrough",
+      "canonical_cn": "米德尔斯堡",
+      "alias_count": 3
+    },
+    {
+      "team_id": 97,
+      "canonical_en": "Montpellier",
+      "canonical_cn": "蒙彼利埃",
+      "alias_count": 4
+    },
+    {
+      "team_id": 98,
+      "canonical_en": "Monza",
+      "canonical_cn": "蒙扎",
+      "alias_count": 3
+    },
+    {
+      "team_id": 99,
+      "canonical_en": "Málaga CF",
+      "canonical_cn": "马拉加",
+      "alias_count": 5
+    },
+    {
+      "team_id": 100,
+      "canonical_en": "Nancy",
+      "canonical_cn": "南锡",
+      "alias_count": 4
+    },
+    {
+      "team_id": 101,
+      "canonical_en": "Nantes",
+      "canonical_cn": "南特",
+      "alias_count": 3
+    },
+    {
+      "team_id": 102,
+      "canonical_en": "Newcastle United",
+      "canonical_cn": "纽卡斯尔",
+      "alias_count": 6
+    },
+    {
+      "team_id": 103,
+      "canonical_en": "Nice",
+      "canonical_cn": "尼斯",
+      "alias_count": 3
+    },
+    {
+      "team_id": 104,
+      "canonical_en": "Norwich City",
+      "canonical_cn": "诺维奇",
+      "alias_count": 3
+    },
+    {
+      "team_id": 105,
+      "canonical_en": "Nottingham Forest",
+      "canonical_cn": "诺丁汉森林",
+      "alias_count": 8
+    },
+    {
+      "team_id": 106,
+      "canonical_en": "Nîmes Olympique",
+      "canonical_cn": "尼姆",
+      "alias_count": 5
+    },
+    {
+      "team_id": 107,
+      "canonical_en": "Olympique Lyonnais",
+      "canonical_cn": "里昂",
+      "alias_count": 4
+    },
+    {
+      "team_id": 108,
+      "canonical_en": "Olympique de Marseille",
+      "canonical_cn": "马赛",
+      "alias_count": 5
+    },
+    {
+      "team_id": 109,
+      "canonical_en": "Osasuna",
+      "canonical_cn": "奥萨苏纳",
+      "alias_count": 3
+    },
+    {
+      "team_id": 110,
+      "canonical_en": "Palermo",
+      "canonical_cn": "巴勒莫",
+      "alias_count": 3
+    },
+    {
+      "team_id": 111,
+      "canonical_en": "Paris FC",
+      "canonical_cn": "巴黎FC",
+      "alias_count": 2
+    },
+    {
+      "team_id": 112,
+      "canonical_en": "Paris Saint-Germain",
+      "canonical_cn": "巴黎圣日耳曼",
+      "alias_count": 8
+    },
+    {
+      "team_id": 113,
+      "canonical_en": "Parma",
+      "canonical_cn": "帕尔马",
+      "alias_count": 4
+    },
+    {
+      "team_id": 114,
+      "canonical_en": "Pescara",
+      "canonical_cn": "佩斯卡拉",
+      "alias_count": 3
+    },
+    {
+      "team_id": 115,
+      "canonical_en": "Pisa",
+      "canonical_cn": "比萨",
+      "alias_count": 4
+    },
+    {
+      "team_id": 116,
+      "canonical_en": "RB Leipzig",
+      "canonical_cn": "莱比锡",
+      "alias_count": 5
+    },
+    {
+      "team_id": 117,
+      "canonical_en": "RC Lens",
+      "canonical_cn": "朗斯",
+      "alias_count": 3
+    },
+    {
+      "team_id": 118,
+      "canonical_en": "RC Strasbourg",
+      "canonical_cn": "斯特拉斯堡",
+      "alias_count": 4
+    },
+    {
+      "team_id": 119,
+      "canonical_en": "Rayo Vallecano",
+      "canonical_cn": "巴列卡诺",
+      "alias_count": 4
+    },
+    {
+      "team_id": 120,
+      "canonical_en": "Real Betis",
+      "canonical_cn": "皇家贝蒂斯",
+      "alias_count": 3
+    },
+    {
+      "team_id": 121,
+      "canonical_en": "Real Madrid",
+      "canonical_cn": "皇家马德里",
+      "alias_count": 4
+    },
+    {
+      "team_id": 122,
+      "canonical_en": "Real Oviedo",
+      "canonical_cn": "奥维耶多",
+      "alias_count": 3
+    },
+    {
+      "team_id": 123,
+      "canonical_en": "Real Racing Club",
+      "canonical_cn": "桑坦德竞技",
+      "alias_count": 5
+    },
+    {
+      "team_id": 124,
+      "canonical_en": "Real Sociedad",
+      "canonical_cn": "皇家社会",
+      "alias_count": 3
+    },
+    {
+      "team_id": 125,
+      "canonical_en": "Real Valladolid",
+      "canonical_cn": "巴利亚多利德",
+      "alias_count": 5
+    },
+    {
+      "team_id": 126,
+      "canonical_en": "SC Freiburg",
+      "canonical_cn": "弗赖堡",
+      "alias_count": 3
+    },
+    {
+      "team_id": 127,
+      "canonical_en": "SC Paderborn 07",
+      "canonical_cn": "帕德博恩",
+      "alias_count": 4
+    },
+    {
+      "team_id": 128,
+      "canonical_en": "SPAL",
+      "canonical_cn": "费拉拉SPAL",
+      "alias_count": 3
+    },
+    {
+      "team_id": 129,
+      "canonical_en": "SSC Napoli",
+      "canonical_cn": "那不勒斯",
+      "alias_count": 3
+    },
+    {
+      "team_id": 130,
+      "canonical_en": "SV 07 Elversberg",
+      "canonical_cn": "埃尔沃斯堡",
+      "alias_count": 6
+    },
+    {
+      "team_id": 131,
+      "canonical_en": "SV Werder Bremen",
+      "canonical_cn": "云达不来梅",
+      "alias_count": 6
+    },
+    {
+      "team_id": 132,
+      "canonical_en": "Saint-Étienne",
+      "canonical_cn": "圣埃蒂安",
+      "alias_count": 7
+    },
+    {
+      "team_id": 133,
+      "canonical_en": "Salernitana",
+      "canonical_cn": "萨勒尼塔纳",
+      "alias_count": 2
+    },
+    {
+      "team_id": 134,
+      "canonical_en": "Sampdoria",
+      "canonical_cn": "桑普多利亚",
+      "alias_count": 4
+    },
+    {
+      "team_id": 135,
+      "canonical_en": "Sassuolo",
+      "canonical_cn": "萨索洛",
+      "alias_count": 3
+    },
+    {
+      "team_id": 136,
+      "canonical_en": "Sevilla",
+      "canonical_cn": "塞维利亚",
+      "alias_count": 3
+    },
+    {
+      "team_id": 137,
+      "canonical_en": "Sheffield United",
+      "canonical_cn": "谢菲尔德联",
+      "alias_count": 5
+    },
+    {
+      "team_id": 138,
+      "canonical_en": "Southampton",
+      "canonical_cn": "南安普顿",
+      "alias_count": 4
+    },
+    {
+      "team_id": 139,
+      "canonical_en": "SpVgg Greuther Fürth",
+      "canonical_cn": "菲尔特",
+      "alias_count": 7
+    },
+    {
+      "team_id": 140,
+      "canonical_en": "Spezia",
+      "canonical_cn": "斯佩齐亚",
+      "alias_count": 3
+    },
+    {
+      "team_id": 141,
+      "canonical_en": "Sporting Gijón",
+      "canonical_cn": "希洪竞技",
+      "alias_count": 5
+    },
+    {
+      "team_id": 142,
+      "canonical_en": "Stade Brestois",
+      "canonical_cn": "布雷斯特",
+      "alias_count": 4
+    },
+    {
+      "team_id": 143,
+      "canonical_en": "Stade Malherbe Caen",
+      "canonical_cn": "卡昂",
+      "alias_count": 4
+    },
+    {
+      "team_id": 144,
+      "canonical_en": "Stade Rennais",
+      "canonical_cn": "雷恩",
+      "alias_count": 3
+    },
+    {
+      "team_id": 145,
+      "canonical_en": "Stade de Reims",
+      "canonical_cn": "兰斯",
+      "alias_count": 4
+    },
+    {
+      "team_id": 146,
+      "canonical_en": "Stoke City",
+      "canonical_cn": "斯托克城",
+      "alias_count": 3
+    },
+    {
+      "team_id": 147,
+      "canonical_en": "Sunderland",
+      "canonical_cn": "桑德兰",
+      "alias_count": 3
+    },
+    {
+      "team_id": 148,
+      "canonical_en": "Swansea City",
+      "canonical_cn": "斯旺西",
+      "alias_count": 3
+    },
+    {
+      "team_id": 149,
+      "canonical_en": "TSG Hoffenheim",
+      "canonical_cn": "霍芬海姆",
+      "alias_count": 3
+    },
+    {
+      "team_id": 150,
+      "canonical_en": "Torino",
+      "canonical_cn": "都灵",
+      "alias_count": 3
+    },
+    {
+      "team_id": 151,
+      "canonical_en": "Tottenham Hotspur",
+      "canonical_cn": "热刺",
+      "alias_count": 6
+    },
+    {
+      "team_id": 152,
+      "canonical_en": "Toulouse",
+      "canonical_cn": "图卢兹",
+      "alias_count": 3
+    },
+    {
+      "team_id": 153,
+      "canonical_en": "Troyes",
+      "canonical_cn": "特鲁瓦",
+      "alias_count": 4
+    },
+    {
+      "team_id": 154,
+      "canonical_en": "UD Las Palmas",
+      "canonical_cn": "拉斯帕尔马斯",
+      "alias_count": 3
+    },
+    {
+      "team_id": 155,
+      "canonical_en": "US Salernitana 1919",
+      "canonical_cn": "萨勒尼塔纳",
+      "alias_count": 4
+    },
+    {
+      "team_id": 156,
+      "canonical_en": "Udinese",
+      "canonical_cn": "乌迪内斯",
+      "alias_count": 3
+    },
+    {
+      "team_id": 157,
+      "canonical_en": "Valencia",
+      "canonical_cn": "瓦伦西亚",
+      "alias_count": 4
+    },
+    {
+      "team_id": 158,
+      "canonical_en": "Venezia",
+      "canonical_cn": "威尼斯",
+      "alias_count": 3
+    },
+    {
+      "team_id": 159,
+      "canonical_en": "VfB Stuttgart",
+      "canonical_cn": "斯图加特",
+      "alias_count": 3
+    },
+    {
+      "team_id": 160,
+      "canonical_en": "VfL Bochum 1848",
+      "canonical_cn": "波鸿",
+      "alias_count": 4
+    },
+    {
+      "team_id": 161,
+      "canonical_en": "VfL Wolfsburg",
+      "canonical_cn": "沃尔夫斯堡",
+      "alias_count": 3
+    },
+    {
+      "team_id": 162,
+      "canonical_en": "Villarreal",
+      "canonical_cn": "比利亚雷亚尔",
+      "alias_count": 5
+    },
+    {
+      "team_id": 163,
+      "canonical_en": "Watford",
+      "canonical_cn": "沃特福德",
+      "alias_count": 3
+    },
+    {
+      "team_id": 164,
+      "canonical_en": "West Bromwich Albion",
+      "canonical_cn": "西布罗姆维奇",
+      "alias_count": 5
+    },
+    {
+      "team_id": 165,
+      "canonical_en": "West Ham United",
+      "canonical_cn": "西汉姆",
+      "alias_count": 6
+    },
+    {
+      "team_id": 166,
+      "canonical_en": "Wolverhampton",
+      "canonical_cn": "狼队",
+      "alias_count": 6
+    }
+  ]
+}

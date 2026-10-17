@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import sys
 from datetime import datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -62,6 +63,28 @@ FEATURE_KEYS = [
     "pa_squad_stability", # 首发变化率（与上一场首发的 Jaccard 相似度）
     "pa_formation_std",   # 阵型评分标准差（球员间评分差异）
 ]
+
+# ==================== 无数据哨兵（C-20261014-090）====================
+# 背景：pa_* 中「无数据/样本不足」此前与「真值 0」共用字面 0.0（实测落库 pa_missing_impact=0.0
+# 占全部行 70.8%、pa_fatigue_7d=0.0 占 39.5%、pa_squad_stability=0.5 兜底 178 行），
+# 与特征矩阵层的缺失填充 -1.0（feature_utils L2190 fillna(-1.0)）语义不一致 → 训练矩阵
+# 无法区分"真值 0"与"未采集"。开启后：无数据/样本不足写 NO_DATA(-1.0)，真值 0 仍写 0.0。
+# ⚠️ 开启会改变进入 254 维矩阵的特征取值 → 必须与下一次重训配套，否则 train/serve 语义分叉。
+NO_DATA = -1.0
+
+
+@lru_cache(maxsize=1)
+def _no_data_sentinel_enabled() -> bool:
+    """读取 config.yaml pa_features.no_data_sentinel.enabled（默认 false；读取异常=false）。
+
+    默认关 = 保持历史行为（无数据写 0.0 / 稳定性兜底 0.5），生产口径不变。
+    """
+    try:
+        import yaml
+        cfg = yaml.safe_load((PROJECT_ROOT / "config.yaml").read_text(encoding="utf-8")) or {}
+        return bool(((cfg.get("pa_features") or {}).get("no_data_sentinel") or {}).get("enabled", False))
+    except Exception:
+        return False
 
 
 class PlayerAvailabilityFeatures:
@@ -123,6 +146,48 @@ class PlayerAvailabilityFeatures:
             for team, g in df.groupby("team", sort=False)
         }
 
+    def _load_team_stats(self, team_name: str) -> pd.DataFrame:
+        """单队懒载入球员统计（与 preload_team_stats 同口径，载入后写缓存）。
+
+        C-20261014-092：报告 §十二 官方校正需 predict_xi_players，逐队懒载入替代
+        preload_team_stats 全量载入（单场报告场景每队 1 次单队查询即可）。
+        无数据时缓存空 DataFrame，避免同一队重复查库。
+        """
+        if self._team_stats is None:
+            self._team_stats = {}
+        g = self._team_stats.get(team_name)
+        if g is not None:
+            return g
+        conn = self._get_conn()
+        rows = conn.execute(
+            """
+            SELECT mps.player_name, mps.position, mps.rating, mps.expected_goals,
+                   mps.expected_assists, mps.minutes_played, fmm.match_date,
+                   mps.is_starter AS is_starting
+            FROM match_player_stats mps
+            JOIN fbref_match_mapping fmm ON mps.fbref_match_id = fmm.fbref_match_id
+            WHERE fmm.fbref_match_id IS NOT NULL AND mps.team = ?
+            """,
+            (team_name,),
+        ).fetchall()
+        df = pd.DataFrame(
+            [dict(r) for r in rows],
+            columns=["player_name", "position", "rating", "expected_goals",
+                     "expected_assists", "minutes_played", "match_date", "is_starting"],
+        )
+        if not df.empty:
+            df["match_date"] = pd.to_datetime(df["match_date"])
+            df = df.sort_values("match_date", ascending=False).reset_index(drop=True)
+        self._team_stats[team_name] = df
+        return df
+
+    def ensure_team_stats(self, team_name: str) -> None:
+        """公开入口：确保指定球队统计已载入缓存（单场/报告场景避免全量 preload）。
+
+        C-20261014-092：调用后 _prepare_recent 不再触发 preload_team_stats 全量载入。
+        """
+        self._load_team_stats(team_name)
+
     def _prepare_recent(
         self,
         team_name: str,
@@ -138,6 +203,9 @@ class PlayerAvailabilityFeatures:
         if self._team_stats is None:
             self.preload_team_stats()
         df_all = self._team_stats.get(team_name)
+        if df_all is None:
+            # 单队懒载入兜底（C-20261014-092：ensure_team_stats 已初始化缓存但未含该队时）
+            df_all = self._load_team_stats(team_name)
         if df_all is None or df_all.empty:
             return None
 
@@ -297,13 +365,24 @@ class PlayerAvailabilityFeatures:
     ) -> Dict[str, float]:
         """从球员统计中构建 12 维特征。"""
         features = {}
+        # C-20261014-090: 无数据哨兵（默认关）。开启时「无数据/样本不足」写 -1.0，真值 0 保持 0.0
+        sentinel_on = _no_data_sentinel_enabled()
+        nd = NO_DATA if sentinel_on else 0.0          # 原「无数据写 0.0」的点
+        nd_stab = NO_DATA if sentinel_on else 0.5     # 原稳定性兜底 0.5
+        nd_rest = NO_DATA if sentinel_on else 7.0     # 原休息天数兜底 7.0
 
         # --- 首发强度 (3维) ---
         xi = self._predict_starting_xi(player_stats, recent_matches, n_recent)
 
-        features["pa_xi_rating"] = round(float(xi["avg_rating"].mean()), 4)
-        features["pa_xi_xg"] = round(float(xi["avg_xg"].sum()), 4)  # 全队 xG 和
-        features["pa_xi_xa"] = round(float(xi["avg_xa"].sum()), 4)  # 全队 xA 和
+        if len(xi) == 0:  # 无任何球员样本 → 原实现产出 NaN，哨兵开启时统一为 -1.0
+            v = NO_DATA if sentinel_on else float("nan")
+            features["pa_xi_rating"] = v
+            features["pa_xi_xg"] = v
+            features["pa_xi_xa"] = v
+        else:
+            features["pa_xi_rating"] = round(float(xi["avg_rating"].mean()), 4)
+            features["pa_xi_xg"] = round(float(xi["avg_xg"].sum()), 4)  # 全队 xG 和
+            features["pa_xi_xa"] = round(float(xi["avg_xa"].sum()), 4)  # 全队 xA 和
 
         # --- 核心依赖 (2维) ---
         core_players = player_stats[
@@ -312,11 +391,15 @@ class PlayerAvailabilityFeatures:
         ]
         total_xg = player_stats["avg_xg"].sum() or 0.01
         core_xg = core_players["avg_xg"].sum()
-        features["pa_core_xg_share"] = round(float(core_xg / total_xg), 4)
-        # 依赖度 = 核心球员人数 / 全队人数，越高越依赖少数人
-        features["pa_core_dependency"] = round(
-            float(len(core_players) / max(len(player_stats), 1)), 4
-        )
+        if player_stats.empty:  # 无球员样本 → 无数据哨兵
+            features["pa_core_xg_share"] = nd
+            features["pa_core_dependency"] = nd
+        else:
+            features["pa_core_xg_share"] = round(float(core_xg / total_xg), 4)
+            # 依赖度 = 核心球员人数 / 全队人数，越高越依赖少数人
+            features["pa_core_dependency"] = round(
+                float(len(core_players) / max(len(player_stats), 1)), 4
+            )
 
         # --- 伤病/缺阵 (2维) ---
         # 检查最近一场比赛是否有核心球员缺阵
@@ -328,11 +411,15 @@ class PlayerAvailabilityFeatures:
                 core_players["player_name"].isin(missing_core)
             ]["avg_xg"].sum()
 
-            availability = 1.0 - min(0.2, len(missing_core) / max(len(core_names), 1))
-            missing_impact = missing_core_xg / total_xg
+            if sentinel_on and not core_names:  # 无核心池 → "缺阵影响"不可判，走哨兵
+                availability = NO_DATA
+                missing_impact = NO_DATA
+            else:  # off 态核心池为空时复现原式：availability=1.0、missing_impact=0.0
+                availability = 1.0 - min(0.2, len(missing_core) / max(len(core_names), 1))
+                missing_impact = missing_core_xg / total_xg
         else:
-            availability = 1.0
-            missing_impact = 0.0
+            availability = NO_DATA if sentinel_on else 1.0
+            missing_impact = nd
 
         features["pa_availability"] = round(float(availability), 4)
         features["pa_missing_impact"] = round(float(missing_impact), 4)
@@ -350,20 +437,20 @@ class PlayerAvailabilityFeatures:
                 avg_min = period_df.groupby("player_name")["minutes_played"].mean().mean()
                 # NaN 防护：该时段有出场记录但 minutes_played 全缺失时
                 # groupby.mean().mean() 返回 NaN（C-20260907-004：避免 NaN 落库）
-                if pd.isna(avg_min):
-                    features[key] = 0.0
-                else:
-                    features[key] = round(float(avg_min), 1)
+                # 此支=「有比赛但分钟数据缺失」=真·未观测 → 哨兵；否则为实算值
+                features[key] = nd if pd.isna(avg_min) else round(float(avg_min), 1)
             else:
+                # 该窗口内无比赛 → 近 7/14 天出场分钟数确为 0（观测到「零」，非未采集）
+                # 属真值 0，与原实现一致，哨兵不适用；到场跨度由 pa_rest_days 另行表达
                 features[key] = 0.0
 
         # 休息天数（距上一场比赛）
         if not df.empty:
             last_match_date = df["match_date"].max()
-            rest_days = (pd.to_datetime(match_date) - last_match_date).days if pd.notna(last_match_date) else 7
-            features["pa_rest_days"] = float(max(0, rest_days))
+            rest_days = (pd.to_datetime(match_date) - last_match_date).days if pd.notna(last_match_date) else nd_rest
+            features["pa_rest_days"] = nd_rest if sentinel_on and pd.isna(last_match_date) else float(max(0, rest_days))
         else:
-            features["pa_rest_days"] = 7.0
+            features["pa_rest_days"] = nd_rest
 
         # --- 阵容稳定性 (2维) ---
         if len(recent_matches) >= 2:
@@ -374,13 +461,13 @@ class PlayerAvailabilityFeatures:
                 jaccard = len(prev_xi & curr_xi) / max(len(prev_xi | curr_xi), 1)
                 features["pa_squad_stability"] = round(float(jaccard), 4)
             else:
-                features["pa_squad_stability"] = 0.5
+                features["pa_squad_stability"] = nd_stab  # 名单为空 → 原兜底 0.5
         else:
-            features["pa_squad_stability"] = 0.5
+            features["pa_squad_stability"] = nd_stab  # 样本 <2 场 → 原兜底 0.5
 
         # 阵型评分标准差
         features["pa_formation_std"] = round(
-            float(player_stats["avg_rating"].std() if len(player_stats) > 1 else 0.0), 4
+            float(player_stats["avg_rating"].std() if len(player_stats) > 1 else nd), 4
         )
 
         return features
@@ -449,8 +536,9 @@ class PlayerAvailabilityFeatures:
 
     @staticmethod
     def _empty_features() -> Dict[str, float]:
-        """返回全 0 特征（升班马/无数据时）。"""
-        return {k: 0.0 for k in FEATURE_KEYS}
+        """返回空特征（升班马/无数据时）。C-20261014-090: 哨兵开启时写 -1.0。"""
+        v = NO_DATA if _no_data_sentinel_enabled() else 0.0
+        return {k: v for k in FEATURE_KEYS}
 
     @staticmethod
     def feature_keys() -> List[str]:

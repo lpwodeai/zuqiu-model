@@ -3,7 +3,7 @@
 import json
 from curl_cffi import requests
 
-BASE = "https://api.sofascore.com/api/v1"
+BASE = "https://www.sofascore.com/api/v1"  # C-20260930-004: api. 子域已 403，迁移至主域路径
 
 def fetch(url, timeout=15):
     try:

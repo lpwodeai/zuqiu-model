@@ -55,6 +55,15 @@ LEAGUE_IDS = {
     "英超": 25, "意甲": 40, "西甲": 62, "德甲": 37, "法甲": 32,
 }
 
+# 赛程接口 leagueAllName -> 采集器联赛简称 映射
+LEAGUE_NAME_MAP = {
+    "英格兰超级联赛": "英超",
+    "意大利甲级联赛": "意甲",
+    "西班牙甲级联赛": "西甲",
+    "德国甲级联赛": "德甲",
+    "法国甲级联赛": "法甲",
+}
+
 # 赛季 → 采集日期范围（8月~次年5月，覆盖实际比赛期）
 # 对标 Understat / SofaScore 五大联赛 10 季（16/17 ~ 25/26）
 # 20/21 因疫情延迟开赛（法甲 8/22，西甲/英超 9/12，意甲 9/19，德甲 9/18），start 取 8/1 已覆盖
@@ -76,6 +85,8 @@ SEASON_RANGES = {
 # API URL
 MATCH_LIST_API = "https://webapi.sporttery.cn/gateway/uniform/football/getUniformMatchResultV1.qry"
 FIXED_BONUS_API = "https://webapi.sporttery.cn/gateway/uniform/football/getFixedBonusV1.qry"
+# 赛程接口（zqszsc 页使用）：返回全部在售比赛+当前赔率，覆盖未来日期
+MATCH_SCHEDULE_API = "https://webapi.sporttery.cn/gateway/uniform/football/getMatchListV1.qry"
 SPORTTERY_HOME = "https://www.sporttery.cn/jc/zqsgkj/"
 
 REQUEST_DELAY = 1.0
@@ -293,6 +304,67 @@ def parse_match_list_response(data: dict) -> list:
     return matches
 
 
+def parse_match_schedule_response(data: dict) -> list:
+    """解析赛程接口(getMatchListV1)响应
+
+    赛程接口返回全部在售比赛（含未来日期），结构为:
+      value.matchInfoList[]  -> 按 businessDate(销售日) 分组
+        .subMatchList[]      -> 比赛列表
+          .matchId, .matchNumStr, .homeTeamAllName, .awayTeamAllName
+          .leagueAllName, .matchDate, .matchTime, .matchStatus
+          .oddsList[]        -> 当前赔率（HAD/HHAD/CRS/TTG/HAFU）
+    """
+    matches = []
+    groups = data.get("value", {}).get("matchInfoList", [])
+
+    for group in groups:
+        sub_list = group.get("subMatchList", [])
+        for m in sub_list:
+            sporttery_id = str(m.get("matchId", ""))
+            if not sporttery_id:
+                continue
+
+            # 联赛简称映射
+            league_all = m.get("leagueAllName", "")
+            league_abbr = LEAGUE_NAME_MAP.get(league_all, league_all[:2] if league_all else "")
+
+            # 从 oddsList 提取当前赔率作为单条时序记录
+            odds_list = m.get("oddsList", [])
+            had_odds = None
+            hhad_odds = None
+            handicap = 0.0
+            for o in odds_list:
+                pc = o.get("poolCode", "")
+                if pc == "HAD" and o.get("h"):
+                    had_odds = {"h": o["h"], "d": o["d"], "a": o["a"]}
+                elif pc == "HHAD" and o.get("h"):
+                    hhad_odds = {"h": o["h"], "d": o["d"], "a": o["a"]}
+                    try:
+                        handicap = float(str(o.get("goalLine", "0")).replace("+", ""))
+                    except (ValueError, TypeError):
+                        handicap = 0.0
+
+            # matchStatus: Selling(在售) / Payout(已开奖) / Close(已关闭)
+            # 仅采集在售或已开奖（未来比赛为 Selling）
+            status = m.get("matchStatus", "")
+
+            matches.append({
+                "sporttery_match_id": sporttery_id,
+                "home_team": m.get("homeTeamAllName", m.get("homeTeamAbbName", "")),
+                "away_team": m.get("awayTeamAllName", m.get("awayTeamAbbName", "")),
+                "match_date": m.get("matchDate", ""),
+                "league_name_abbr": league_abbr,
+                "handicap": handicap,
+                "actual_wdl": "",
+                "actual_score": "",
+                "actual_total_goals": None,
+                "_current_had": had_odds,
+                "_current_hhad": hhad_odds,
+            })
+
+    return matches
+
+
 def parse_fixed_bonus_response(data: dict) -> dict:
     """解析赔率详情API响应"""
     result = {"wdl_timing": [], "handicap_timing": [], "total_goals_timing": [], "score_timing": []}
@@ -436,6 +508,10 @@ class SportteryCollector:
         query = "&".join([f"{k}={v}" for k, v in params.items()])
         return await self._api_fetch(f"{MATCH_LIST_API}?{query}")
 
+    async def fetch_match_schedule(self) -> dict:
+        """调用赛程接口 getMatchListV1，返回全部在售比赛（含未来日期）+ 当前赔率"""
+        return await self._api_fetch(f"{MATCH_SCHEDULE_API}?clientCode=3001")
+
     async def fetch_fixed_bonus(self, sporttery_match_id: str) -> dict:
         url = f"{FIXED_BONUS_API}?clientCode=3001&matchId={sporttery_match_id}"
         return await self._api_fetch(url)
@@ -443,32 +519,56 @@ class SportteryCollector:
     async def collect_league_chunk(self, league_name: str, season: str,
                                     start_date: str, end_date: str,
                                     save_raw: bool = True) -> tuple:
-        """采集指定联赛一个时间块的数据"""
+        """采集指定联赛一个时间块的数据
+
+        路由策略:
+          - 结束日期 >= 今天: 用赛程接口 getMatchListV1（含未来在售比赛+当前赔率）
+          - 结束日期 < 今天:  用赛果接口 getUniformMatchResultV1（历史赛果+时序赔率）
+        """
+        from datetime import date as _date
+        today_str = _date.today().strftime("%Y-%m-%d")
+        is_future = end_date >= today_str
+
         print(f"\n{'='*60}")
         print(f"🏆 {league_name} {season} | {start_date} ~ {end_date}")
+        print(f"  路由: {'赛程接口(getMatchListV1)' if is_future else '赛果接口(getUniformMatchResultV1)'}")
         print(f"{'='*60}")
 
         # 第一步：获取比赛列表
         print("📋 获取比赛列表...")
         all_matches = []
-        page_no = 1
-        total_pages = 1
 
-        while page_no <= total_pages:
-            data = await self.fetch_match_list(start_date, end_date, page_no)
+        if is_future:
+            # 赛程接口：一次返回全部在售比赛，按日期+联赛过滤
+            data = await self.fetch_match_schedule()
             if not data or data.get("errorCode") != "0":
-                print(f"  ⚠️ 第{page_no}页请求失败: {data.get('errorMessage') if data else '无响应'}")
-                break
-
-            value = data.get("value", {})
-            total_pages = value.get("pages", 1)
-            matches = parse_match_list_response(data)
-            league_matches = [m for m in matches if m["league_name_abbr"] == league_name]
+                print(f"  ⚠️ 赛程接口请求失败: {data.get('errorMessage') if data else '无响应'}")
+                return 0, 0
+            matches = parse_match_schedule_response(data)
+            league_matches = [
+                m for m in matches
+                if m["league_name_abbr"] == league_name
+                and start_date <= m["match_date"] <= end_date
+            ]
             all_matches.extend(league_matches)
-            print(f"  第{page_no}/{total_pages}页: {len(league_matches)}场 (累计{len(all_matches)})")
-
-            page_no += 1
-            await asyncio.sleep(REQUEST_DELAY)
+            print(f"  赛程接口返回 {len(matches)} 场，过滤后 {len(all_matches)} 场")
+        else:
+            # 赛果接口：分页
+            page_no = 1
+            total_pages = 1
+            while page_no <= total_pages:
+                data = await self.fetch_match_list(start_date, end_date, page_no)
+                if not data or data.get("errorCode") != "0":
+                    print(f"  ⚠️ 第{page_no}页请求失败: {data.get('errorMessage') if data else '无响应'}")
+                    break
+                value = data.get("value", {})
+                total_pages = value.get("pages", 1)
+                matches = parse_match_list_response(data)
+                league_matches = [m for m in matches if m["league_name_abbr"] == league_name]
+                all_matches.extend(league_matches)
+                print(f"  第{page_no}/{total_pages}页: {len(league_matches)}场 (累计{len(all_matches)})")
+                page_no += 1
+                await asyncio.sleep(REQUEST_DELAY)
 
         print(f"📊 共 {len(all_matches)} 场")
 
@@ -483,25 +583,46 @@ class SportteryCollector:
         # 第二步：逐场获取赔率
         print(f"📈 获取时序赔率...")
         success = fail = 0
+        now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         for i, match in enumerate(all_matches):
             sid = match["sporttery_match_id"]
             print(f"  [{i+1}/{len(all_matches)}] {match['match_date']} {match['home_team']} vs {match['away_team']}", end=" ")
 
+            # 优先用 getFixedBonusV1 取时序赔率；失败则用赛程接口的当前赔率兜底
+            timing = None
             bonus = await self.fetch_fixed_bonus(sid)
-            if not bonus or bonus.get("errorCode") != "0":
-                print("❌")
-                fail += 1
-                continue
+            if bonus and bonus.get("errorCode") == "0":
+                timing = parse_fixed_bonus_response(bonus)
 
-            timing = parse_fixed_bonus_response(bonus)
+            # 兜底：赛程接口提供的当前赔率
+            if not timing or (not timing["wdl_timing"] and not timing["handicap_timing"]):
+                timing = {"wdl_timing": [], "handicap_timing": [], "total_goals_timing": [], "score_timing": []}
+                had = match.get("_current_had")
+                hhad = match.get("_current_hhad")
+                if had:
+                    timing["wdl_timing"].append({
+                        "timestamp": now_ts,
+                        "win_a": float(had["h"]), "draw": float(had["d"]), "win_b": float(had["a"]),
+                    })
+                if hhad:
+                    timing["handicap_timing"].append({
+                        "timestamp": now_ts,
+                        "win": float(hhad["h"]), "draw": float(hhad["d"]), "lose": float(hhad["a"]),
+                    })
+
+            # 清理内部字段
+            match.pop("_current_had", None)
+            match.pop("_current_hhad", None)
+
             full_data = {**match, **timing}
 
             if save_to_odds_db(full_data, season, league_name):
                 w = len(timing["wdl_timing"])
                 h = len(timing["handicap_timing"])
                 t = len(timing["total_goals_timing"])
-                print(f"✅ WDL:{w} HCP:{h} TG:{t}")
+                src = "时序" if (bonus and bonus.get("errorCode") == "0") else "当前赔率"
+                print(f"✅ WDL:{w} HCP:{h} TG:{t} [{src}]")
                 success += 1
             else:
                 print("❌")
@@ -583,14 +704,29 @@ async def main():
         await collector.start()
         try:
             await collector._get_cookies()
+            from datetime import date as _date
+            today_str = _date.today().strftime("%Y-%m-%d")
             for league_name in leagues:
                 total = 0
                 for cs, ce in chunks:
-                    data = await collector.fetch_match_list(cs, ce, page_no=1, page_size=100)
-                    if data and data.get("errorCode") == "0":
-                        matches = parse_match_list_response(data)
-                        league_matches = [m for m in matches if m["league_name_abbr"] == league_name]
-                        total += len(league_matches)
+                    if ce >= today_str:
+                        # 未来日期：用赛程接口
+                        data = await collector.fetch_match_schedule()
+                        if data and data.get("errorCode") == "0":
+                            matches = parse_match_schedule_response(data)
+                            league_matches = [
+                                m for m in matches
+                                if m["league_name_abbr"] == league_name
+                                and cs <= m["match_date"] <= ce
+                            ]
+                            total += len(league_matches)
+                    else:
+                        # 历史日期：用赛果接口
+                        data = await collector.fetch_match_list(cs, ce, page_no=1, page_size=100)
+                        if data and data.get("errorCode") == "0":
+                            matches = parse_match_list_response(data)
+                            league_matches = [m for m in matches if m["league_name_abbr"] == league_name]
+                            total += len(league_matches)
                 print(f"  {league_name}: 预计 {total} 场")
         finally:
             await collector.stop()

@@ -909,6 +909,37 @@ def save_calibration_params(calibration_params, model_name):
     print(f"\nSaved {model_name} calibration params to {output_path}")
     return output_path
 
+
+def fit_platt_per_league(y_true, y_proba, leagues, min_samples=20):
+    """按联赛拟合 Platt；联赛样本数 < min_samples 时跳过该联赛（降级到全局）。"""
+    params = {}
+    for lg in np.unique(leagues):
+        m = leagues == lg
+        if int(m.sum()) < min_samples:
+            continue
+        params[lg] = fit_platt_scaling(y_true[m], y_proba[m])
+    return params
+
+
+# C-20261015-113: 训练端文件名与消费端对齐（xgb→xgboost, lgb→lightgbm）
+_PLATT_OUTPUT_ALIAS = {'xgb': 'xgboost', 'lgb': 'lightgbm'}
+
+
+def save_calibration_json(model_name, global_params, league_params):
+    """导出双端（Node + Python）共读的 canonical JSON：global + leagues 同口径。"""
+    canonical = _PLATT_OUTPUT_ALIAS.get(model_name.lower(), model_name.lower())
+    output_path = os.path.join(OUTPUT_DIR, f"{canonical}_calibration.json")
+    payload = {
+        "version": 1,
+        "model": model_name.lower(),
+        "global": global_params,
+        "leagues": league_params,
+    }
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    print(f"\nSaved {model_name} per-league calibration to {output_path}")
+    return output_path
+
 def evaluate_with_time_series_split(X, y, feature_names, n_splits=5, sample_weights=None):
     tscv = TimeSeriesSplit(n_splits=n_splits)
     
@@ -1789,6 +1820,8 @@ def main(incremental=False, version=None):
     
     X_train, X_val = X_scaled_df.iloc[:train_size], X_scaled_df.iloc[train_size:]
     y_train, y_val = y.iloc[:train_size], y.iloc[train_size:]
+    # C-20261004-004: val 段联赛标签（与 X_val 逐行对齐），供分联赛 Platt 拟合
+    val_leagues = df['competition_name'].iloc[train_size:].values
     
     print(f"   训练集: {len(X_train)} 场")
     print(f"   验证集: {len(X_val)} 场")
@@ -1846,34 +1879,43 @@ def main(incremental=False, version=None):
     
     xgb_calibration = None
     lgb_calibration = None
+    # C-20261004-004: 分联赛 Platt 参数（近赛季时序窗=val 段，消融④臂同口径）
+    xgb_league_calibration = {}
+    lgb_league_calibration = {}
     
     if calibration_enabled and xgb_model:
         dtrain = xgb.DMatrix(X_val.values, label=y_val.values)
         xgb_val_probs = xgb_model.predict(dtrain)
         xgb_calibration = fit_platt_scaling(y_val.values, xgb_val_probs)
+        xgb_league_calibration = fit_platt_per_league(y_val.values, xgb_val_probs, val_leagues)
         calibrated_probs = apply_platt_scaling(xgb_val_probs, xgb_calibration)
         calibrated_acc = accuracy_score(y_val, np.argmax(calibrated_probs, axis=1))
         calibrated_brier = brier_score_loss(y_val, calibrated_probs, pos_label=2)
         print(f"  XGBoost 校准后 - Val Accuracy: {calibrated_acc:.4f}, Brier: {calibrated_brier:.4f}")
+        print(f"  分联赛 Platt: {list(xgb_league_calibration.keys())}")
         
         logger.log_evaluation('XGBoost校准', {
             'calibrated_accuracy': calibrated_acc,
             'calibrated_brier': calibrated_brier,
-            'calibration_enabled': calibration_enabled
+            'calibration_enabled': calibration_enabled,
+            'league_calibration': list(xgb_league_calibration.keys()),
         })
     
     if calibration_enabled and lgb_model:
         lgb_val_probs = _lgb_predict_proba(lgb_model, X_val.values)
         lgb_calibration = fit_platt_scaling(y_val.values, lgb_val_probs)
+        lgb_league_calibration = fit_platt_per_league(y_val.values, lgb_val_probs, val_leagues)
         calibrated_probs = apply_platt_scaling(lgb_val_probs, lgb_calibration)
         calibrated_acc = accuracy_score(y_val, np.argmax(calibrated_probs, axis=1))
         calibrated_brier = brier_score_loss(y_val, calibrated_probs, pos_label=2)
         print(f"  LightGBM 校准后 - Val Accuracy: {calibrated_acc:.4f}, Brier: {calibrated_brier:.4f}")
+        print(f"  分联赛 Platt: {list(lgb_league_calibration.keys())}")
         
         logger.log_evaluation('LightGBM校准', {
             'calibrated_accuracy': calibrated_acc,
             'calibrated_brier': calibrated_brier,
-            'calibration_enabled': calibration_enabled
+            'calibration_enabled': calibration_enabled,
+            'league_calibration': list(lgb_league_calibration.keys()),
         })
     
     print(f"\n9.5 平局后处理校准 (自适应精细搜索 + dr>=0.28 约束下最小化准确率损失)...")
@@ -2289,9 +2331,11 @@ def main(incremental=False, version=None):
     print("\n12. 保存概率校准参数...")
     if xgb_calibration:
         save_calibration_params(xgb_calibration, 'XGB')
+        save_calibration_json('XGB', xgb_calibration, xgb_league_calibration)
     
     if lgb_calibration:
         save_calibration_params(lgb_calibration, 'LGB')
+        save_calibration_json('LGB', lgb_calibration, lgb_league_calibration)
     
     print("\n" + "=" * 60)
     print("训练完成!")
@@ -2441,6 +2485,101 @@ def main(incremental=False, version=None):
     print(f"\nbrier_score: {final_brier:.4f}" if final_brier else "\nbrier_score: null")
     print(f"accuracy: {final_accuracy:.4f}" if final_accuracy else "accuracy: null")
     print(f"version: {version}" if version else "version: null")
+
+    # C-20261011-044: 训练后自动归档钩子——「训练→版本升级」成为默认动作（失败不阻断训练）
+    try:
+        _archive_training_artifacts(version, final_brier, final_accuracy)
+    except Exception as _hook_err:
+        print(f"[归档钩子] ⚠️ 自动归档失败（训练产物不受影响）: {_hook_err}")
+
+
+def _archive_training_artifacts(version, brier, accuracy):
+    """C-20261011-044: 训练成功后自动归档（补「训练→版本升级」最后一公里）。
+
+    1) model_versions 插入 xgb/lgb/scaler/selected_features 四行（status=active，INSERT OR IGNORE 幂等）；
+    2) deployment/latest_model.json 新增/刷新 "wdl" 产品线键——按产品线分键，
+       **不动顶层 T-005 v3 键**（temperature/threshold/class_weight_ratio 是走水检测器部署物，两条线并存）；
+    3) deployment/trigger_state.json 双轨合一：last_retrain_* 同步成功态、consecutive_failures 清零
+       （修复 10/7 success 但 state 仍记 9/28 failed 的双轨漂移）。
+    任一步失败打印警告不抛出——归档失败不应让训练白跑。
+    """
+    import json
+    import sqlite3
+    from datetime import datetime as _dt
+    from pathlib import Path as _Path
+
+    _root = _Path(__file__).resolve().parent.parent
+    if not version:
+        print("[归档钩子] 跳过：version 为空")
+        return
+    _stamp = str(version)
+    _artifacts = {
+        "xgb_model": _root / "assets" / f"xgb_model_{_stamp}.pkl",
+        "lgb_model": _root / "assets" / f"lgb_model_{_stamp}.pkl",
+        "scaler": _root / "assets" / f"scaler_{_stamp}.pkl",
+        "selected_features": _root / "assets" / f"selected_features_{_stamp}.pkl",
+    }
+    _missing = [k for k, p in _artifacts.items() if not p.exists()]
+    if _missing:
+        print(f"[归档钩子] 跳过：产物缺失 {_missing}（可能为增量/异常路径）")
+        return
+
+    conn = sqlite3.connect(str(_root / "data" / "odds.db"))
+    cur = conn.cursor()
+    for _name, _p in _artifacts.items():
+        cur.execute(
+            "INSERT OR IGNORE INTO model_versions "
+            "(model_name, version, file_path, archive_path, status, created_at, trigger_experiment) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (_name, _stamp, f"assets\\{_p.name}", f"backups\\models\\{_p.name}",
+             "active", _dt.now().strftime("%Y-%m-%d %H:%M:%S"), "auto-archive hook (C-20261011-044)"),
+        )
+    conn.commit()
+    conn.close()
+    print(f"[归档钩子] model_versions 已写入 4 行 @ {_stamp}")
+
+    # latest_model.json：按产品线分键（不动 T-005 v3 顶层键）
+    _lm_path = _root / "deployment" / "latest_model.json"
+    try:
+        _lm = json.loads(_lm_path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        _lm = {}
+    _lm["wdl"] = {
+        "latest_version": _stamp,
+        "updated_at": _dt.now().isoformat(timespec="seconds"),
+        "model_paths": {
+            "xgb_model_pkl": f"assets\\xgb_model_{_stamp}.pkl",
+            "lgb_model_pkl": f"assets\\lgb_model_{_stamp}.pkl",
+            "xgb_model_export_js": "assets\\xgb_model_export.js",
+            "lgb_model_export_js": "assets\\lgb_model_export.js",
+            "lambda_model_export_js": "assets\\lambda_model_export.js",
+            "xgb_calibration": "assets\\xgb_calibration.json",
+            "lgb_calibration": "assets\\lgb_calibration.json",
+            "scaler_params_js": "assets\\feature_scaler_params.js",
+        },
+        "metrics": {"brier": brier, "accuracy": accuracy},
+        "note": "C-20261011-044 自动归档钩子写入；Node 服务经 prediction-service.js require assets/*_export.js，重启/热重载后生效",
+    }
+    _lm_path.write_text(json.dumps(_lm, ensure_ascii=False, indent=2), encoding="utf-8")
+    print("[归档钩子] latest_model.json wdl 键已刷新（T-005 v3 顶层键未动）")
+
+    # trigger_state.json 双轨合一：成功态回写
+    _ts_path = _root / "deployment" / "trigger_state.json"
+    try:
+        _ts = json.loads(_ts_path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        _ts = {}
+    _ts.update({
+        "last_retrain_time": _dt.now().isoformat(timespec="seconds"),
+        "last_retrain_result": "success",
+        "consecutive_failures": 0,
+        "total_retrains": int(_ts.get("total_retrains", 0)) + 1,
+        "total_successes": int(_ts.get("total_successes", 0)) + 1,
+        "last_retrain_metrics": {"version": _stamp, "brier": brier, "accuracy": accuracy},
+    })
+    _ts_path.write_text(json.dumps(_ts, ensure_ascii=False, indent=2), encoding="utf-8")
+    print("[归档钩子] trigger_state.json 已同步成功态（consecutive_failures 清零）")
+
 
 if __name__ == "__main__":
     import argparse
