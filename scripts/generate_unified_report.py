@@ -401,8 +401,12 @@ def discover_matches(conn, start_date, end_date, leagues=None, played_only=False
                 "match_date": mdate,
                 "match_time": "12:00",  # 竞彩表无开赛时间；表头展示改由 _kickoff500 承担（见下）
                 "_kickoff500": _kickoff500,  # C-20261016-116: 500 真实开赛（日期+时刻），仅表头展示用
-                "home_team_cn": home,
-                "away_team_cn": away,
+                # C-20261017-133: 兜底行显示名归一到 canonical 中文（复用报告链已有
+                # feature_utils.normalize_team_name，单一源 team_names.CANONICAL_CN）。
+                # matches 表 FBref 英文行（竞彩未售场）原值直落会产生英文名报告文件；
+                # 仅归一报告展示层，matches 写入侧归一属 P2/P4 窗口项，此处不碰。
+                "home_team_cn": _normalize_team_name(home),
+                "away_team_cn": _normalize_team_name(away),
                 "home_team_en": home,   # 无英文名，用中文占位
                 "away_team_en": away,
                 "win": 0, "draw": 0, "lost": 0,
@@ -3229,7 +3233,10 @@ def run(args):
         _rd = m.get("report_date") or m['match_date']
         out_dir = BASE_DIR / "docs" / "prematch_reports" / _rd.replace("-", "")
         out_dir.mkdir(parents=True, exist_ok=True)
-        fname = f"{m['league']}_{_rd}_{home_cn}_vs_{away_cn}.md".replace("/", "-")
+        # C-20261017-133: 文件名队名归一到 canonical 中文（同一函数 feature_utils.
+        # normalize_team_name，单一源 team_names.CANONICAL_CN）——兜底防线，覆盖任何
+        # 残留英文/别名路径（如 matches 表 FBref 英文行进主源的情况）。
+        fname = f"{m['league']}_{_rd}_{_normalize_team_name(home_cn)}_vs_{_normalize_team_name(away_cn)}.md".replace("/", "-")
         report_path = out_dir / fname
         # C-20260922-053: 必须在 render_report 覆盖文件前解析赛前时间锚点
         replay_anchor, anchor_ev = (None, None)

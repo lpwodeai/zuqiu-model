@@ -941,7 +941,23 @@ def collect_match(client, conn, item, season, league, pages):
     if conn is not None:
         # P1-17: betting 有结果就写（含 crawl_status 标记，区分 ok/source_no_data/crawl_parse_failed）
         if result["betting"] is not None:
-            write_betting(conn, fid, match_id, result["betting"])
+            # C-20261017-133: blocked 不覆盖好行守卫（与 C-20261011-034 欧指守卫、
+            # C-20260926-089 partial 不 mark_done 同族：坏数据永不覆盖好数据）。
+            # 事故实证 2026-10-17 西甲 R9：EdgeOne 拦截把拉科 10-16 好行（必发 60.5%）
+            # 覆盖成 crawl_status='anti_bot_blocked' + 数值全 NULL。
+            # 规则：anti_bot_blocked 响应且库中已有 crawl_status='ok' 行 → 跳过写库
+            # 保留旧值；库中无 ok 行时仍写入 blocked 标记，便于追踪待重采。
+            if result["betting"].get("_crawl_status") == "anti_bot_blocked":
+                _old = conn.execute(
+                    "SELECT crawl_status FROM odds500_betting WHERE match_id=? LIMIT 1",
+                    (match_id,),
+                ).fetchone()
+                if _old and _old[0] == "ok":
+                    print(f"  [{fid}] 投注页命中反爬拦截，库中已有 ok 好行，跳过写库（保留旧值）")
+                else:
+                    write_betting(conn, fid, match_id, result["betting"])
+            else:
+                write_betting(conn, fid, match_id, result["betting"])
         if result["ouzhi"]:
             write_ouzhi(conn, fid, match_id, result["ouzhi"])
         if result["stat"]:
