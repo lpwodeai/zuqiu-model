@@ -82,11 +82,11 @@ FENXI_URL = "https://odds.500.com/fenxi/{page}-{fid}.shtml"
 COOKIE_FILE = MODEL_PROJECT_ROOT / "data" / "cookies_500.json"
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0")
+      "(KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0")
 # C-20261002-002：EO-Bot-Captcha-Token 与导出浏览器的 UA 主版本强绑定，
 # UA 不匹配时即使 token 新鲜也返回 ~2.1KB「Security Verification」拦截页（与 TLS 指纹无关）。
 # 用户 Edge 升级后必须同步本常量，或在 cookies_500.json 写 "__user_agent" 覆盖（优先级更高）。
-# 实测版本沿革：Chrome/152（旧）→ Edge153（C-20260922-054 注释）→ Edge154.0.4258.37（2026-10-02）。
+# 实测版本沿革：Chrome/152（旧）→ Edge153（C-20260922-054 注释）→ Edge154.0.4258.37（2026-10-02）→ Edge155（2026-10-17，C-20261017-133）。
 
 # 五大联赛 stid 映射：赛季 -> 联赛 -> (stid, 轮数)
 # 轮数约定：英超/西甲/意甲 38 轮（20 队）；德甲 34 轮（18 队）；
