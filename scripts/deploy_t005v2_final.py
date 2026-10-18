@@ -226,11 +226,15 @@ def two_stage_predict_final(draw_model, dir_model, X, handicap_categories=None,
 # Elo 快照构建（复用 deploy_t005_model 逻辑）
 # ========================================
 
-def build_team_elo_snapshot():
+def build_team_elo_snapshot(cutoff_date=None):
     """基于历史比赛结果计算所有球队的最新 Elo 评分快照。
 
     C-20260919-018: 队名归一化 + (日期,主,客) 去重，消除双轨重复双重计数；
     写入英文主键及全部英文别名键，保证 prediction_core 查询命中。
+    C-20261018-144: cutoff_date（YYYY-MM-DD）as-of 截止——只用严格早于该日的完赛
+    结果重放（C-143 Elo 泄漏根修：赛前链 0c 按报告日截止，杜绝赛果回填后快照含
+    比赛日及之后结果、跨日重生成被赛后快照污染）；None=旧行为全量重放
+    （训练/部署全量调用不变）。
     """
     import re
     conn = sqlite3.connect(DB_PATH)
@@ -239,9 +243,15 @@ def build_team_elo_snapshot():
         FROM matches
         WHERE actual_score IS NOT NULL
           AND actual_score != ''
+    """
+    if cutoff_date:
+        query += """
+          AND match_date < ?
+        """
+    query += """
         ORDER BY match_date
     """
-    raw = pd.read_sql(query, conn)
+    raw = pd.read_sql(query, conn, params=[cutoff_date] if cutoff_date else None)
     conn.close()
 
     from feature_utils import normalize_team_name
@@ -324,6 +334,8 @@ def build_team_elo_snapshot():
             elo_momentum[k] = elo_momentum_cn.get(canon, 0.0)
 
     print(f"[ELO] 计算了 {len(elo_ratings_cn)} 支球队的最新 Elo 评分（{len(elo_ratings)} 个英文键）")
+    if cutoff_date:
+        print(f"[ELO] as-of 截止生效: 仅用 match_date < {cutoff_date} 的完赛结果（C-144 泄漏根修）")
     vals = list(elo_ratings_cn.values())
     print(f"[ELO] Elo 评分范围: {min(vals):.1f} ~ {max(vals):.1f}")
 
@@ -333,6 +345,7 @@ def build_team_elo_snapshot():
         'default_elo': DEFAULT_ELO,
         'k_factor': K_FACTOR,
         'home_advantage': HOME_ADVANTAGE,
+        'cutoff_date': cutoff_date,
     }
 
 
@@ -816,7 +829,14 @@ if __name__ == "__main__":
     if "--elo-only" in sys.argv:
         # C-20260919-019: 仅重建 Elo 快照（每日赛前 20:30 流程调用），
         # 不跑完整训练部署；build_team_elo_snapshot 已含归一化去重+别名展开
-        elo_snapshot = build_team_elo_snapshot()
+        # C-20261018-144: --cutoff YYYY-MM-DD = as-of 截止（链 0c 传报告日，
+        # 严格 match_date < 报告日；不传=旧行为全量重放）
+        _cutoff = None
+        if "--cutoff" in sys.argv:
+            _ci = sys.argv.index("--cutoff")
+            if _ci + 1 < len(sys.argv):
+                _cutoff = sys.argv[_ci + 1]
+        elo_snapshot = build_team_elo_snapshot(cutoff_date=_cutoff)
         elo_path = os.path.join(ASSETS_DIR, 't005v2_final_elo_ratings.json')
         with open(elo_path, 'w', encoding='utf-8') as f:
             json.dump(elo_snapshot, f, ensure_ascii=False, indent=2)

@@ -91,11 +91,27 @@ Invoke-Step -Name "0a-4_understat补采" -Arguments @("collection\final_understa
 $scheduleEnd = (Get-Date).AddDays(3).ToString("yyyy-MM-dd")
 Invoke-Step -Name "0a-5_竞彩赛程采集" -Arguments @("scripts\sporttery_collector.py", "--season", "2026-2027", "--start-date", $reportDate, "--end-date", $scheduleEnd)
 
+# 0a-6. C-20261018-137: 竞彩赛果回填（matches.actual_score 断根修复）
+# 断根：0a-5 窗口 today~today+3 使 collector 路由 is_future=(end>=today) 恒真，
+# 赛果接口在链上从未触发 → 已完赛场次 actual_score 永空 → 报告链兜底枚举误判未赛、
+# 错目录件反复写回（C-136 根因之二）。本步窗口 today-3~yesterday 强制走赛果接口，
+# 智能 UPSERT 只补非空字段 + 时序 INSERT OR IGNORE，幂等可重跑。
+$resultsBegin = (Get-Date).AddDays(-3).ToString("yyyy-MM-dd")
+$resultsEnd = (Get-Date).AddDays(-1).ToString("yyyy-MM-dd")
+Invoke-Step -Name "0a-6_竞彩赛果回填" -Arguments @("scripts\sporttery_collector.py", "--season", "2026-2027", "--start-date", $resultsBegin, "--end-date", $resultsEnd)
+
+# 0a-7. C-20261018-137: 赛果传播——英文/别名/日期漂移键行（如 2026-10-19_Venezia_SSC Napoli）
+# 赛果接口只命中 canonical 中文行，漂移行永空仍会被兜底枚举误判未赛；
+# 按「队名双重归一 + 日期±3天」从已填赛果行复制，actual_handicap 用本行盘口重算。
+Invoke-Step -Name "0a-7_赛果传播回填" -Arguments @("scripts\backfill_match_results_propagate.py", "--apply")
+
 # 0b. 回踩当日竞彩时序赔率（刷新未赛赔率快照；INSERT OR IGNORE，新增快照不覆盖旧值）
 Invoke-Step -Name "0b_竞彩时序赔率回踩" -Arguments @("scripts\sporttery_live_collector.py", "--date", $reportDate)
 
 # 0c. C-20260919-019: 重建 Elo 快照（归一化去重+别名英文键），防静态快照随比赛累积过期
-Invoke-Step -Name "0c_Elo快照重建" -Arguments @("scripts\deploy_t005v2_final.py", "--elo-only")
+# C-20261018-144: --cutoff 传报告日——快照按「报告日 as-of」构建（严格 match_date < 报告日），
+# 杜绝 0a-6/0a-7 赛果回填后快照含比赛日及之后结果（C-143 Elo 泄漏根修，活漏止血）
+Invoke-Step -Name "0c_Elo快照重建" -Arguments @("scripts\deploy_t005v2_final.py", "--elo-only", "--cutoff", $reportDate)
 
 # 1. 生成预测报告（内置完整性门禁：竞彩WDL快照<2 会在汇总中标记「数据完整性告警」）
 Invoke-Step -Name "1_生成预测报告" -Arguments @("scripts\generate_unified_report.py", "--date", $reportDate, "--days", "2")

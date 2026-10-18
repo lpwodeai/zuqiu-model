@@ -214,6 +214,36 @@ def odds_to_implied(win, draw, lose):
     return (1 / win) / total, (1 / draw) / total, (1 / lose) / total, 1 / total
 
 
+def _market_lambda_contrast(ih_h, ih_d, ih_a, total):
+    """C-20261018-141: 市场 λ 对照（展示层只读，λ 失衡场自检；零模型/零落库影响）。
+
+    总量锁死为模型 λ 和（λ主+λ客），市场去水 WDL 经 solve_lambda_core 二分反演
+    市场分割（与 C-20261002-006 bisect 同构：锁总量 + 市场 WDL 二分），独立泊松
+    网格取 Top1 格。对照靶子 = λ 差放大（族内形状虚高），非总量。市场数据不足返回 None。
+    """
+    try:
+        if not all(isinstance(x, (int, float)) and x > 0 for x in (ih_h, ih_d, ih_a)):
+            return None
+        if not isinstance(total, (int, float)) or total <= 0.3:
+            return None
+        import math
+        from t006_score_predictor_v5 import solve_lambda_core  # 函数内 import 防循环（C-20261002-006 同法）
+        lh, la = solve_lambda_core(ih_h, ih_a, total)
+
+        def _pp(k, lam):
+            return math.exp(-lam) * lam ** k / math.factorial(k)
+
+        best, best_p = "—", -1.0
+        for h in range(8):
+            for a in range(8):
+                p = _pp(h, lh) * _pp(a, la)
+                if p > best_p:
+                    best_p, best = p, "{}:{}".format(h, a)
+        return {"lh": lh, "la": la, "top1": best, "top1_prob": best_p}
+    except Exception:
+        return None
+
+
 def kelly(model_prob, odds):
     """凯利指数 = (模型概率×赔率 - 1)/(赔率 - 1)"""
     if odds is None or model_prob is None or odds <= 1:
@@ -301,6 +331,7 @@ def discover_matches(conn, start_date, end_date, leagues=None, played_only=False
     out = []
     seen_keys = set()  # (date, home_cn_norm, away_cn_norm) 去重
     from datetime import datetime as _dt
+    from datetime import timedelta as _td
     _now = _dt.now() if not played_only else None
     for r in rows:
         d = dict(r)
@@ -311,14 +342,20 @@ def discover_matches(conn, start_date, end_date, leagues=None, played_only=False
             d["home_team_en"] = d["home_team_cn"]
         if not d["away_team_en"] or any("\u4e00" <= ch <= "\u9fff" for ch in d["away_team_en"]):
             d["away_team_en"] = d["away_team_cn"]
-        # C-20261011-047 开球时间守卫
+        # C-20261011-047 开球时间守卫（C-20261018-140 改造：不再 skip 丢弃，改标 _frozen
+        # 标记——冻结场在主循环走 FROZEN 分支：不重预测（防赛后数据泄漏，C-053 纪律 /
+        # pred_ts_valid 门禁），summary 经 load_frozen_row 保留既有赛前预测行。
+        # 解混：500 混搭口径 match_date=欧洲日期 + match_time=北京时刻，直接拼接会把
+        # 次日凌晨场（如皇马 03:00）误判已开球永久跳过；match_time<12:00 视为次日凌晨 +1 天。
         if _now is not None:
             try:
-                _ko = _dt.strptime(f"{d['match_date']} {d['match_time']}", "%Y-%m-%d %H:%M")
+                _ko_date = d['match_date']
+                if d['match_time'] and d['match_time'] < "12:00":
+                    _ko_date = (_dt.strptime(_ko_date, "%Y-%m-%d") + _td(days=1)).strftime("%Y-%m-%d")
+                _ko = _dt.strptime(f"{_ko_date} {d['match_time']}", "%Y-%m-%d %H:%M")
                 if _ko <= _now:
-                    print(f"[SKIP] 已开球场次跳过渲染: {d.get('home_team_cn')} vs {d.get('away_team_cn')} "
-                          f"(开球 {d['match_date']} {d['match_time']}，500 status 滞后未翻转，C-20261011-047)")
-                    continue
+                    d["_frozen"] = True
+                    d["_kickoff"] = _ko.strftime("%Y-%m-%d %H:%M")
             except (ValueError, TypeError):
                 pass
         key = (d["match_date"], _normalize_team_for_wdl(d["home_team_cn"]), _normalize_team_for_wdl(d["away_team_cn"]))
@@ -414,6 +451,40 @@ def discover_matches(conn, start_date, end_date, leagues=None, played_only=False
                 "pan": None,
                 "_source": "sporttery",
             })
+            # C-20261018-140: 兜底场冻结判据（已开球不重预测，主循环走 FROZEN 分支保 summary 行）。
+            # 判据 = mdate（竞彩北京日期，口径纯）+ _kickoff500 时刻分量（500 match_time
+            # 即北京时刻，mdate 已承担日期归一，无需再解混）；未命中 500 反查时保守判
+            # mdate < 今天才冻结（今日场宁可不冻结，临场终版链仍生效）。
+            _fb = out[-1]
+            try:
+                if _kickoff500:
+                    _fko = _dt.strptime(
+                        f"{mdate} {_kickoff500.split(' ')[1]}", "%Y-%m-%d %H:%M")
+                    if _fko <= _dt.now():
+                        _fb["_frozen"] = True
+                        _fb["_kickoff"] = _fko.strftime("%Y-%m-%d %H:%M")
+                elif mdate < _dt.now().strftime("%Y-%m-%d"):
+                    _fb["_frozen"] = True
+            except (ValueError, TypeError, IndexError):
+                pass
+            # C-20261018-144: 漂移行封版扩展（C-143 泄漏根修②守卫）——同一物理场次
+            # （队名双重归一+日期±3天，0a-7 传播同口径）在 matches 中已有赛果时，
+            # 本兜底行视同已赛冻结，禁止 live 重算子模型表（0a-7 漏网/传播未跑时
+            # 的残余错目录写回通道，C-136 同族；±3天同主客对阵双赛现实中不存在）。
+            if not _fb.get("_frozen"):
+                try:
+                    for _pr in conn.execute(
+                        "SELECT home_team, away_team FROM matches "
+                        "WHERE match_date BETWEEN date(?, '-3 day') AND date(?, '+3 day') "
+                        "AND actual_score IS NOT NULL AND actual_score != ''",
+                        (mdate, mdate),
+                    ).fetchall():
+                        if (_normalize_team_for_wdl(_pr[0]) == h_norm
+                                and _normalize_team_for_wdl(_pr[1]) == a_norm):
+                            _fb["_frozen"] = True
+                            break
+                except Exception:
+                    pass
         if sp_rows:
             print(f"[兜底] 竞彩 matches 表补全 {len([r for r in out if r.get('_source')=='sporttery'])} 场（500.com 缺失）")
 
@@ -541,6 +612,69 @@ def match_has_prediction(conn, m):
         if conn.execute("SELECT 1 FROM model_predictions WHERE match_id = ? LIMIT 1", (mid,)).fetchone():
             return True
     return False
+
+
+def load_frozen_row(conn, m):
+    """C-20261018-140: 冻结场（已开球）从 model_predictions 加载既有赛前预测，构造
+    summary 行——不重预测（防赛后数据泄漏，C-053 纪律 / pred_ts_valid 门禁）。
+    无既有 WDL 预测时返回 None（主循环整场跳过）。
+    """
+    date = m["match_date"]
+    cands = [
+        f"{date}_{_clean_team(m['home_team_en'])}_{_clean_team(m['away_team_en'])}",
+        f"{date}_{_clean_team(m['home_team_cn'])}_{_clean_team(m['away_team_cn'])}",
+    ]
+    mid = None
+    for c in cands:
+        if conn.execute(
+            "SELECT 1 FROM model_predictions WHERE match_id=? AND prediction_type='WDL_home' LIMIT 1",
+            (c,),
+        ).fetchone():
+            mid = c
+            break
+    if mid is None:
+        return None
+    probs = {}
+    snap_json = None
+    for pt, prob, sj in conn.execute(
+        "SELECT prediction_type, probability, input_snapshot_json FROM model_predictions "
+        "WHERE match_id=? AND prediction_type IN ('WDL_home','WDL_draw','WDL_away')",
+        (mid,),
+    ):
+        probs[pt] = prob or 0.0
+        if sj and not snap_json:
+            snap_json = sj
+    hp = probs.get("WDL_home", 0.0)
+    dp = probs.get("WDL_draw", 0.0)
+    ap = probs.get("WDL_away", 0.0)
+    pred = "主胜" if hp >= max(dp, ap) else ("平局" if dp >= ap else "客胜")
+    # 比分口径 = generate_unified_report_v2.0 行（与报告 §一 most_likely 同源）；
+    # t006 行（v5 shadow 网格 argmax，同名类型）仅作兜底——冒烟实证利兹联两行
+    # 分叉（t006=1:1 / v2.0=2:1），summary 展示口径以 v2.0 为准
+    top1 = conn.execute(
+        "SELECT prediction FROM model_predictions WHERE match_id=? AND prediction_type='Score_top1' "
+        "ORDER BY (model_name LIKE 'generate_unified_report%') DESC, id DESC LIMIT 1",
+        (mid,),
+    ).fetchone()
+    snaps = 2  # 解析失败保守置 2：冻结行的告警应以赛前快照为准，缺失时不误报
+    if snap_json:
+        try:
+            _ws = json.loads(snap_json).get("wdl_snapshots")
+            snaps = len(_ws) if isinstance(_ws, list) else int(_ws)
+        except Exception:
+            snaps = 2
+    _rd = m.get("report_date") or date
+    fname = f"{m['league']}_{_rd}_{_normalize_team_name(m['home_team_cn'])}_vs_{_normalize_team_name(m['away_team_cn'])}.md".replace("/", "-")
+    return {
+        "match_id": mid, "league": m["league"],
+        "home": m["home_team_cn"], "away": m["away_team_cn"],
+        "match_date": date, "report_date": m.get("report_date"),
+        "wdl": {"prediction": pred, "home_prob": hp, "draw_prob": dp, "away_prob": ap},
+        "score": {"most_likely": top1[0] if top1 else "—"},
+        "hc": {}, "tg": {}, "ev": {},  # 冻结行不携带让球/总进球/EV（summary 不消费；不回写 DB）
+        "_file": fname, "_frozen": True,
+        "_wdl_snapshots": snaps, "_wdl_not_offered": False, "_completeness": 100,
+    }
 
 
 # ============================================================
@@ -1718,6 +1852,7 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
     # C-20261017-130: 子模型分歧闸（纯展示层，零模型改动，ev_engine 返回值不动）。
     # 5 子模型 argmax 计票，多数（≥3）方向与 meta（wdl_pred）不一致（4:1/3:1:1 等）时，
     # §一 推荐卡与 §6.2 EV 决策卡一律强制降级为「提示·分歧观望」，不出 VALUE 执行建议。
+    # （C-20261018-138 起两卡均已退役，本闸转挂为「方向分歧提示」，变量仍用于分支标记。）
     # 依据 C-20261004-007：分歧信任规则已被证伪（n=77，方向规则 RPS 0.1912 输纯市场
     # 0.1831；δ*=0.06 信任规则仅噪声级微胜；w*=1.0），分歧场跟随模型无统计优势。
     # pass-through 语义（C-20261017-130 定案，7 场景单测覆盖）：无 ≥3 多数票（如 2:2:1）
@@ -1872,57 +2007,17 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
             _c["name"], "基准" if _c["type"] == "base" else "扣分",
             _sign, _v, _c["reason"]))
     A("")
-    A("### 模型推荐")
-    A("")
-    A("```")
-    A("┌─────────────────────────────────────────────────────────────┐")
+    # C-20261018-138: EV 展示层解耦——「模型推荐」下注建议卡整体退役（六层证伪 ROI 为负、
+    # 勒芒场错方向 VALUE 事件；推荐/仓位语义不再面向读者渲染）。ev_engine 计算与 EV_* 落库
+    # 不受影响（C1 P0-E 实盘通道内部继续使用）。C-20261017-130 分歧闸转挂为「方向分歧提示」：
+    # 4:1/3:1:1 票型 vs meta 反向的提示对读者仍有独立价值，但不再携带任何执行/仓位语义。
     if rec_type == "DISAGREE_WATCH":
-        A("│  推荐类型: 提示（子模型分歧，不建议执行）")
-        A("│  多数票方向: {}（{}{}，meta 反向给{}）".format(
-            _maj_dir, _maj_votes, ":" + str(_meta_votes) if _vote_total == 5 else "票:" + str(_meta_votes) + "票",
-            wdl_pred))
-        A("│  原 EV 信号: {} @ {} / edge {}{}% / 凯利 {}（已降级留痕）".format(
-            rec_dir, fnum(rec_odds),
-            "+" if (rec_edge or 0) > 0 else "", fnum((rec_edge or 0) * 100), fnum(rec_k, 3)))
-        A("│  建议仓位: 0%（分歧场观望）")
-    elif rec_type in ("NO_VALUE", "AVOID"):
-        # P0-02: 无价值/规避时不再输出误导性「推荐方向」，明示观望
-        A("│  推荐类型: {}".format(rec_type))
-        A("│  推荐方向: —（无投注价值，观望）")
-        A("│  推荐赔率: —")
-        A("│  模型概率: —")
-        A("│  隐含概率: —")
-        A("│  价值空间: —")
-        A("│  凯利指数: —")
-        A("│  建议仓位: 0%")
-    else:
-        A("│  推荐类型: {}".format(rec_type))
-        A("│  推荐方向: {}".format(rec_dir))
-        A("│  推荐赔率: {}".format(fnum(rec_odds)))
-        A("│  模型概率: {}".format(pct(rec_mp)))
-        A("│  隐含概率: {}".format(pct(rec_implied)))
-        A("│  价值空间: {}{}%".format("+" if (rec_edge or 0) > 0 else "", fnum((rec_edge or 0) * 100)))
-        A("│  凯利指数: {}".format(fnum(rec_k, 3)))
-        A("│  建议仓位: {}%".format(fnum(suggested_stake * 100, 1)))
-    A("└─────────────────────────────────────────────────────────────┘")
-    A("```")
-    A("")
-    # C-20261017-130: 分歧场降级附注（与 C-022 的「EV≠概率方向」注释互斥，降级卡不再谈仓位）
-    if rec_type == "DISAGREE_WATCH":
-        A("> 🚫 **分歧场降级（C-20261017-130）**：可用子模型 {} 个，**{} 票看{}、Stacking meta 反向给{}**（分歧度 std={:.4f}）；"
-          "C-20261004-007 已证伪「分歧时信任模型」规则（n=77：方向规则 RPS 0.1912 输纯市场 0.1831，"
-          "δ 信任规则仅噪声级微胜、w*=1.0）——**分歧场不建议按 VALUE 执行，本卡仅作观察留痕，建议仓位 0%**。".format(
+        A("### 方向分歧提示")
+        A("")
+        A("> ⚠️ **子模型方向分歧**：可用子模型 {} 个，**{} 票看{}、Stacking meta 反向给{}**（分歧度 std={:.4f}）。"
+          "方向分歧显著时融合概率的不确定性升高，本场置信度已在「置信度拆解」中相应扣分；"
+          "历史检验（C-20261004-007，n=77）显示分歧场跟随模型无统计优势，请对结论保持审慎。".format(
             _vote_total, _maj_votes, _maj_dir, wdl_pred, divergence_std))
-        A("")
-    # C-20260919-022: 推荐方向与概率方向相反时直接解释，避免被误读为"模型预测反转"
-    if rec_type not in ("NO_VALUE", "AVOID", "DISAGREE_WATCH") and rec_dir != wdl_pred and rec_mp is not None:
-        A("> ℹ️ **推荐方向（{}）≠ 概率预测方向（{}）**：概率层回答「谁最可能赢」——{} 概率最高（{}）；".format(
-            rec_dir, wdl_pred, wdl_pred, pct(max(hp or 0, dp or 0, ap or 0))))
-        A("> EV 层回答「押谁的赔率划算」——{} 虽只给 {} 概率，但赔率 {}，概率×赔率={:.2f}>1，单位注金期望为正。这是**高赔率冷门的小仓位价值提示，不是模型改判 {} 会赢**；该冷门实际仍大概率不发生，建议仓位仅 {}%。".format(
-            rec_dir, pct(rec_mp), fnum(rec_odds), rec_mp * (rec_odds or 0), rec_dir, fnum(suggested_stake * 100, 1)))
-        A("")
-    if rec_type in ("NO_VALUE", "AVOID"):
-        A("> 本场在 EV 阈值（2%）下无足够价值空间（edge 不足或低于抽水），建议观望。")
         A("")
     A("### 一句话总结")
     A("")
@@ -1935,10 +2030,10 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
     else:
         _mkt_word = "对{}方向过热（价值空间 {:+.1f}%）".format(rec_dir, (rec_edge or 0) * 100)
     if rec_type == "DISAGREE_WATCH":
-        _summary_tail = "子模型 {} 票看{}而 meta 反向给{}，分歧场已降级，不建议按 VALUE 执行".format(
+        _summary_tail = "子模型 {} 票看{}而 meta 反向给{}，方向分歧显著，结论需审慎".format(
             _maj_votes, _maj_dir, wdl_pred)
     else:
-        _summary_tail = "存在价值空间" if (rec_edge or 0) >= 0.02 else "无明显价值，建议观望"
+        _summary_tail = "市场对照详见第六节"
     summary = "模型主看{}（概率{}），市场{}，{}。".format(
         wdl_pred, pct(max(hp or 0, dp or 0, ap or 0)), _mkt_word, _summary_tail)
     A("> " + summary)
@@ -2069,6 +2164,23 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
         A("> 赛后建议：拿真实 xG 数据复核 λ 链路（赔率隐含概率 → WDL/TG 缩放 → 调整后 λ），"
           "确认客场强队 λ 被压低是否合理。")
         A("")
+    # C-20261018-141: 市场 λ 对照行（λ 失衡场自检；展示层只读，零模型/零落库影响）
+    if lambda_alert and lambda_alert.get("triggered"):
+        _tot = (lambda_h + lambda_a) if (
+            isinstance(lambda_h, (int, float)) and isinstance(lambda_a, (int, float))) else None
+        _mlc = _market_lambda_contrast(ih_h, ih_d, ih_a, _tot)
+        if _mlc:
+            _t1 = top_scores[0] if top_scores else {}
+            A("> 📏 **市场 λ 对照（λ 失衡自检）**: 市场去水 WDL（主 {} / 平 {} / 客 {}）在**同总量**（{} 球）下"
+              "二分反演 λ主={} λ客={}（差 {:.2f}，模型差 {:.2f}），泊松同构 Top1 = {}@{}"
+              "（本报告 Top1 = {}@{}）——单格真实频率天花板 ~12%，Top1 概率幅度请对照市场口径阅读；"
+              "λ 差放大根治归 Plan 3（C-20261018-141）".format(
+                  pct(ih_h), pct(ih_d), pct(ih_a), fnum(_tot),
+                  fnum(_mlc["lh"]), fnum(_mlc["la"]),
+                  abs(_mlc["lh"] - _mlc["la"]), abs((lambda_h or 0) - (lambda_a or 0)),
+                  _mlc["top1"], pct(_mlc["top1_prob"]),
+                  _t1.get("score", "—"), pct(_t1.get("prob") or 0)))
+            A("")
     # C-20261011-041: WDL 方向族重排注记（Top1=族内最大格；网格/边缘/Top5 集合不变）
     if score_reorder_note:
         A("> ℹ️ **WDL 方向族重排**: {}（C-20261011-041；λ 失衡场重加权后 Top1 概率仍可能虚高，仅供参考）".format(
@@ -2116,18 +2228,23 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
     A("")
 
     # ================= 七、赔率分析 =================
-    A("## 六、赔率分析与价值投注")
+    A("## 六、赔率分析与市场对照")
     A("")
-    # P1-07: 两层预测架构提示块（概率预测层 vs EV 决策层）
+    # P1-07: 两层预测架构提示块（概率预测层 vs 市场对照层）
+    # C-20261018-138: 本节由「EV 决策」改为「市场对照诊断」——保留 edge/去水概率/抽水/凯利等
+    # 诊断数字（项目是锚哲学的展示层），但不再输出任何下注建议/仓位结论（该层已经六层证伪）。
     A("> 📌 **预测层级架构**")
     A("> - **第一层 — 概率预测**（§一~§五）：Stacking 融合 5 子模型，输出 WDL/让球/比分/总进球概率，回答「谁赢、几个球」。")
-    A("> - **第二层 — EV 决策**（§六）：以第一层概率 × 市场赔率，扣除抽水后计算期望值，回答「是否值得下注、下注仓位」。")
-    A("> - 概率预测正确 ≠ 有投注价值：抽水率（vig）会吞噬部分 edge，仅当 EV>0 且 edge≥EV 阈值（2%）才进入决策。")
+    A("> - **第二层 — 市场对照**（§六）：以第一层概率 × 市场赔率，计算 edge/去水市场概率/抽水率等诊断指标，回答「模型定价与市场定价差多少、差在哪」。")
+    A("> - 本节所有数字均为**诊断对照、非下注建议**（历史回测已证伪其下注指导价值，仅作市场罗盘参考）。")
     A("")
 
     # --- EV 期望值分析（ev_engine 决策层）---
     if ev_analysis is not None:
         A("### 6.1 期望值分析 (EV)")
+        A("")
+        # C-20261018-138: 本表为市场对照诊断（保留罗盘），非下注建议；原「6.2 投注建议卡」已整体退役
+        A("> 下表为**诊断对照**（历史回测已证伪其下注指导价值，ROI 长期为负），仅用于观察模型定价与市场定价的差异。")
         A("")
         A("| 结果 | 竞彩赔率 | 模型概率 | 去水市场概率 | 价值空间 | EV | 凯利(1/4) | 决策 |")
         A("|------|:--------:|:--------:|:------------:|:--------:|:---:|:---------:|:----:|")
@@ -2138,80 +2255,16 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
                 "{:.1f}%".format(d.kelly_clipped * 100) if d.decision != "AVOID" else "0%",
                 d.decision))
         A("")
-        A("### 6.2 投注建议 (EV 决策)")
-        A("")
-        A("```")
-        A("┌─────────────────────────────────────────────────────────────┐")
-        if ev_analysis.overall_decision == "AVOID":
-            A("│  本场决策: AVOID（无投注价值）                              │")
-            A("│  最佳EV: {:.2f}%                                            │".format(ev_analysis.best_ev * 100))
-            A("│  建议仓位: 0%（观望）                                       │")
-        else:
-            # C-20261017-130: meta 与子模型多数票分歧时，EV 卡同步纯展示降级（ev_engine 对象不动）
-            if _meta_majority_disagree:
-                label = "提示（子模型分歧，不建议执行；原 {} 判定留痕）".format(
-                    "VALUE" if ev_analysis.overall_decision == "VALUE" else "MARGINAL")
-            else:
-                label = "VALUE（有投注价值）" if ev_analysis.overall_decision == "VALUE" else "MARGINAL（微弱价值）"
-            if ev_analysis.best_direction == "home":
-                bp, bo = ev_analysis.home_analysis.p_model, ev_analysis.home_analysis.odds
-            elif ev_analysis.best_direction == "draw":
-                bp, bo = ev_analysis.draw_analysis.p_model, ev_analysis.draw_analysis.odds
-            else:
-                bp, bo = ev_analysis.away_analysis.p_model, ev_analysis.away_analysis.odds
-            A("│  本场决策: {}".format(label))
-            A("│  推荐方向: {}".format(ev_analysis.best_direction_cn))
-            A("│  模型概率: {:.1f}% | 建议赔率: {:.2f}".format(bp * 100, bo))
-            A("│  价值空间: {:+.1f}%".format(ev_analysis.best_edge * 100))
-            A("│  期望值: {:+.2f}%（每注1元）".format(ev_analysis.best_ev * 100))
-            A("│  建议仓位: {:.1f}%（1/4凯利）".format(
-                0.0 if _meta_majority_disagree else ev_analysis.recommended_stake_pct * 100))
-            if _meta_majority_disagree:
-                A("│  分歧闸: 子模型 {} 票看{} / meta 反向给{}，强制观望".format(
-                    _maj_votes, _maj_dir, wdl_pred))
-        A("└─────────────────────────────────────────────────────────────┘")
-        A("```")
-        A("")
-        # C-20261017-130: 分歧场 EV 卡降级附注
-        if _meta_majority_disagree and ev_analysis.overall_decision != "AVOID":
-            A("> 🚫 **分歧场降级（C-20261017-130）**：上表 EV 数字为 ev_engine 原始输出留痕，但子模型 {} 票看{}、"
-              "Stacking meta 反向给{}；C-20261004-007 已证伪「分歧时信任模型」规则（n=77：方向规则 RPS 0.1912 "
-              "输纯市场 0.1831，w*=1.0），**本卡降级为提示、建议仓位 0%，不按 VALUE 执行**。".format(
-                _maj_votes, _maj_dir, wdl_pred))
-            A("")
-        # C-20260919-022: EV 决策方向与概率预测方向相反时，报告内自动解释（两套口径不互相覆盖）
-        _EV_DIR_CN = {"home": "主胜", "draw": "平局", "away": "客胜"}
-        if ev_analysis.overall_decision != "AVOID":
-            _ev_dir_cn = _EV_DIR_CN.get(ev_analysis.best_direction, ev_analysis.best_direction)
-            if _ev_dir_cn != wdl_pred:
-                _ev_d = {"home": ev_analysis.home_analysis, "draw": ev_analysis.draw_analysis,
-                         "away": ev_analysis.away_analysis}[ev_analysis.best_direction]
-                A("> ℹ️ **EV 推荐方向（{}）与概率预测方向（{}）相反，这并非模型改判**：".format(_ev_dir_cn, wdl_pred))
-                A("> 概率层：{} 概率最高（{}），模型认为它最可能发生；".format(
-                    wdl_pred, pct(max(hp or 0, dp or 0, ap or 0))))
-                A("> EV 层：{} 仅 {:.1f}% 概率，但赔率 {:.2f}，概率×赔率={:.2f}>1，长期看每元期望回报 {:+.2f}%。".format(
-                    _ev_dir_cn, _ev_d.p_model * 100, _ev_d.odds,
-                    _ev_d.p_model * _ev_d.odds, ev_analysis.best_ev * 100))
-                A("> 即「赢面仍在{}，但 {} 的高赔率相对于其小概率被低估」——属小概率高赔率事件的**小仓位（{:.1f}%）价值提示**，请按仓位纪律看待，不可当成胜负预测。".format(
-                    wdl_pred, _ev_dir_cn, ev_analysis.recommended_stake_pct * 100))
-                A("")
-            # C-20260923-064: §一 推荐卡（按价值空间 edge 最大选向）与本卡（按期望值 EV 最大选向）
-            # 方向可能不同——两卡各自解释过「≠概率方向」，但相互之间未解释，同报告两个「推荐方向」易被误读为矛盾
-            if rec_dir not in (None, "—", _ev_dir_cn) and (rec_edge or 0) >= ev_thr:
-                A("> ℹ️ **§一 推荐卡（{}）与本卡（{}）方向不同，两者均为 EV 层价值提示、非概率改判**：".format(
-                    rec_dir, _ev_dir_cn))
-                A("> §一 按「价值空间 edge 最大」选向（{}，edge {:+.1f}%）；本卡按「期望值 EV 最大」选向（{}，EV {:+.1f}%）——".format(
-                    rec_dir, (rec_edge or 0) * 100, _ev_dir_cn, ev_analysis.best_ev * 100))
-                A("> EV 含赔率杠杆（模型概率×赔率-1），高赔率小概率方向的 EV 可远高于低赔率高 edge 方向；两列口径见 §6.1（价值空间=edge 列，EV=期望值列），仓位以本卡（EV 最大方向）为准。")
-                A("")
-        A("### 6.3 抽水分析")
+        # C-20261018-138: 原「6.2 投注建议 (EV 决策)」卡及其附注块整体退役（展示层解耦；
+        # ev_engine 对象、EV_* 落库、C1 P0-E 实盘通道不受影响）。6.3 抽水分析顺延为 6.2。
+        A("### 6.2 抽水分析")
         A("")
         A("- 竞彩返还率: {} | 抽水率: {} | 三向隐含概率和: {}".format(
             pct(ev_analysis.payout_rate), pct(ev_analysis.vig), pct(ev_analysis.total_implied)))
         if ev_analysis.risk_warnings:
             A("- 风险提示: {}".format("；".join(ev_analysis.risk_warnings)))
         A("")
-        A("> 注：EV 阈值 {}% | 凯利策略 {} | 单场上限 {}%。EV>0 且 edge>0 才有价值。".format(
+        A("> 注：EV 阈值 {}% | 凯利策略 {} | 单场上限 {}%（以上参数为 ev_engine 内部口径，供 C1 实盘通道使用；本节数字仅作诊断对照）。".format(
             ev_analysis.ev_threshold * 100, ev_analysis.kelly_strategy, ev_analysis.kelly_cap * 100))
         A("")
         # P1-06: edge 正向但 EV 负（或反向）矛盾解释
@@ -2234,8 +2287,11 @@ def render_report(m, odds_data, result, extra, report_path, conn=None, is_replay
     A("### 凯利指数分析")
     A("")
     # P1-05: 两套凯利概念脚注（下注策略 vs 市场隐含），消除混用
+    # C-20261018-138: 本表保留作市场对照，标注「历史证伪，仅作对照」；原 §6.2 决策卡已退役
+    A("> ⚠️ **历史证伪，仅作对照**：凯利下注策略在本项目历史回测中未产生正期望，本表仅用于观察「模型 vs 市场」定价分歧，不构成任何仓位建议。")
+    A("")
     A("> 📝 **凯利概念辨析**（两套概念易混用，特此脚注）")
-    A("> - **下注策略凯利**（本表与 §6.2 决策卡）：f* = (bp - q) / b，b=净赔率(赔率-1)，p=模型胜率，q=1-p。本表列为**全凯利原始值**，§6.2 实际仓位取 **1/4 分数凯利**（kelly_clipped×0.25，控方差）。")
+    A("> - **下注策略凯利**（本表）：f* = (bp - q) / b，b=净赔率(赔率-1)，p=模型胜率，q=1-p。本表列为**全凯利原始值**；1/4 分数凯利（kelly_clipped×0.25）为 ev_engine 内部口径，供 C1 实盘通道使用。")
     A("> - **赔率隐含凯利**：以市场隐含概率作为「市场认为的胜率」反推 f*，反映庄家观点，与模型凯利差值衡量「市场 vs 模型」分歧，本表未展示。")
     A("")
     A("| 结果 | 竞彩赔率 | 模型概率 | 凯利指数 | 判定 |")
@@ -3117,7 +3173,11 @@ def run(args):
 
     if args.dry_run:
         for m in matches:
-            print(f"  - {m['match_date']} {m['match_time']} [{m['league']}] {m['home_team_cn']} vs {m['away_team_cn']} (盘口 {m['handicap'] or '—'})")
+            # C-20261018-140: 冻结场 dry-run 标签（含既有预测可用性，冒烟断言用）
+            _fz = ""
+            if m.get("_frozen"):
+                _fz = " ❄️FROZEN(既有预测✓)" if match_has_prediction(conn, m) else " ❄️FROZEN(无预测)"
+            print(f"  - {m['match_date']} {m['match_time']} [{m['league']}] {m['home_team_cn']} vs {m['away_team_cn']} (盘口 {m['handicap'] or '—'}){_fz}")
         conn.close()
         return
 
@@ -3153,6 +3213,26 @@ def run(args):
         # C-20260923-059: --force 绕过此检查以强制重生成报告（验证/修复用，建议配合 --no-write 避免污染 DB）
         if args.replay and not args.force and match_has_prediction(conn, m):
             print(f"  ⏭️ 已有预测，跳过: {home_cn} vs {away_cn}")
+            continue
+
+        # C-20261018-144: 跨日重生成封版扩展（C-143 泄漏根修②守卫）——match_date
+        # 早于运行日的场次一律视同封版（补开球守卫漏判：时间解析失败等残余），
+        # 禁止 live 重算子模型表；--replay/--teams 手工绕过通道不变。
+        if not m.get("_frozen") and not args.replay and not getattr(args, "teams", None):
+            from datetime import datetime as _dt144
+            if m.get("match_date") and m["match_date"] < _dt144.now().strftime("%Y-%m-%d"):
+                m["_frozen"] = True
+
+        # C-20261018-140: 冻结场（已开球）封版分支——不重预测（防赛后数据泄漏，
+        # C-053 纪律 / pred_ts_valid 门禁），summary 经 load_frozen_row 保留既有
+        # 赛前预测行；--replay / --teams 为手工绕过通道（runbook 写死）。
+        if m.get("_frozen") and not args.replay and not getattr(args, "teams", None):
+            _fr = load_frozen_row(conn, m)
+            if _fr is not None:
+                rows.append(_fr)
+                print(f"  ❄️ FROZEN 已开球封版: 沿用既有赛前预测（{_fr['match_id']}），不重预测")
+            else:
+                print(f"  ❄️ FROZEN 已开球封版: 无既有赛前预测，整场跳过（不重预测）")
             continue
 
         # 1. 定位竞彩时序 match_id（仅 WDL 表）
@@ -3478,7 +3558,9 @@ def run(args):
     # 8. 回写 model_predictions
     if rows and not args.no_write:
         try:
-            ids = batch_save_predictions([serializable_to_pred(r) for r in rows])
+            # C-20261018-140: 冻结行（_frozen）不回写——既有赛前预测原样保留，
+            # 重跑只恢复 summary 展示，绝不用赛后窗口数据覆盖 pred_ts_valid 门禁字段
+            ids = batch_save_predictions([serializable_to_pred(r) for r in rows if not r.get("_frozen")])
             print(f"✅ 已回写 {len(ids)} 场到 model_predictions: {ids}")
         except Exception as e:
             print(f"⚠️ 回写 model_predictions 失败: {type(e).__name__}: {e}")
@@ -3487,7 +3569,7 @@ def run(args):
         # 独立 try/except 守卫：失败只告警，不阻断主预测回写与报告产出。
         try:
             from prediction_db_writer import batch_save_submodel_probs
-            _n_sub = batch_save_submodel_probs(rows)
+            _n_sub = batch_save_submodel_probs([r for r in rows if not r.get("_frozen")])  # C-20261018-140: 冻结行不回写
             print(f"✅ 已回写子模型概率 {_n_sub} 行（{len(rows)} 场 × 最多 15，Submodel_* 类型）")
         except Exception as e:
             print(f"⚠️ 子模型概率回写失败（不影响主链路）: {type(e).__name__}: {e}")
