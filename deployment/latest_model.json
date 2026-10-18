@@ -1,11 +1,11 @@
 {
-  "latest_version": "20261017_080020",
-  "updated_at": "2026-10-17T08:00:20.631169",
+  "latest_version": "20261018_080018",
+  "updated_at": "2026-10-18T08:00:18.651877",
   "model_paths": {
     "draw_detector": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_draw_detector.pkl",
     "direction_predictor": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_direction_predictor.pkl",
     "metadata": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\assets\\t005v3_metadata.json",
-    "report": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\reports\\t005v3_deployment_20261017_080020.json"
+    "report": "F:\\zuqiu\\五大联赛专属模型\\五大联赛专属模型\\reports\\t005v3_deployment_20261018_080018.json"
   },
   "calibration": {
     "temperature": 1.0,

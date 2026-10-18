@@ -1,7 +1,7 @@
 {
   "model_name": "T-005 v3 (24维对手Lag特征扩展 + 重新校准)",
-  "version": "20261017_080020",
-  "created_at": "2026-10-17T08:00:20.463589",
+  "version": "20261018_080018",
+  "created_at": "2026-10-18T08:00:18.562469",
   "architecture": "two-stage (draw detector + direction predictor)",
   "feature_columns": [
     "hcp_prob_win",
