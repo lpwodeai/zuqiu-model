@@ -25,7 +25,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -58,6 +60,17 @@ PM_HEARTBEAT_FRESH_H = 6.0  # 最近一轮心跳新鲜度；白天超此数=调�
 PM_SILENT_HOURS = range(9, 23)   # 调度静默只在白天判定（夜间关机为正常态）
 PM_BACKLOG_MIN = 3          # DB 侧已完赛日未复盘积压场道门限
 PM_BACKLOG_DAYS = 3         # 积压窗 [今天-3, 昨天]：昨日及更早=已给全天完赛宽限
+
+# ---- C-20261022-192: 监控层接入（只读扫描，非阻断） ----
+# 登记≠现状的教训：scan_orphans / scan_duplicate_keys 曾登记为"已挂链"实际无任何执行入口。
+# 并入本看门狗每日巡检；非阻断——扫描自身失败只入 STATUS.md 观察行，绝不拖垮巡检链。
+SCAN_SCRIPTS = (
+    ("scan_orphans", "scan_orphans.py"),
+    ("scan_duplicate_keys", "scan_duplicate_keys.py"),
+    ("scan_backfill_gap", "scan_backfill_gap.py"),   # C-20261022-194：赛果/league 回填缺口
+    ("disk_error_scan", "disk_error_scan.py"),       # C-20261024-205：Disk EventID 11 控制器错误（NVMe 不迁移的替代告警）
+)
+SCAN_TIMEOUT_S = 300   # scan_orphans 单次实测 ~91s（8 表全量），留足余量；超时仅记观察行
 
 
 def chain_date_for_now(now: datetime, override: str | None) -> str:
@@ -229,6 +242,44 @@ def check_post_match_outage(
     return None, note + "（未达断供门限）"
 
 
+def run_readonly_scans() -> list[str]:
+    """C-20261022-192：每日只读扫描（非阻断）。
+
+    scan_orphans / scan_duplicate_keys 各自有独立的 exit 语义（前者 FK 保护表非零即
+    异常，后者默认恒 0），此处**只采集不裁决**——任何失败/超时/缺脚本都只产出一行
+    观察记录，不进入 fatal、不改看门狗退出码，避免"仪器失败拖垮巡检链"。
+    """
+    notes = []
+    for label, fname in SCAN_SCRIPTS:
+        path = BASE_DIR / "scripts" / fname
+        if not path.exists():
+            notes.append(f"{label}: 脚本缺失")
+            continue
+        try:
+            # C-20261023-196：子扫描 stdout 是管道时回落 GBK，打印 ⚠️ 类字符即
+            # UnicodeEncodeError（scan_backfill_gap 挂链首日实发，哨兵静默变瞎）。
+            # 强制子进程 UTF-8 IO + 显式解码，整个 SCAN_SCRIPTS 注册表一次性免疫。
+            proc = subprocess.run(
+                [sys.executable, str(path)],
+                cwd=str(BASE_DIR), capture_output=True,
+                timeout=SCAN_TIMEOUT_S,
+                encoding="utf-8", errors="replace",
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+            )
+            out_lines = [ln.strip() for ln in (proc.stdout or "").splitlines() if ln.strip()]
+            # scan_orphans 末行是耗时统计，无信息量 → 优先取结论/告警行
+            out_lines = [ln for ln in out_lines if not ln.startswith("总耗时")]
+            err_lines = [ln.strip() for ln in (proc.stderr or "").splitlines() if ln.strip()]
+            # scan_backfill_gap 首行才是主信号（分桶计数+⚠️），末行是 league 计数 → 取首行
+            tail = (out_lines[0] if label == "scan_backfill_gap" else out_lines[-1]) if out_lines else (err_lines[-1] if err_lines else "")
+            notes.append(f"{label}: exit={proc.returncode} {tail[:160]}")
+        except subprocess.TimeoutExpired:
+            notes.append(f"{label}: 超时>{SCAN_TIMEOUT_S}s（非阻断）")
+        except Exception as e:  # 扫描器自身异常绝不能冒泡到看门狗
+            notes.append(f"{label}: 执行异常 {type(e).__name__}（非阻断）")
+    return notes
+
+
 def run(status_dir: Path, reports_dir: Path, db_path: Path,
         date: str, phase: str, now: datetime) -> int:
     # 注入告警器状态目录（生产=默认 logs/chain_status；固件测试=临时目录）
@@ -329,6 +380,9 @@ def run(status_dir: Path, reports_dir: Path, db_path: Path,
                                    source="chain_watchdog"):
             fired.append(item["title"])
 
+    # 每日只读扫描（C-20261022-192）：仅记录，不影响 fatal / 退出码
+    scan_notes = run_readonly_scans()
+
     footer = [
         f"最近巡检: {now.strftime('%Y-%m-%d %H:%M:%S')}（phase={phase}，链日 {date}）",
         f"- {CHAIN}: {chain_state}",
@@ -337,6 +391,8 @@ def run(status_dir: Path, reports_dir: Path, db_path: Path,
     if artifact_note:
         footer.append(f"- {artifact_note}")
     footer.append(f"- {pm_note}")
+    for n in scan_notes:
+        footer.append(f"- 只读扫描 {n}")
     if observes:
         footer.append("- 观察项（不告警）: " + "；".join(observes))
     if fired:

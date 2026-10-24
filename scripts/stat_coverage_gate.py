@@ -28,6 +28,9 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 ODDS_DB = BASE / "data" / "odds.db"
 COOKIE_FILE = BASE / "data" / "cookies_500.json"
+# C-20261022-193：known gap 注册表——已定性"排窗口 C 处置"的持续性缺口在此登记，
+# 门禁照常报告缺口数量（可见）但不作为活告警（不刷屏），防"狼来了"常态化。
+KNOWN_GAPS_FILE = BASE / "data" / "known_gaps.json"
 
 WINDOW_DAYS = 30
 GRACE_DAYS = 2          # 完赛 48h 内不算缺口
@@ -36,6 +39,15 @@ PROBE_SIGS = ("EdgeOut", "刷新 Cookie", "刷新Cookie", "请开启JavaScript",
 
 def _ro_conn():
     return sqlite3.connect(f"file:{ODDS_DB.as_posix()}?mode=ro", uri=True)
+
+
+def _known_gaps() -> dict:
+    """读 known gap 注册表；文件缺失/损坏 → 空表（门禁恢复原始行为）。"""
+    try:
+        data = json.loads(KNOWN_GAPS_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def count_gaps(conn: sqlite3.Connection):
@@ -56,9 +68,11 @@ def run_coverage() -> dict:
         by_date, total = count_gaps(conn)
     finally:
         conn.close()
+    known = _known_gaps().get("odds500_stat")
     return {"mode": "coverage", "window_days": WINDOW_DAYS, "grace_days": GRACE_DAYS,
             "total_gaps": total, "by_date": by_date,
-            "alert": total > 0}
+            "known_gap": known,
+            "alert": total > 0 and not known}
 
 
 def run_probe(timeout: int = 20) -> dict:
@@ -119,10 +133,16 @@ def main() -> int:
         print(json.dumps({**r, "exit": 1 if alert else 0}, ensure_ascii=False))
         return 1 if alert else 0
     if r["mode"] == "coverage":
+        known = r.get("known_gap")
+        mark = "🟡" if known else "🔴"
         print(f"[stat-gate] 覆盖检测（窗口 {r['window_days']}d / 宽限 {r['grace_days']}d）: "
               f"缺口 {r['total_gaps']} 场")
         for d, n in r["by_date"][:10]:
-            print(f"  🔴 {d}: {n} 场缺统计")
+            print(f"  {mark} {d}: {n} 场缺统计")
+        if known and r["total_gaps"]:
+            print(f"  🟡 known gap（{known.get('label', '已登记')}）— {known.get('reason', '')}")
+            print(f"     登记: {known.get('registered', '?')}（{known.get('register_ref', '?')}）；"
+                  f"摘除条件: {known.get('remove_on', '未注明')}")
         if not r["total_gaps"]:
             print("  ✅ 30 天窗口零缺口")
         print("修复: 人工刷 Cookie → final_500_collector --pages stat 回补 → 重生成复盘（C-105 runbook）")

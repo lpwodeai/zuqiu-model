@@ -124,7 +124,14 @@ def main() -> int:
                             cwd=str(DB_PATH.parent.parent))
         line2 = (p2.stdout.strip().splitlines() or ["{}"])[-1]
         g2 = json.loads(line2) if line2.startswith("{") else {}
-        if p2.returncode == 0:
+        if p2.returncode == 0 and g2.get("known_gap"):
+            # C-20261022-193：已登记的持续性缺口 → 黄级观察（可见但不刷屏），
+            # 不判红——防"狼来了"常态化；窗口 C 补采后摘除标签恢复红级告警。
+            kg = g2["known_gap"]
+            g2_level = "yellow"
+            g2_txt = (f"known gap（{kg.get('label', '已登记')}）统计缺口 "
+                      f"{g2.get('total_gaps')} 场（{kg.get('register_ref', '?')} 登记）")
+        elif p2.returncode == 0:
             g2_level, g2_txt = "green", "30 天窗口零缺口"
         elif p2.returncode == 1:
             g2_level = "red"
